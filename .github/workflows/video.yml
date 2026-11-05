@@ -5,6 +5,15 @@ name: Promo video
 
 on:
   workflow_dispatch:
+    inputs:
+      scenes:
+        description: 'Optional: other places, as JSON [{"place":"…","hash":"lat=…&lon=…&km=2&ex=1.5","lines":["line 1","line 2"]}]'
+        required: false
+        default: ''
+      end:
+        description: 'Optional: the end card text, as JSON {"what":"…","free":"…"}'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -33,6 +42,9 @@ jobs:
           npm i --no-save --no-audit --no-fund playwright@1.64.1 && npx playwright install --with-deps chromium
 
       - name: Render
+        env:
+          VIDEO_SCENES: ${{ inputs.scenes }}
+          VIDEO_END: ${{ inputs.end }}
         run: node tools/video/render.mjs
 
       - name: Keep the files with this run

@@ -19,13 +19,24 @@ const SCENE_S = 4.6; // seconds per place
 const DIP_S = 0.35; // fade through the background between places
 const END_S = 3.2;
 
-const SCENES = [
+// Another set of places (a city video for its own subreddit, say) comes in as JSON through
+// VIDEO_SCENES, in the same shape; VIDEO_END replaces the end card's two text lines.
+const DEFAULT_SCENES = [
   { place: 'Hong Kong', hash: 'lat=22.2795&lon=114.1605&km=2&ex=1', lines: ['The street', 'you grew up on.'] },
   { place: 'Porto', hash: 'lat=41.1405&lon=-8.6110&km=2&ex=1.5', lines: ['The place', 'you got married.'] },
   // 1 km side-on: the cut side wall shows the drop from the village on the rim into the canyon
   { place: 'Grand Canyon Village', hash: 'lat=36.0590&lon=-112.1385&km=1&ex=1', lines: ['The trip you', 'still talk about.'], az: [115, 70] },
   { place: 'Salzburg', hash: 'lat=47.7985&lon=13.0455&km=2&ex=1.5', lines: ['The town', 'you left.'] },
 ];
+const SCENES = process.env.VIDEO_SCENES?.trim() ? JSON.parse(process.env.VIDEO_SCENES) : DEFAULT_SCENES;
+const END = {
+  what: 'The places that matter to you, in 3D',
+  free: 'Any address, on its real terrain · Free · No sign-up<br>A poster or a 3D print, with your own title',
+  ...(process.env.VIDEO_END?.trim() ? JSON.parse(process.env.VIDEO_END) : {}),
+};
+for (const sc of SCENES) {
+  if (typeof sc.place !== 'string' || typeof sc.hash !== 'string' || !Array.isArray(sc.lines) || sc.lines.length !== 2) throw new Error(`bad scene: ${JSON.stringify(sc)}`);
+}
 
 const FORMATS = [
   { key: 'vertical', file: 'your-place-9x16.mp4', width: 1080, height: 1920 },
@@ -101,8 +112,8 @@ const OVERLAY_HTML = (fmt) => `
     <div class="end">
       ${icon}
       <h1>Your Place</h1>
-      <div class="what">The places that matter to you, in 3D</div>
-      <div class="free">Any address, on its real terrain · Free · No sign-up<br>A poster or a 3D print, with your own title</div>
+      <div class="what">${END.what}</div>
+      <div class="free">${END.free}</div>
       <div class="url">${SITE}</div>
       <div class="osm">Map data © OpenStreetMap contributors</div>
     </div>
