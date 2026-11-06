@@ -1,0 +1,57 @@
+name: Survey cities
+
+# Counts the buildings, and how many have a real height, in a square around ~80 city centres
+# (tools/survey/survey.mjs), and copies the ranked table to the branch "survey". Run it again with
+# "delete" to remove that branch.
+
+on:
+  workflow_dispatch:
+    inputs:
+      km:
+        description: Side of the square around each city centre (km)
+        required: false
+        default: '2'
+      action:
+        description: publish or delete
+        required: true
+        default: publish
+        type: choice
+        options: [publish, delete]
+
+permissions:
+  contents: write
+
+jobs:
+  survey:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Delete the survey branch
+        if: inputs.action == 'delete'
+        run: git push origin --delete survey || echo "nothing to delete"
+
+      - name: Set up Node.js
+        if: inputs.action == 'publish'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Survey
+        if: inputs.action == 'publish'
+        env:
+          SURVEY_KM: ${{ inputs.km }}
+        run: npm ci && node tools/survey/survey.mjs
+
+      - name: Copy the results to the survey branch
+        if: inputs.action == 'publish'
+        run: |
+          cp -r survey-out "$RUNNER_TEMP/survey-out"
+          git switch --orphan survey
+          cp "$RUNNER_TEMP"/survey-out/* .
+          git add survey.json survey.md
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -q -m 'Survey'
+          git push -f origin survey
