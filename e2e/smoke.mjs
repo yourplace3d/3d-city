@@ -282,13 +282,24 @@ try {
   await settle(page, 600);
   await shot(page, '03c-area-1500m');
   await setArea(2000);
+  // one colour for all buildings: no legend, and the choice is kept
+  for (const colour of ['grey', 'sand', 'dark']) {
+    await page.click(`#style-group [data-value="${colour}"]`);
+    await settle(page, 400);
+    await shot(page, `04a-buildings-${colour}`);
+  }
+  expect((await page.evaluate(() => window.__yourPlace.state().style)) === 'dark' && !(await page.isVisible('#legend')), 'buildings can be one colour (grey, sand, dark), without the height legend');
   await page.click('#style-group [data-value="ramp"]');
   expect(await page.isVisible('#legend'), 'height legend appears with height colours');
   await page.focus('#scene');
   for (let k = 0; k < 7; k++) await page.keyboard.press('ArrowDown');
   for (let k = 0; k < 3; k++) await page.keyboard.press('ArrowRight');
   await page.keyboard.press('+');
-  await settle(page, 1500);
+  // headless software GL can pause drawing for a second or two here; as for the compass below,
+  // wait for the movement's last frame rather than a fixed delay (moving() is still false right
+  // after the key press, before the first frame)
+  await page.waitForFunction(() => (window.__yourPlace.camera()?.tilt ?? 0) > 40 && !window.__yourPlace.moving(), null, { timeout: 15000 }).catch(() => undefined);
+  await settle(page, 500);
   const cam = await page.evaluate(() => window.__yourPlace.camera());
   await shot(page, '04-height-colours-tilted');
   await page.click('[data-layer="roads"]');
@@ -384,7 +395,7 @@ try {
     /-10cm\.stl$/.test(plain.dl.suggestedFilename()) && Math.abs(plain.size[0] - 100) < 0.01 && plain.size[1] > 105 && plain.size[1] < 120 && Math.abs(plain.lo[2] + 3) < 1e-4 && plain.hi[2] > 5,
     `STL is 100 mm wide on a 3 mm base, with the title ledge in front (${plain.size.map((v) => v.toFixed(2)).join(' × ')} mm)`,
   );
-  expect(/^Saved: 10 × 1\d(\.\d)? cm with the title ledge at 1:20,000/.test(await page.textContent('#share-msg')), 'the dialog confirms the print file and its ledge');
+  expect(/^Saved: 10 × 1\d(\.\d)? cm with the title strip at 1:20,000/.test(await page.textContent('#share-msg')), 'the dialog confirms the print file and its ledge');
   expect(/Water sunk 1 mm\./.test(await page.textContent('#share-msg')), 'the river in the test city is sunk 1 mm in the print');
   // your own title and a second line make the ledge deeper and name the file
   await page.fill('#print-title', 'Our first home');
@@ -398,6 +409,18 @@ try {
   expect(!/Water sunk/.test(await page.textContent('#share-msg')), 'without the tick the water stays level');
   await page.check('#print-water');
   expect(Math.abs(bare.size[0] - 100) < 0.01 && Math.abs(bare.size[1] - 100) < 0.01, `without the title the print is the plain square (${bare.size.map((v) => v.toFixed(2)).join(' × ')} mm)`);
+  // raised roads and parks: their own pieces on the terrain, and the dialog says so
+  await page.check('#print-roads');
+  await page.check('#print-green');
+  const painted = await printFile('06h-roads-green.stl');
+  const paintedMsg = await page.textContent('#share-msg');
+  expect(
+    /Roads raised 0\.4 mm\./.test(paintedMsg) && painted.count > bare.count + 1000 && Math.abs(painted.size[0] - 100) < 0.01 && Math.abs(painted.size[1] - 100) < 0.01,
+    `raised roads add ${painted.count - bare.count} triangles and stay inside the square (${painted.size.map((v) => v.toFixed(2)).join(' × ')} mm)`,
+  );
+  expect(/Parks and woods raised 0\.6 mm\./.test(paintedMsg), 'the park and the forest in the test city are raised');
+  await page.uncheck('#print-roads');
+  await page.uncheck('#print-green');
   await page.check('#print-ledge');
   // tiles: 2 × 2 pieces of 10 cm in a ZIP, with the title ledge as its own piece
   const setTiles = (n) =>
@@ -437,7 +460,7 @@ try {
     `each tile is 100 × 100 mm on the same 3 mm base (${tileSizes.map((b) => b.size.map((v) => v.toFixed(1)).join('×')).join(', ')})`,
   );
   expect(/A1 is the north-west corner/.test(files['README.txt'].toString()) && /sits 1 mm below the land/.test(files['README.txt'].toString()), 'the note in the ZIP explains how the tiles go together and that the water is sunk');
-  expect(/^Saved: 4 tiles of 10 cm, 20 × 20 cm in all, and the title ledge as its own piece, at 1:10,000/.test(await page.textContent('#share-msg')), 'the dialog confirms the tiles');
+  expect(/^Saved: 4 tiles of 10 cm, 20 × 20 cm in all, and the title strip as its own piece, at 1:10,000/.test(await page.textContent('#share-msg')), 'the dialog confirms the tiles');
   // the largest split, in the browser: 64 tiles in one ZIP
   await setTiles(8);
   const t8 = Date.now();
@@ -703,6 +726,55 @@ try {
   await ap.waitForSelector('#welcome', { state: 'visible' });
   expect(new URL(ap.url()).pathname === '/', '“Open the app” goes back to the app');
   await aboutCtx.close();
+
+  // ---------------- languages: Portuguese from the browser, German from the picker
+  const ptCtx = await browser.newContext({ viewport: { width: 1280, height: 800 }, locale: 'pt-BR', reducedMotion: 'reduce' });
+  await routeAll(ptCtx);
+  const lp = await ptCtx.newPage();
+  watchConsole(lp, 'pt');
+  await lp.goto(`${base}#lat=48.7765&lon=9.1772&km=1.5&ex=1.5`);
+  const tPt = await waitStage(lp, ['ready', 'error']);
+  await settle(lp, 800);
+  const ptTexts = await lp.evaluate(() => ({
+    lang: document.documentElement.lang,
+    placeholder: document.getElementById('search-input').getAttribute('placeholder'),
+    area: document.querySelector('label[for="size-range"]').textContent,
+    size: document.getElementById('size-out').textContent,
+    describe: document.getElementById('describe').textContent,
+  }));
+  expect(
+    tPt.stage === 'ready' && ptTexts.lang === 'pt-BR' && ptTexts.placeholder === 'Busque um endereço ou lugar' && ptTexts.area === 'Área' && ptTexts.size === '1,5 × 1,5 km',
+    `a Portuguese browser gets the app in Portuguese (“${ptTexts.placeholder}”, “${ptTexts.size}”)`,
+  );
+  expect(/em volta de|perto de/.test(ptTexts.describe) && /prédios/.test(ptTexts.describe), `the description is in Portuguese too (“${ptTexts.describe.slice(0, 80)}…”)`);
+  // nothing marked for translation still shows its English text
+  const leftover = await lp.evaluate(async () => {
+    const html = await (await fetch('./')).text();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const english = new Map([...doc.querySelectorAll('[data-t]')].map((el) => [el.dataset.t, el.textContent.trim()]));
+    return [...document.querySelectorAll('[data-t]')].filter((el) => el.textContent.trim() === english.get(el.dataset.t) && !/^(optional)$/.test(el.textContent.trim())).map((el) => el.dataset.t);
+  });
+  expect(leftover.length === 0, `no English left on the Portuguese page (${leftover.join(', ') || 'none'})`);
+  await shot(lp, '12-portuguese');
+  await lp.click('#share-btn');
+  await settle(lp, 300);
+  await shot(lp, '12a-portuguese-share');
+  await lp.keyboard.press('Escape');
+  // the picker switches to German and keeps the view
+  await lp.selectOption('.about .lang-select', 'de');
+  await lp.waitForLoadState('load');
+  await waitStage(lp, ['ready', 'error']);
+  const deTexts = await lp.evaluate(() => ({ lang: document.documentElement.lang, area: document.querySelector('label[for="size-range"]').textContent, hash: location.hash }));
+  expect(deTexts.lang === 'de-DE' && deTexts.area === 'Gebiet' && /km=1\.5/.test(deTexts.hash), `the language picker switches to German and keeps the place (“${deTexts.area}”)`);
+  await shot(lp, '12b-german');
+  await lp.click('#share-btn');
+  await settle(lp, 300);
+  await shot(lp, '12c-german-share');
+  await lp.keyboard.press('Escape');
+  await lp.goto(base);
+  await lp.waitForSelector('#welcome', { state: 'visible' });
+  await shot(lp, '12d-german-welcome');
+  await ptCtx.close();
 
   // ---------------- dark mode, reduced motion
   const dark = await browser.newContext({ viewport: { width: 1280, height: 800 }, colorScheme: 'dark', reducedMotion: 'reduce' });

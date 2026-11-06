@@ -452,6 +452,31 @@ a {
   text-underline-offset: 3px;
 }
 
+.lang {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.lang select {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-sunk);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+
+.welcome .lang {
+  margin-top: 14px;
+}
+
+.about .lang {
+  margin-top: 4px;
+}
+
 .welcome-more a:hover {
   color: var(--text);
 }
@@ -665,6 +690,7 @@ a {
 
 .control-label small,
 .control-label output {
+  white-space: nowrap;
   font-weight: 450;
   color: var(--muted);
   font-size: 13px;
@@ -740,6 +766,29 @@ input[type='range'] {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 
+/* building colours: a swatch over each name */
+.swatches button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 2px 5px;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.style-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+
+.swatches button[aria-checked='true'] .style-swatch {
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18), 0 0 0 2px var(--surface-solid), 0 0 0 3.5px var(--accent);
+}
+
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -779,7 +828,7 @@ input[type='range'] {
 }
 
 .swatch-roads {
-  background: linear-gradient(#cfc6b6 0 28%, #fbfaf6 28% 72%, #cfc6b6 72%);
+  background: linear-gradient(#998c76 0 28%, #fbfaf6 28% 72%, #998c76 72%);
 }
 
 .swatch-water {
@@ -1151,4 +1200,21 @@ input[type='range'] {
 
 .print-block .tiles-label {
   margin-top: 6px;
+}
+
+.paint-set {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 2px 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.paint-set legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: var(--muted);
 }

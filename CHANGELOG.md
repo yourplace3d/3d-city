@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.6.1 — 2026-11-06
+
+- Clearer streets: roads have a darker, wider edge, so white roads no longer fade into the beige ground. On screen and on the poster; the 3D print is unchanged. Suggested on Reddit.
+
+## 1.6.0 — 2026-11-06
+
+- Your Place in Portuguese (Brazil) and German, as well as English. It follows the browser's language, or pick one under the settings or on the start page; the choice is remembered on that device. Numbers follow the language too (1,5 × 1,5 km, 1:13.300). Share links carry no language, so each visitor sees the app in their own. The "How it works" page stays in English for now.
+
+## 1.5.0 — 2026-11-06
+
+- Buildings in more colours: white, grey, sand or dark, or coloured by height, picked from a row of swatches. Share links keep the choice. Suggested on Reddit: white buildings blended into the streets.
+- Height colours no longer use greens and blues, which looked like parks and water: they now run from yellow through orange and magenta to deep indigo. Suggested on Reddit.
+
+## 1.4.0 — 2026-11-06
+
+- Raised roads in the 3D print: roads, paths and railways stand 0.4 mm above the ground with sharp edges, as their own pieces that follow the terrain, so they're easy to paint. At small scales only the roads wide enough to print are kept. Off by default; tick it in the share dialog. Suggested on Reddit.
+- Raised parks and woods: parks, gardens, pitches and woods stand 0.6 mm above the land (water inside them stays sunk). Off by default. Suggested on Reddit.
+- Clearer wording for the title option: "Add the title in raised letters on a strip in front".
+
 ## 1.3.2 — 2026-11-06
 
 - Water sinks 1 mm into the 3D print: lakes, rivers mapped as areas and the sea sit a little below the land, so they stand out and have an edge to paint along. The same 1 mm at any scale and exaggeration, in one piece or in tiles; untick it in the share dialog to keep the water level. Suggested on Reddit.
