@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.3.2 — 2026-11-06
+
+- Water sinks 1 mm into the 3D print: lakes, rivers mapped as areas and the sea sit a little below the land, so they stand out and have an edge to paint along. The same 1 mm at any scale and exaggeration, in one piece or in tiles; untick it in the share dialog to keep the water level. Suggested on Reddit.
+
+## 1.3.1 — 2026-11-05
+
+- Prints in up to 8 × 8 tiles, for a model to hang on the wall: 64 tiles of 20 cm make 1.6 m across, and a 4 km area at that size is about 1:2,500. The tile choice is a slider now. Suggested on Reddit.
+
+## 1.3.0 — 2026-11-05
+
+Both suggested on Reddit.
+
+### Any area, from 300 m to 4 km
+- The area is a slider now, from 300 m to 4 km in 100 m steps, instead of 1, 2 or 4 km. Share links carry the exact size; older links still work.
+- Small areas print with much bigger houses: 500 m on a 15 cm print is 1:3,330, so a 10 m house stands 3 mm tall.
+
+### 3D prints in tiles
+- Split the print into 2 × 2, 3 × 3 or 4 × 4 tiles that fit your print bed. Each tile is the print size you pick, so 3 × 3 tiles of 20 cm make a 60 cm model.
+- The download is a ZIP: one STL per tile, named like a map grid (A1 is the north-west corner), the title ledge as its own piece, and a note on how they go together.
+- The tiles fit edge to edge on one base, and buildings are cut exactly at the seams. Every tile is checked to print as closed solids.
+
 ## 1.2.0 — 2026-11-05
 
 ### Your own title

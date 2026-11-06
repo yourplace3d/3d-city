@@ -15,13 +15,14 @@ works on your phone.**
 
 - **Search anything:** an address, a street, a village, a postcode or `lat, lon`, or use your location.
   Postcode and county results land on their village, not in a field.
-- **See it in 3D:** the 1, 2 or 4 km around it, with terrain you can exaggerate (1×–5×) and contour lines.
+- **See it in 3D:** any square from 300 m to 4 km around it, in 100 m steps, with terrain you can exaggerate (1×–5×) and contour lines.
   Buildings stand at their mapped height; where none is mapped the app estimates it and says how many.
 - **Find a house:** slide the plate, tap a building to pin it, and “Centre here” to rebuild the square around it,
   or double-tap / double-click a spot to load the area there in one go.
 - **Share it:** the link opens the same view with the same house pinned. It holds coordinates only, never the address you typed.
 - **Keep it:** download a poster image with the place name and coordinates, or an STL file to 3D print
-  (10, 15 or 20 cm wide; 2 km on 15 cm is 1:13,300). Every exported shell is checked to be watertight.
+  (10, 15 or 20 cm wide; 2 km on 15 cm is 1:13,300), in one piece or in up to 8 × 8 tiles that fit your
+  print bed. Water sits 1 mm below the land, easy to paint. Every exported shell is checked to be watertight.
 
 ## Controls
 

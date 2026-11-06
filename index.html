@@ -44,7 +44,7 @@
         "image": "%SITE_URL%og.jpg",
         "screenshot": "%SITE_URL%og.jpg",
         "featureList": [
-          "3D model of the 1, 2 or 4 km around any address",
+          "3D model of any square from 300 m to 4 km around an address",
           "Real terrain with adjustable exaggeration and contour lines",
           "Buildings at their mapped height",
           "Pin a house and share a link to it",
@@ -167,12 +167,12 @@
           </div>
 
           <div class="control">
-            <div class="control-label"><span id="size-label">Area</span></div>
-            <div class="segmented" role="radiogroup" aria-labelledby="size-label" id="size-group">
-              <button type="button" role="radio" data-value="1000" aria-checked="false">1 km</button>
-              <button type="button" role="radio" data-value="2000" aria-checked="true">2 km</button>
-              <button type="button" role="radio" data-value="4000" aria-checked="false">4 km</button>
+            <div class="control-label">
+              <label for="size-range">Area</label>
+              <output id="size-out" for="size-range">2 × 2 km</output>
             </div>
+            <input type="range" id="size-range" min="300" max="4000" step="100" value="2000" list="size-ticks" />
+            <datalist id="size-ticks"><option value="1000"></option><option value="2000"></option><option value="4000"></option></datalist>
           </div>
 
           <div class="control">
@@ -235,7 +235,13 @@
               <button type="button" role="radio" data-value="150" aria-checked="true">15 cm</button>
               <button type="button" role="radio" data-value="200" aria-checked="false" tabindex="-1">20 cm</button>
             </div>
+            <div class="control-label tiles-label">
+              <label for="tiles-range">Split into tiles that fit your print bed</label>
+              <output id="tiles-out" for="tiles-range">One piece</output>
+            </div>
+            <input type="range" id="tiles-range" min="1" max="8" step="1" value="1" />
             <label class="check"><input type="checkbox" id="print-ledge" checked /> Raise the title on a ledge in front</label>
+            <label class="check"><input type="checkbox" id="print-water" checked /> Sink water 1 mm, easier to paint</label>
             <button type="button" class="btn btn-wide" id="stl-btn">Download 3D print file (STL)</button>
           </div>
           <p class="dialog-note" id="share-msg" role="status" aria-live="polite"></p>

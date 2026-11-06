@@ -263,6 +263,25 @@ try {
   await settle(page, 900);
   expect((await page.textContent('#ex-out')) === '×3.0', 'exaggeration slider updates its readout');
   await shot(page, '03-contours-exaggerated');
+  // the area in 100 m steps, from the slider: 1.5 km, then back to 2 km
+  const setArea = async (m) => {
+    await page.$eval('#size-range', (el, v) => {
+      el.value = String(v);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    }, m);
+    await page.waitForFunction(() => window.__yourPlace.stage !== 'ready', null, { timeout: 5000 }).catch(() => undefined);
+    await waitStage(page, ['ready', 'error']);
+    await still(page); // the camera's fly-in after a load would override keys pressed during it
+  };
+  await setArea(1500);
+  expect(
+    /km=1\.5(&|$)/.test(await page.evaluate(() => location.hash)) && (await page.textContent('#size-out')) === '1.5 × 1.5 km' && /^1\.5 × 1\.5 km around/.test(await page.textContent('#describe')),
+    'the area can be any size in 100 m steps (1.5 km: share link, readout and description)',
+  );
+  await settle(page, 600);
+  await shot(page, '03c-area-1500m');
+  await setArea(2000);
   await page.click('#style-group [data-value="ramp"]');
   expect(await page.isVisible('#legend'), 'height legend appears with height colours');
   await page.focus('#scene');
@@ -330,6 +349,18 @@ try {
   await page.click('#print-size-group [data-value="100"]');
   expect(/^1:20,000 · terrain ×3\.0$/.test(await page.textContent('#print-note')), 'print size shows its scale and exaggeration');
   // a print file, and its size: x, y, z extents in mm
+  const stlBounds = (data) => {
+    const count = data.readUInt32LE(80);
+    const lo = [Infinity, Infinity, Infinity];
+    const hi = [-Infinity, -Infinity, -Infinity];
+    for (let k = 0; k < count; k++)
+      for (let q = 0; q < 9; q++) {
+        const v = data.readFloatLE(84 + k * 50 + 12 + q * 4);
+        lo[q % 3] = Math.min(lo[q % 3], v);
+        hi[q % 3] = Math.max(hi[q % 3], v);
+      }
+    return { count, lo, hi, size: [0, 1, 2].map((a) => hi[a] - lo[a]), whole: data.length === 84 + 50 * count };
+  };
   const printFile = async (name) => {
     const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.click('#stl-btn')]);
     const path = join(out, name);
@@ -354,6 +385,7 @@ try {
     `STL is 100 mm wide on a 3 mm base, with the title ledge in front (${plain.size.map((v) => v.toFixed(2)).join(' × ')} mm)`,
   );
   expect(/^Saved: 10 × 1\d(\.\d)? cm with the title ledge at 1:20,000/.test(await page.textContent('#share-msg')), 'the dialog confirms the print file and its ledge');
+  expect(/Water sunk 1 mm\./.test(await page.textContent('#share-msg')), 'the river in the test city is sunk 1 mm in the print');
   // your own title and a second line make the ledge deeper and name the file
   await page.fill('#print-title', 'Our first home');
   await page.fill('#print-subtitle', 'Where we met · June 2019');
@@ -361,9 +393,61 @@ try {
   expect(/^your-place-our-first-home-2km-10cm\.stl$/.test(titled.dl.suggestedFilename()) && titled.size[1] > plain.size[1] + 3, `your own title names the file and adds a second line (${titled.dl.suggestedFilename()}, ${titled.size[1].toFixed(1)} mm deep)`);
   // without the ledge: the plain square again
   await page.uncheck('#print-ledge');
+  await page.uncheck('#print-water');
   const bare = await printFile('06d-no-ledge.stl');
+  expect(!/Water sunk/.test(await page.textContent('#share-msg')), 'without the tick the water stays level');
+  await page.check('#print-water');
   expect(Math.abs(bare.size[0] - 100) < 0.01 && Math.abs(bare.size[1] - 100) < 0.01, `without the title the print is the plain square (${bare.size.map((v) => v.toFixed(2)).join(' × ')} mm)`);
   await page.check('#print-ledge');
+  // tiles: 2 × 2 pieces of 10 cm in a ZIP, with the title ledge as its own piece
+  const setTiles = (n) =>
+    page.$eval('#tiles-range', (el, v) => {
+      el.value = String(v);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }, n);
+  await setTiles(8);
+  expect((await page.textContent('#tiles-out')) === '8 × 8 tiles' && /^64 tiles, 80 × 80 cm in all · 1:2,500/.test(await page.textContent('#print-note')), `tiles go up to 8 × 8 (“${await page.textContent('#print-note')}”)`);
+  await setTiles(2);
+  expect(/^4 tiles, 20 × 20 cm in all · 1:10,000 · terrain ×3\.0$/.test(await page.textContent('#print-note')), `the tile choice shows the size in all and the scale (“${await page.textContent('#print-note')}”)`);
+  const [zdl] = await Promise.all([page.waitForEvent('download', { timeout: 180000 }), page.click('#stl-btn')]);
+  const zpath = join(out, '06f-tiles.zip');
+  await zdl.saveAs(zpath);
+  const zip = readFileSync(zpath);
+  const files = {};
+  {
+    const end = zip.length - 22;
+    let p = zip.readUInt32LE(end + 16);
+    for (let k = 0; k < zip.readUInt16LE(end + 10); k++) {
+      const nameLen = zip.readUInt16LE(p + 28);
+      const size = zip.readUInt32LE(p + 24);
+      const local = zip.readUInt32LE(p + 42);
+      const start = local + 30 + zip.readUInt16LE(local + 26);
+      files[zip.subarray(p + 46, p + 46 + nameLen).toString()] = zip.subarray(start, start + size);
+      p += 46 + nameLen;
+    }
+  }
+  const names = Object.keys(files).sort();
+  expect(
+    zdl.suggestedFilename() === 'your-place-our-first-home-2km-2x2-tiles-10cm.zip' && names.join() === 'README.txt,tile-A1.stl,tile-A2.stl,tile-B1.stl,tile-B2.stl,title.stl',
+    `the tiles download as a ZIP: four tiles, the title ledge and a note (${zdl.suggestedFilename()}: ${names.join(', ')})`,
+  );
+  const tileSizes = ['A1', 'A2', 'B1', 'B2'].map((t) => stlBounds(files[`tile-${t}.stl`]));
+  expect(
+    tileSizes.every((b) => b.whole && b.count > 5000 && Math.abs(b.size[0] - 100) < 0.01 && Math.abs(b.size[1] - 100) < 0.01 && Math.abs(b.lo[2] + 3) < 1e-4),
+    `each tile is 100 × 100 mm on the same 3 mm base (${tileSizes.map((b) => b.size.map((v) => v.toFixed(1)).join('×')).join(', ')})`,
+  );
+  expect(/A1 is the north-west corner/.test(files['README.txt'].toString()) && /sits 1 mm below the land/.test(files['README.txt'].toString()), 'the note in the ZIP explains how the tiles go together and that the water is sunk');
+  expect(/^Saved: 4 tiles of 10 cm, 20 × 20 cm in all, and the title ledge as its own piece, at 1:10,000/.test(await page.textContent('#share-msg')), 'the dialog confirms the tiles');
+  // the largest split, in the browser: 64 tiles in one ZIP
+  await setTiles(8);
+  const t8 = Date.now();
+  const [z8] = await Promise.all([page.waitForEvent('download', { timeout: 300000 }), page.click('#stl-btn')]);
+  const z8path = join(out, '06g-tiles-8x8.zip');
+  await z8.saveAs(z8path);
+  const zip8 = readFileSync(z8path);
+  const n8 = zip8.readUInt16LE(zip8.length - 22 + 10);
+  expect(n8 === 66 && /-8x8-tiles-10cm\.zip$/.test(z8.suggestedFilename()), `8 × 8 tiles download in ${((Date.now() - t8) / 1000).toFixed(0)} s: ${n8} files, ${(zip8.length / 1048576).toFixed(1)} MB`);
+  await setTiles(1);
   // the poster carries the title and the second line too
   const [titledPoster] = await Promise.all([page.waitForEvent('download', { timeout: 60000 }), page.click('#poster-btn')]);
   expect(titledPoster.suggestedFilename() === 'your-place-our-first-home-2km.png', `the poster uses your own title (${titledPoster.suggestedFilename()})`);
