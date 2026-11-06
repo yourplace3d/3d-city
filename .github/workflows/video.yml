@@ -56,7 +56,10 @@ jobs:
       - name: Draft release with the videos
         env:
           GH_TOKEN: ${{ github.token }}
+          VIDEO_SCENES: ${{ inputs.scenes }}
         run: |
+          # name the draft after its places, so drafts can be told apart in the Releases list
+          places=$(node -e 'const s = process.env.VIDEO_SCENES?.trim(); console.log(s ? JSON.parse(s).map((x) => x.place).join(", ") : "main promo")')
           gh release create "promo-$(date -u +%Y%m%d-%H%M)" video-out/* --draft \
-            --title "Promo video (draft: only visible to you)" \
+            --title "Promo video: $places (draft, only visible to you)" \
             --notes "Rendered from live map data by the Promo video workflow. Download the MP4s; delete this draft when you're done."
