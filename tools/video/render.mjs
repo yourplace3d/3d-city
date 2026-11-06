@@ -20,7 +20,9 @@ const DIP_S = 0.35; // fade through the background between places
 const END_S = 3.2;
 
 // Another set of places (a city video for its own subreddit, say) comes in as JSON through
-// VIDEO_SCENES, in the same shape; VIDEO_END replaces the end card's two text lines.
+// VIDEO_SCENES, in the same shape; VIDEO_END replaces the end card's two text lines. A scene may set
+// `az` (the camera's sweep) and `tilt` (degrees from straight down, at the start and the end: lower
+// shows the street plan more from above).
 const DEFAULT_SCENES = [
   { place: 'Hong Kong', hash: 'lat=22.2795&lon=114.1605&km=2&ex=1', lines: ['The street', 'you grew up on.'] },
   { place: 'Porto', hash: 'lat=41.1405&lon=-8.6110&km=2&ex=1.5', lines: ['The place', 'you got married.'] },
@@ -44,6 +46,7 @@ const FORMATS = [
 ];
 
 const DEFAULT_AZ = [-28, 24]; // camera sweep in degrees: 0 looks north, 180 looks south
+const DEFAULT_TILT = [36, 52]; // degrees from straight down
 
 // ------------------------------------------------------------------ static server for dist/
 
@@ -161,7 +164,8 @@ for (const fmt of FORMATS) {
       const t = ease(i / (total - 1));
       const [az0, az1] = scene.az ?? DEFAULT_AZ;
       const az = az0 + (az1 - az0) * t;
-      const tilt = 36 + 16 * t;
+      const [t0, t1] = scene.tilt ?? DEFAULT_TILT;
+      const tilt = t0 + (t1 - t0) * t;
       const distance = d0 * (fmt.key === 'wide' ? 1.0 - 0.14 * t : 0.88 - 0.2 * t);
       // wide: keep the model right of centre, clear of the caption (move the target to the screen's left)
       const shift = fmt.key === 'wide' ? distance * 0.2 : 0;
