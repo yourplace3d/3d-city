@@ -22,7 +22,9 @@ const END_S = 3.2;
 // Another set of places (a city video for its own subreddit, say) comes in as JSON through
 // VIDEO_SCENES, in the same shape; VIDEO_END replaces the end card's two text lines. A scene may set
 // `az` (the camera's sweep) and `tilt` (degrees from straight down, at the start and the end: lower
-// shows the street plan more from above).
+// shows the street plan more from above) and `seconds` (how long it lasts).
+// A quiz ("which city?"): VIDEO_END with "quiz": true hides the brand, the address and the app's end
+// card (the end card shows only its two lines), and the model is centred; give scenes empty lines and place.
 const DEFAULT_SCENES = [
   { place: 'Hong Kong', hash: 'lat=22.2795&lon=114.1605&km=2&ex=1', lines: ['The street', 'you grew up on.'] },
   { place: 'Porto', hash: 'lat=41.1405&lon=-8.6110&km=2&ex=1.5', lines: ['The place', 'you got married.'] },
@@ -36,6 +38,7 @@ const END = {
   free: 'Any address, on its real terrain · Free · No sign-up<br>A poster or a 3D print, with your own title',
   ...(process.env.VIDEO_END?.trim() ? JSON.parse(process.env.VIDEO_END) : {}),
 };
+const QUIZ = END.quiz === true;
 for (const sc of SCENES) {
   if (typeof sc.place !== 'string' || typeof sc.hash !== 'string' || !Array.isArray(sc.lines) || sc.lines.length !== 2) throw new Error(`bad scene: ${JSON.stringify(sc)}`);
 }
@@ -103,9 +106,13 @@ const OVERLAY_CSS = `
   #promo.wide .caption { top: 50%; left: 120px; width: 640px; margin-top: -100px; }
   #promo.wide .place { bottom: 120px; left: 120px; }
   #promo.wide .credit { bottom: 50px; right: 60px; }
+  /* a quiz: no brand, no caption panel, and an end card with just the question */
+  #promo.quiz .brand, #promo.quiz .scrim-left, #promo.quiz .end svg, #promo.quiz .end h1, #promo.quiz .end .url { display: none !important; }
+  #promo.quiz .end .what { font: 500 120px/1.05 Fraunces, Georgia, serif; color: #1e1c19; }
+  #promo.quiz .end .free { font: 500 36px/1.3 Inter, sans-serif; }
 `;
 const OVERLAY_HTML = (fmt) => `
-  <div id="promo" class="${fmt}">
+  <div id="promo" class="${fmt}${QUIZ ? ' quiz' : ''}">
     <div class="scrim-top"></div><div class="scrim-bottom"></div><div class="scrim-left"></div>
     <div class="brand">Your Place</div>
     <div class="caption"><div class="l1"></div><div class="l2"></div></div>
@@ -158,7 +165,8 @@ for (const fmt of FORMATS) {
     await page.waitForTimeout(1500); // let the map layers settle
 
     const d0 = info.cam.distance;
-    const total = Math.round(SCENE_S * FPS);
+    const sceneS = scene.seconds ?? SCENE_S;
+    const total = Math.round(sceneS * FPS);
     for (let i = 0; i < total; i++) {
       const s = i / FPS;
       const t = ease(i / (total - 1));
@@ -168,13 +176,13 @@ for (const fmt of FORMATS) {
       const tilt = t0 + (t1 - t0) * t;
       const distance = d0 * (fmt.key === 'wide' ? 1.0 - 0.14 * t : 0.88 - 0.2 * t);
       // wide: keep the model right of centre, clear of the caption (move the target to the screen's left)
-      const shift = fmt.key === 'wide' ? distance * 0.2 : 0;
+      const shift = fmt.key === 'wide' && !QUIZ ? distance * 0.2 : 0;
       const r = (az * Math.PI) / 180;
       const cam = { azimuth: az, tilt, distance, targetE: -shift * Math.cos(r), targetN: -shift * Math.sin(r) };
       const dipIn = si === 0 ? 1 - s / (DIP_S * 1.6) : 1 - s / DIP_S;
-      const dipOut = (s - (SCENE_S - DIP_S)) / DIP_S;
+      const dipOut = (s - (sceneS - DIP_S)) / DIP_S;
       const dip = Math.max(0, Math.min(1, Math.max(dipIn, dipOut)));
-      const cap = Math.max(0, Math.min(1, Math.min((s - 0.35) / 0.45, (SCENE_S - 0.25 - s) / 0.4)));
+      const cap = Math.max(0, Math.min(1, Math.min((s - 0.35) / 0.45, (sceneS - 0.25 - s) / 0.4)));
       await page.evaluate(({ cam, dip, cap }) => {
         window.__yourPlace.setCamera(cam);
         const p = document.getElementById('promo');
