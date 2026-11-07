@@ -2,7 +2,8 @@ import './styles.css';
 import { resolveToSettlement, reverse, type Place } from './geo/geocode';
 import { buildingsQuery, featuresQuery, overpass, parseBuildings, parseFeatures, parseSettlements, pickSettlement, settlementsQuery, type FeatureSet, type Settlement, type SettlementKind } from './geo/osm';
 import { DATA_ZOOM, fetchTiles, parseTiles, settlementsFromTiles, tilesForSquare } from './geo/tiles';
-import { formatLatLon, makeProjector, squareBBox, type LngLat } from './geo/projection';
+import { formatLatLon, makeProjector, round, squareBBox, type LngLat } from './geo/projection';
+import { referenceHeight, SERIES_REACH, seriesCenter, squareLabel, withReference } from './geo/series';
 import { loadHeightGrid } from './geo/terrain';
 import { CityModel } from './scene/cityModel';
 import { BUILDING_COLOURS, HEIGHT_RAMP } from './scene/buildingsMesh';
@@ -206,6 +207,7 @@ async function resolvePick(p: Place): Promise<Place> {
 
 async function openPlace(p: Place, opts: { size?: AreaSize; ex?: number } = {}): Promise<void> {
   markOwnPlace();
+  state.series = null;
   if (opts.size) state.size = opts.size;
   if (opts.ex) state.exaggeration = opts.ex;
   state.pin = null;
@@ -249,6 +251,11 @@ function setSize(want: AreaSize): void {
   const size = clampSize(want);
   if (size === state.size) return;
   state.size = size;
+  if (state.series) {
+    // neighbours of another size wouldn't fit
+    state.series = null;
+    toast(t.seriesEnded, 5000);
+  }
   syncControls();
   if (state.center) void loadPlace(state.center, { label: placeLabel || undefined, detail: placeMetaDetail });
 }
@@ -283,7 +290,8 @@ async function loadPlace(center: LngLat, opts: { label?: string; detail?: string
   debug.timings = {};
 
   const bbox = squareBBox(center, size);
-  const terrainP = loadHeightGrid(center, size, gridResolution(size), signal);
+  // the squares of a bigger map share their terrain grid, so their edges are sampled alike
+  const terrainP = loadHeightGrid(center, size, state.series?.n ?? gridResolution(size), signal, state.series?.z);
   // Map data: vector tiles from a CDN (fast, cached). Overpass only if the tiles fail.
   const tilesP = fetchTiles(tilesForSquare(center, size, DATA_ZOOM), signal).then((t) => parseTiles(t, center, size));
   const fallback = (err: unknown) => {
@@ -396,6 +404,38 @@ async function loadPlace(center: LngLat, opts: { label?: string; detail?: string
   }
 }
 
+/**
+ * A square of the bigger map, loaded without showing it: terrain, buildings and map layers, ready to
+ * print (for "Download the whole map"). Dispose it when done.
+ */
+async function loadSquareOffscreen(center: LngLat, signal: AbortSignal): Promise<CityModel> {
+  const s = state.series!;
+  const size = state.size;
+  const grid = await loadHeightGrid(center, size, s.n, signal, s.z);
+  const m = new CityModel(grid, overlayPixels(size), accent);
+  m.setExaggeration(s.ex);
+  try {
+    const d = await fetchTiles(tilesForSquare(center, size, DATA_ZOOM), signal).then((tiles) => parseTiles(tiles, center, size));
+    m.setBuildingSpecs(d.buildings.map((b) => ({ ...b, estimated: false })));
+    m.setFeatures(d.features);
+  } catch (err) {
+    if (signal.aborted) {
+      m.dispose();
+      throw err;
+    }
+    const bbox = squareBBox(center, size);
+    try {
+      const [b, f] = await Promise.all([overpass(buildingsQuery(bbox), signal, OVERPASS_TIMEOUT_MS), overpass(featuresQuery(bbox), signal, OVERPASS_TIMEOUT_MS)]);
+      m.setBuildings(parseBuildings(b, center, size));
+      m.setFeatures(parseFeatures(f, center));
+    } catch (err2) {
+      m.dispose();
+      throw err2;
+    }
+  }
+  return m;
+}
+
 // ------------------------------------------------------------------ shared links: "make one of your own"
 
 function readFlag(key: string): boolean {
@@ -469,6 +509,8 @@ function movePinTo(x: number, y: number): void {
 /** Build a new square around the pin, e.g. when the house is near the edge. */
 function centreOnPin(): void {
   if (!state.pin) return;
+  // a square around the pin is off the bigger map's grid
+  state.series = null;
   const cam = viewer.getCameraState();
   void loadPlace(state.pin, { camera: { ...cam, targetE: 0, targetN: 0 } });
 }
@@ -562,7 +604,8 @@ function setPlaceTitle(title: string, detail: string): void {
 
 let placeMetaDetail = '';
 function updateMeta(): void {
-  const parts = [placeMetaDetail, area(state.size), t.terrainTimes(num(state.exaggeration, 1))].filter(Boolean);
+  const square = state.series ? t.seriesMeta(squareLabel(state.series.i, state.series.j)) : '';
+  const parts = [square, placeMetaDetail, area(state.size), t.terrainTimes(num(state.exaggeration, 1))].filter(Boolean);
   $('place-meta').textContent = parts.join(' · ');
 }
 
@@ -656,6 +699,7 @@ function radioGroup(id: string, onChange: (value: string) => void): void {
 function syncControls(): void {
   const ex = $<HTMLInputElement>('ex-range');
   ex.value = String(state.exaggeration);
+  ex.disabled = !!state.series;
   $('ex-out').textContent = `×${num(state.exaggeration, 1)}`;
   $('contour-switch').setAttribute('aria-checked', String(state.contours));
   $<HTMLInputElement>('size-range').value = String(state.size);
@@ -802,14 +846,176 @@ function bindShare(): void {
     printMm = Number(v);
     updatePrintNote();
   });
+
+  // ---- a bigger map: squares side by side whose prints fit together
+  const seriesPart = () => (state.series ? `${squareLabel(state.series.i, state.series.j).replace(' ', '-')}-` : '');
+  const seriesHeader = () => (state.series ? `square ${squareLabel(state.series.i, state.series.j)}, ` : '');
+  const ledge = $<HTMLInputElement>('print-ledge');
+  const sizeButtons = [...$('print-size-group').querySelectorAll<HTMLButtonElement>('[role="radio"]')];
+  /** Show the bigger map's panel and lock what every square must share. */
+  function syncSeries(): void {
+    const s = state.series;
+    $('series-intro').hidden = !!s;
+    $('series-start').hidden = !!s;
+    $('series-on').hidden = !s;
+    ledge.disabled = !!s;
+    if (s) ledge.checked = false;
+    for (const b of sizeButtons) {
+      b.disabled = !!s && b.dataset.value !== String(s.mm);
+      if (s) {
+        b.setAttribute('aria-checked', String(b.dataset.value === String(s.mm)));
+        b.tabIndex = b.dataset.value === String(s.mm) ? 0 : -1;
+      }
+    }
+    if (s) {
+      printMm = s.mm;
+      $('series-where').textContent = t.seriesHere(squareLabel(s.i, s.j));
+      $('series-fixed').textContent = t.seriesFixed(num(s.mm / 10), num(s.ex, 1));
+    }
+    updatePrintNote();
+  }
+  for (const b of $('series-pad').querySelectorAll<HTMLButtonElement>('[data-di]')) {
+    const label = t.seriesGoTo(t.compass[Number(b.dataset.dir)]);
+    b.setAttribute('aria-label', label);
+    b.title = label;
+    b.addEventListener('click', () => {
+      const s = state.series;
+      if (!s) return;
+      const i = s.i + Number(b.dataset.di);
+      const j = s.j + Number(b.dataset.dj);
+      if (Math.abs(i) > SERIES_REACH || Math.abs(j) > SERIES_REACH) return;
+      state.series = { ...s, i, j };
+      state.pin = null;
+      dialog.close();
+      syncControls();
+      void loadPlace(seriesCenter(state.series, state.size), { camera: { ...viewer.getCameraState(), targetE: 0, targetN: 0 } });
+    });
+  }
+  const startBtn = $<HTMLButtonElement>('series-start');
+  startBtn.addEventListener('click', async () => {
+    const center = state.center;
+    if (!model || !center) return;
+    if (debug.stage !== 'ready') {
+      msg.textContent = t.stillLoading;
+      return;
+    }
+    startBtn.disabled = true;
+    msg.textContent = t.seriesStarting;
+    // the base: a little below the lowest ground in a wide area around, so the neighbours fit on it too
+    let lowest = model.grid.min;
+    try {
+      const around = await loadHeightGrid(center, Math.min(state.size * 5, 20000), 65);
+      lowest = Math.min(lowest, around.min);
+    } catch (err) {
+      console.error(err);
+      msg.textContent = t.seriesFailed;
+      startBtn.disabled = false;
+      return;
+    }
+    startBtn.disabled = false;
+    const origin = { lat: round(center.lat, 5), lon: round(center.lon, 5) };
+    state.series = { origin, i: 0, j: 0, ref: referenceHeight(lowest), n: model.grid.n, z: model.grid.zoom, mm: printMm, ex: state.exaggeration };
+    state.pin = null;
+    dialog.close();
+    syncControls();
+    toast(t.seriesStarted(squareLabel(0, 0)), 7000);
+    // load the first square exactly on the map's grid
+    void loadPlace(seriesCenter(state.series, state.size), {
+      label: placeLabel || undefined,
+      detail: placeMetaDetail,
+      camera: viewer.getCameraState(),
+    });
+  });
+  let block = 3;
+  radioGroup('series-block', (v) => (block = Number(v)));
+  const allBtn = $<HTMLButtonElement>('series-all-btn');
+  allBtn.addEventListener('click', async () => {
+    const s = state.series;
+    if (!model || !s) return;
+    if (debug.stage !== 'ready') {
+      msg.textContent = t.stillLoading;
+      return;
+    }
+    // 2 × 2: this square and the ones east, north and north-east; 3 × 3: the ring around it
+    const from = block === 3 ? -1 : 0;
+    const squares: Array<{ i: number; j: number }> = [];
+    for (let dj = block - 1 + from; dj >= from; dj--) for (let di = from; di < block + from; di++) squares.push({ i: s.i + di, j: s.j + dj });
+    allBtn.disabled = startBtn.disabled = true;
+    const name = title();
+    const scale = printScale(state.size, s.mm);
+    const files: ZipEntry[] = [];
+    const done = { water: false, green: false, roads: false };
+    const job = new AbortController();
+    let bytes = 0;
+    try {
+      for (const [k, sq] of squares.entries()) {
+        msg.textContent = t.seriesBuilding(num(k + 1), num(squares.length));
+        await new Promise((r) => window.setTimeout(r, 30)); // let the message show
+        const here = sq.i === s.i && sq.j === s.j;
+        const m: CityModel = here ? model : await loadSquareOffscreen(seriesCenter({ ...s, ...sq }, state.size), job.signal);
+        try {
+          const terrain = printLayers(s.mm, m);
+          done.water ||= terrain.done.water;
+          done.green ||= terrain.done.green;
+          done.roads ||= terrain.done.roads;
+          const tris = buildPrint(terrain.grid, m.printBuildings(s.ref), { sideMm: s.mm, baseMm: PRINT_BASE_MM, exaggeration: s.ex }, terrain.roads);
+          const label = squareLabel(sq.i, sq.j);
+          const data = new Uint8Array(toBinaryStl(tris, `${name}, square ${label}, ${scale}`));
+          files.push({ name: `square-${label.replace(' ', '-')}.stl`, data });
+          bytes += data.byteLength;
+        } finally {
+          if (m !== model) m.dispose();
+        }
+        // after the first square, stop early if the whole map wouldn't fit in memory
+        const estimate = (bytes / (k + 1)) * squares.length;
+        if (k === 0 && estimate > (viewer.small ? 200 : 500) * 1048576) {
+          msg.textContent = t.seriesTooBig(num(estimate / 1048576));
+          return;
+        }
+      }
+      const rows: string[] = [];
+      for (let r = 0; r < block; r++) rows.push(squares.slice(r * block, (r + 1) * block).map((sq) => squareLabel(sq.i, sq.j)).join(' | '));
+      const totalM = state.size * block;
+      const readme = [
+        `Your Place: ${name}`,
+        t.readmeMap(block, area(state.size), area(totalM), num(s.mm / 10), num((s.mm * block) / 10), scale, num(s.ex, 1)),
+        '',
+        t.readmeMapLayout,
+        ...rows,
+        '',
+        done.water ? t.readmeWater(num(WATER_DEPTH_MM)) : '',
+        done.green ? t.readmeGreen(num(GREEN_RAISE_MM, 1)) : '',
+        done.roads ? t.readmeRoads(num(ROAD_RAISE_MM, 1)) : '',
+        '',
+        t.readmeCredit,
+      ].filter((l, i, a) => l || a[i - 1]).join('\n');
+      files.push({ name: 'README.txt', data: new TextEncoder().encode(readme) });
+      const zip = makeZip(files);
+      saveBlob(new Blob([zip], { type: 'application/zip' }), exportFileName(name, state.size, `map-${block}x${block}-${s.mm / 10}cm.zip`));
+      msg.textContent = t.seriesAllSaved(num(squares.length), num(zip.byteLength / 1048576, zip.byteLength < 10485760 ? 1 : 0));
+    } catch (err) {
+      console.error(err);
+      msg.textContent = t.printFailed;
+    } finally {
+      allBtn.disabled = startBtn.disabled = false;
+    }
+  });
+  $('series-stop').addEventListener('click', () => {
+    state.series = null;
+    syncControls();
+    syncSeries();
+    writeHash();
+    msg.textContent = t.seriesLeft;
+  });
   /**
    * The print's terrain and roads, as ticked: water sunk, parks and woods raised (where the square
    * has them), raised roads. `done` lists what was changed, for the message and the tiles' note.
    */
-  const printLayers = (totalMm: number) => {
-    const m = model!;
+  const printLayers = (totalMm: number, m: CityModel = model!) => {
     const metres = (mm: number) => depthInMetres(mm, totalMm, state.size, state.exaggeration);
-    let grid = m.grid;
+    // a square of a bigger map measures from the map's base, so the pieces meet at the seams
+    const series = state.series;
+    let grid = series ? withReference(m.grid, series.ref) : m.grid;
     const done = { water: false, green: false, roads: false };
     const water = $<HTMLInputElement>('print-water').checked ? m.printWater() : null;
     if (water) {
@@ -827,6 +1033,7 @@ function bindShare(): void {
       done.water ? t.waterSunk(num(WATER_DEPTH_MM)) : '',
       done.green ? t.greenRaised(num(GREEN_RAISE_MM, 1)) : '',
       done.roads ? t.roadsRaised(num(ROAD_RAISE_MM, 1)) : '',
+      series && m.grid.min < series.ref ? t.seriesClamped : '',
     ].join('');
     return { grid, roads, done, note };
   };
@@ -854,6 +1061,7 @@ function bindShare(): void {
     if (!titleInput.value.trim() || titleInput.value === autoTitle) titleInput.value = place;
     autoTitle = place;
     titleInput.placeholder = place;
+    syncSeries();
     dialog.showModal();
   });
 
@@ -913,12 +1121,12 @@ function bindShare(): void {
       }
       const scale = printScale(state.size, printMm);
       const terrain = printLayers(printMm);
-      const tris = buildPrint(terrain.grid, model.printBuildings(), { sideMm: printMm, baseMm: PRINT_BASE_MM, exaggeration: state.exaggeration }, terrain.roads);
+      const tris = buildPrint(terrain.grid, model.printBuildings(state.series?.ref), { sideMm: printMm, baseMm: PRINT_BASE_MM, exaggeration: state.exaggeration }, terrain.roads);
       const brokenBuildings = tris.skipped;
       // the title in raised letters on a strip in front of the model
       const label = $<HTMLInputElement>('print-ledge').checked ? addLabel(tris, await loadGlyphs(), [name, subtitle()], printMm, PRINT_BASE_MM) : null;
-      const stl = toBinaryStl(tris, `${name}, ${state.size / 1000} km, ${scale}, terrain x${state.exaggeration.toFixed(1)}`);
-      saveBlob(new Blob([stl], { type: 'model/stl' }), exportFileName(name, state.size, `${printMm / 10}cm.stl`));
+      const stl = toBinaryStl(tris, `${name}, ${seriesHeader()}${state.size / 1000} km, ${scale}, terrain x${state.exaggeration.toFixed(1)}`);
+      saveBlob(new Blob([stl], { type: 'model/stl' }), exportFileName(name, state.size, `${seriesPart()}${printMm / 10}cm.stl`));
       const mb = num(stl.byteLength / 1048576, stl.byteLength < 10485760 ? 1 : 0);
       const depth = label ? Math.round(label.depthMm) : 0;
       const cm = num(printMm / 10);
@@ -941,10 +1149,10 @@ function bindShare(): void {
     const totalMm = printMm * n;
     const scale = printScale(state.size, totalMm);
     const terrain = printLayers(totalMm);
-    const tiles = buildTiledPrint(terrain.grid, model.printBuildings(), { sideMm: printMm, baseMm: PRINT_BASE_MM, exaggeration: state.exaggeration, tiles: n }, terrain.roads);
+    const tiles = buildTiledPrint(terrain.grid, model.printBuildings(state.series?.ref), { sideMm: printMm, baseMm: PRINT_BASE_MM, exaggeration: state.exaggeration, tiles: n }, terrain.roads);
     const files: ZipEntry[] = tiles.map((t) => ({
       name: `tile-${t.name}.stl`,
-      data: new Uint8Array(toBinaryStl(t.tris, `${name}, tile ${t.name} of ${n}x${n}, ${scale}`)),
+      data: new Uint8Array(toBinaryStl(t.tris, `${name}, ${seriesHeader()}tile ${t.name} of ${n}x${n}, ${scale}`)),
     }));
     // the most a building was left out in any one tile (one building can be cut into several)
     const broken = Math.max(0, ...tiles.map((t) => t.tris.skipped));
@@ -961,6 +1169,7 @@ function bindShare(): void {
       '',
       t.readmeGrid,
       t.readmeCorners(last),
+      state.series ? t.readmeSeries(squareLabel(state.series.i, state.series.j)) : '',
       label ? t.readmeStrip : '',
       terrain.done.water ? t.readmeWater(num(WATER_DEPTH_MM)) : '',
       terrain.done.green ? t.readmeGreen(num(GREEN_RAISE_MM, 1)) : '',
@@ -970,7 +1179,7 @@ function bindShare(): void {
     ].filter((l, i, a) => l || a[i - 1]).join('\n');
     files.push({ name: 'README.txt', data: new TextEncoder().encode(readme) });
     const zip = makeZip(files);
-    saveBlob(new Blob([zip], { type: 'application/zip' }), exportFileName(name, state.size, `${n}x${n}-tiles-${printMm / 10}cm.zip`));
+    saveBlob(new Blob([zip], { type: 'application/zip' }), exportFileName(name, state.size, `${seriesPart()}${n}x${n}-tiles-${printMm / 10}cm.zip`));
     const triangles = tiles.reduce((s, t) => s + t.tris.count, 0);
     const mb = num(zip.byteLength / 1048576, zip.byteLength < 10485760 ? 1 : 0);
     const left = broken ? t.brokenInTile : '';
