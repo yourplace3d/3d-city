@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.0 — 2026-11-07
+
+- No printer? "Order a print online" in the share menu saves the 3D print file and points to independent print services: Craftcloud, which compares many services, and JLC3DP, which is often the cheapest. You order and pay them directly; Your Place earns nothing from it.
+- A "Where to print" section on the How it works page: a friend's printer, a makerspace or library, a local print shop, or online, and what the price depends on.
+- Printed one? Share a photo in Show and tell on GitHub.
+
 ## 1.7.0 — 2026-11-06
 
 - Your Place in Spanish, for Latin America and Spain, with Mexico's way of writing numbers (1.5 × 1.5 km). It follows the browser's language, or pick Español in the settings.

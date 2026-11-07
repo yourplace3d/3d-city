@@ -1060,6 +1060,11 @@ input[type='range'] {
   margin-top: 2px;
 }
 
+.order-note .order-show {
+  margin: 8px 0 0;
+  font-weight: 600;
+}
+
 .title-fields {
   display: grid;
   gap: 8px;

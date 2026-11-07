@@ -183,6 +183,7 @@ export const en = {
   orderCraftcloud: 'compares many print services',
   orderJlc: 'often cheapest, ships from China',
   orderMore: 'Makerspaces, print shops and tips',
+  orderShow: 'Printed one? Show us your print',
   stlTilesButton: 'Download 3D print tiles (ZIP of STL files)',
   stillLoading: 'Still loading the buildings — try again in a moment.',
   buildingPrint: 'Building the 3D print file…',

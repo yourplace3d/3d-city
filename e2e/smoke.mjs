@@ -402,7 +402,7 @@ try {
   const [orderDl] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.click('#order-btn')]);
   const services = await page.$$eval('#order-note a', (as) => as.map((a) => ({ href: a.getAttribute('href'), rel: a.rel, target: a.target })));
   expect(
-    /\.stl$/.test(orderDl.suggestedFilename()) && (await page.isVisible('#order-note')) && services.length === 3 && services.slice(0, 2).every((a) => /^https:\/\//.test(a.href) && a.rel === 'noopener' && a.target === '_blank'),
+    /\.stl$/.test(orderDl.suggestedFilename()) && (await page.isVisible('#order-note')) && services.length === 4 && /show-and-tell/.test(services[3].href) && services.slice(0, 2).every((a) => /^https:\/\//.test(a.href) && a.rel === 'noopener' && a.target === '_blank'),
     `“Order a print online” saves the file and lists independent services (${services.map((a) => a.href).join(', ')})`,
   );
   expect(/earns nothing/.test(await page.textContent('#order-note')), 'the note says we earn nothing from the services');

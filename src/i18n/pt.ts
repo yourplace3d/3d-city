@@ -178,6 +178,7 @@ export const pt: Messages = {
   orderCraftcloud: 'compara vários serviços de impressão',
   orderJlc: 'costuma ser o mais barato, envia da China',
   orderMore: 'Makerspaces, lojas de impressão 3D e dicas',
+  orderShow: 'Imprimiu? Mostre a sua impressão para a gente',
   stlTilesButton: 'Baixar peças para impressão 3D (ZIP de STLs)',
   stillLoading: 'Os prédios ainda estão carregando — tente de novo daqui a pouco.',
   buildingPrint: 'Gerando o arquivo para impressão 3D…',
