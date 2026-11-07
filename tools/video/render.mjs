@@ -22,7 +22,10 @@ const END_S = 3.2;
 // Another set of places (a city video for its own subreddit, say) comes in as JSON through
 // VIDEO_SCENES, in the same shape; VIDEO_END replaces the end card's two text lines. A scene may set
 // `az` (the camera's sweep) and `tilt` (degrees from straight down, at the start and the end: lower
-// shows the street plan more from above) and `seconds` (how long it lasts).
+// shows the street plan more from above) and `seconds` (how long it lasts). For a flyover instead of a
+// turn, `dist` sets the camera's distance at the start and the end (as a share of the whole-model
+// view, so 0.2 is five times closer) and `path` moves the point it looks at: [[E, N], [E, N]] in
+// metres from the centre.
 // A quiz ("which city?"): VIDEO_END with "quiz": true hides the brand, the address and the app's end
 // card (the end card shows only its two lines), and the model is centred; give scenes empty lines and place.
 const DEFAULT_SCENES = [
@@ -174,11 +177,13 @@ for (const fmt of FORMATS) {
       const az = az0 + (az1 - az0) * t;
       const [t0, t1] = scene.tilt ?? DEFAULT_TILT;
       const tilt = t0 + (t1 - t0) * t;
-      const distance = d0 * (fmt.key === 'wide' ? 1.0 - 0.14 * t : 0.88 - 0.2 * t);
+      const [k0, k1] = scene.dist ?? (fmt.key === 'wide' ? [1.0, 0.86] : [0.88, 0.68]);
+      const distance = d0 * (k0 + (k1 - k0) * t);
+      const [[e0, n0], [e1, n1]] = scene.path ?? [[0, 0], [0, 0]];
       // wide: keep the model right of centre, clear of the caption (move the target to the screen's left)
       const shift = fmt.key === 'wide' && !QUIZ ? distance * 0.2 : 0;
       const r = (az * Math.PI) / 180;
-      const cam = { azimuth: az, tilt, distance, targetE: -shift * Math.cos(r), targetN: -shift * Math.sin(r) };
+      const cam = { azimuth: az, tilt, distance, targetE: e0 + (e1 - e0) * t - shift * Math.cos(r), targetN: n0 + (n1 - n0) * t - shift * Math.sin(r) };
       const dipIn = si === 0 ? 1 - s / (DIP_S * 1.6) : 1 - s / DIP_S;
       const dipOut = (s - (sceneS - DIP_S)) / DIP_S;
       const dip = Math.max(0, Math.min(1, Math.max(dipIn, dipOut)));
