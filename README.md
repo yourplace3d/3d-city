@@ -151,9 +151,11 @@ Design notes:
 
 ## Privacy
 
-No account, no cookies, no analytics, no server of its own. What you type in the search box goes from
-your browser to Photon or Nominatim; share links hold only coordinates and the view; map data you
-loaded is cached on your device.
+No account, no cookies, no analytics. What you type in the search box goes from your browser to
+Photon or Nominatim; share links hold only coordinates and the view; map data you loaded is cached on
+your device. The one exception is optional: pressing "Yes, I'm printing it" after "Order a print
+online" sends the print size and number of tiles, and nothing else, to a small counter
+(server/print-count) that adds one to a total.
 
 ## Known limitations
 

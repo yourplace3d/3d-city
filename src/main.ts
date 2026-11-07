@@ -22,6 +22,12 @@ import { area, direction, distance, num, scale as localScale, t, translatePage }
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
+/**
+ * The optional print counter (server/print-count): one anonymous count with the print size, sent
+ * only when someone presses "Yes, I'm printing it" after "Order a print online". Nothing else.
+ */
+const PRINT_COUNT_URL = 'https://count.yourplace3d.com/print.php';
+
 const PRESETS: Array<{ name: string; detail: string; center: LngLat; size: AreaSize; ex: number }> = [
   { name: 'Stuttgart', detail: t.presets.stuttgart, center: { lat: 48.7765, lon: 9.1772 }, size: 4000, ex: 2 },
   { name: 'Heidelberg', detail: t.presets.heidelberg, center: { lat: 49.4106, lon: 8.7065 }, size: 2000, ex: 1.5 },
@@ -898,6 +904,18 @@ function bindShare(): void {
   $('order-btn').addEventListener('click', () => {
     $('order-note').hidden = false;
     $('stl-btn').click();
+  });
+  // "Yes, I'm printing it": the only thing the app ever counts, and only when pressed
+  const yes = $<HTMLButtonElement>('order-yes');
+  yes.addEventListener('click', () => {
+    if (yes.disabled) return;
+    try {
+      navigator.sendBeacon?.(PRINT_COUNT_URL, JSON.stringify({ size: printMm / 10, tiles: printTiles }));
+    } catch {
+      /* the count is a bonus: never let it get in the way */
+    }
+    yes.disabled = true;
+    $('order-thanks').hidden = false;
   });
 
   // 3D print: terrain block + buildings as one watertight STL, in millimetres

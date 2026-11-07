@@ -399,13 +399,29 @@ try {
   expect(/Water sunk 1 mm\./.test(await page.textContent('#share-msg')), 'the river in the test city is sunk 1 mm in the print');
   // no printer: the same file is saved, and the dialog points to independent print services
   expect(!(await page.isVisible('#order-note')), 'the print services stay hidden until asked for');
+  // the one optional count: recorded here instead of reaching the real counter
+  const beacons = [];
+  await page.route(/count\.yourplace3d\.com/, (r) => {
+    beacons.push(r.request().postData() ?? '');
+    return r.fulfill({ status: 204, body: '' });
+  });
   const [orderDl] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.click('#order-btn')]);
   const services = await page.$$eval('#order-note a', (as) => as.map((a) => ({ href: a.getAttribute('href'), rel: a.rel, target: a.target })));
   expect(
-    /\.stl$/.test(orderDl.suggestedFilename()) && (await page.isVisible('#order-note')) && services.length === 4 && /show-and-tell/.test(services[3].href) && services.slice(0, 2).every((a) => /^https:\/\//.test(a.href) && a.rel === 'noopener' && a.target === '_blank'),
+    /\.stl$/.test(orderDl.suggestedFilename()) && (await page.isVisible('#order-note')) && services.length === 3 && services.slice(0, 2).every((a) => /^https:\/\//.test(a.href) && a.rel === 'noopener' && a.target === '_blank'),
     `“Order a print online” saves the file and lists independent services (${services.map((a) => a.href).join(', ')})`,
   );
   expect(/earns nothing/.test(await page.textContent('#order-note')), 'the note says we earn nothing from the services');
+  await page.waitForTimeout(500);
+  expect(beacons.length === 0, 'ordering a print sends nothing on its own');
+  await page.click('#order-yes');
+  await page.waitForFunction(() => !document.getElementById('order-thanks').hidden, null, { timeout: 5000 }).catch(() => undefined);
+  await page.waitForTimeout(800);
+  const sent = beacons.map((b) => { try { return JSON.parse(b); } catch { return b; } });
+  expect(
+    sent.length === 1 && JSON.stringify(sent[0]) === JSON.stringify({ size: 10, tiles: 1 }) && (await page.isDisabled('#order-yes')),
+    `“Yes, I'm printing it” sends one count with only the print size, once (${beacons.join(' | ') || 'nothing sent'})`,
+  );
   // your own title and a second line make the ledge deeper and name the file
   await page.fill('#print-title', 'Our first home');
   await page.fill('#print-subtitle', 'Where we met · June 2019');

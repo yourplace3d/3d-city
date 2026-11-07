@@ -1060,9 +1060,39 @@ input[type='range'] {
   margin-top: 2px;
 }
 
-.order-note .order-show {
-  margin: 8px 0 0;
+.order-ask {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.order-ask p,
+.order-ask small {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.order-ask small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.order-ask .btn {
+  min-height: 36px;
+  padding: 6px 12px;
+}
+
+.order-thanks {
+  color: var(--ok);
   font-weight: 600;
+}
+
+.order-photo {
+  margin: 10px 0 0;
 }
 
 .title-fields {

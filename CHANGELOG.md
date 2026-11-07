@@ -4,7 +4,7 @@
 
 - No printer? "Order a print online" in the share menu saves the 3D print file and points to independent print services: Craftcloud, which compares many services, and JLC3DP, which is often the cheapest. You order and pay them directly; Your Place earns nothing from it.
 - A "Where to print" section on the How it works page: a friend's printer, a makerspace or library, a local print shop, or online, and what the price depends on.
-- Printed one? Share a photo in Show and tell on GitHub.
+- Are you printing it? After "Order a print online" you can tell us with one tap. It sends one anonymous count with the print size and nothing else, and nothing at all unless you press it. Photos are welcome with #yourplace3d.
 
 ## 1.7.0 — 2026-11-06
 
