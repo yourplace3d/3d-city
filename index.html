@@ -255,6 +255,15 @@
               <label class="check"><input type="checkbox" id="print-green" /> <span data-t="raiseGreen">Raise parks and woods 0.6 mm</span></label>
             </fieldset>
             <button type="button" class="btn btn-wide" id="stl-btn" data-t="stlButton">Download 3D print file (STL)</button>
+            <button type="button" class="btn btn-wide btn-plain" id="order-btn" data-t="orderPrint">No printer? Order a print online</button>
+            <div class="order-note" id="order-note" hidden>
+              <p data-t="orderNote">Your file is being saved. Upload it to one of these independent print services to see the price and order. You pay them directly; Your Place earns nothing.</p>
+              <ul>
+                <li><a href="https://craftcloud3d.com/" target="_blank" rel="noopener">Craftcloud</a> · <span data-t="orderCraftcloud">compares many print services</span></li>
+                <li><a href="https://jlc3dp.com/" target="_blank" rel="noopener">JLC3DP</a> · <span data-t="orderJlc">often cheapest, ships from China</span></li>
+                <li><a href="./about/#where-to-print" data-t="orderMore">Makerspaces, print shops and tips</a></li>
+              </ul>
+            </div>
           </div>
           <p class="dialog-note" id="share-msg" role="status" aria-live="polite"></p>
         </form>

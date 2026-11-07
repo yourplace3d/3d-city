@@ -397,6 +397,15 @@ try {
   );
   expect(/^Saved: 10 × 1\d(\.\d)? cm with the title strip at 1:20,000/.test(await page.textContent('#share-msg')), 'the dialog confirms the print file and its ledge');
   expect(/Water sunk 1 mm\./.test(await page.textContent('#share-msg')), 'the river in the test city is sunk 1 mm in the print');
+  // no printer: the same file is saved, and the dialog points to independent print services
+  expect(!(await page.isVisible('#order-note')), 'the print services stay hidden until asked for');
+  const [orderDl] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.click('#order-btn')]);
+  const services = await page.$$eval('#order-note a', (as) => as.map((a) => ({ href: a.getAttribute('href'), rel: a.rel, target: a.target })));
+  expect(
+    /\.stl$/.test(orderDl.suggestedFilename()) && (await page.isVisible('#order-note')) && services.length === 3 && services.slice(0, 2).every((a) => /^https:\/\//.test(a.href) && a.rel === 'noopener' && a.target === '_blank'),
+    `“Order a print online” saves the file and lists independent services (${services.map((a) => a.href).join(', ')})`,
+  );
+  expect(/earns nothing/.test(await page.textContent('#order-note')), 'the note says we earn nothing from the services');
   // your own title and a second line make the ledge deeper and name the file
   await page.fill('#print-title', 'Our first home');
   await page.fill('#print-subtitle', 'Where we met · June 2019');

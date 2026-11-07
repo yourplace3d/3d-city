@@ -1031,6 +1031,35 @@ input[type='range'] {
   width: 100%;
 }
 
+/* a quieter second choice under a main button */
+.btn-plain {
+  margin-top: 8px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--accent-text);
+}
+
+.order-note {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-sunk);
+  font-size: 14px;
+}
+
+.order-note p {
+  margin: 0 0 6px;
+}
+
+.order-note ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.order-note li + li {
+  margin-top: 2px;
+}
+
 .title-fields {
   display: grid;
   gap: 8px;

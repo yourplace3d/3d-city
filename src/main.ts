@@ -894,6 +894,12 @@ function bindShare(): void {
     }
   });
 
+  // no printer: save the file the same way, and point to independent print services (we earn nothing)
+  $('order-btn').addEventListener('click', () => {
+    $('order-note').hidden = false;
+    $('stl-btn').click();
+  });
+
   // 3D print: terrain block + buildings as one watertight STL, in millimetres
   const stlBtn = $<HTMLButtonElement>('stl-btn');
   stlBtn.addEventListener('click', async () => {
