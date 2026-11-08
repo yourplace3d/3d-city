@@ -4,6 +4,7 @@
 
 - Flyover video: a 12-second upright MP4 that flies low along a diagonal of the square, north-east or north-west, with your title at the end. Made on your device, frame by frame, so it stays smooth on slow phones, and nothing is uploaded. Needs a recent Chrome, Edge, Safari or desktop Firefox.
 - The poster's small line (coordinates, area, terrain) can be replaced with your own text or left empty, like the title.
+- Sunken roads for 3D prints: roads, paths and railways can be cut 0.6 mm into the ground instead of standing 0.4 mm above it, with sharp edges to paint along or fill. Bridges stay raised. Suggested on Reddit.
 
 ## 1.7.0 — 2026-11-06
 
