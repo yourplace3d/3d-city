@@ -1218,3 +1218,81 @@ input[type='range'] {
   font-size: 13px;
   color: var(--muted);
 }
+
+/* ------------------------------------------------------------------ a route (GPX, TCX) */
+
+.welcome-route {
+  margin: 16px 0 0;
+  font-size: 14px;
+}
+
+.link-btn {
+  appearance: none;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  color: var(--text);
+}
+
+.route-note {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.route-loaded {
+  display: grid;
+  gap: 8px;
+}
+
+.route-name {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.route-stretch .control-label {
+  margin: 4px 0 2px;
+  font-weight: 500;
+  font-size: 13.5px;
+}
+
+.route-play-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.route-play-row .btn {
+  min-width: 96px;
+}
+
+.route-clock {
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.check small {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+#route-trim-row,
+#share-route-row {
+  align-items: flex-start;
+}
+
+#route-trim-row input,
+#share-route-row input {
+  margin-top: 2px;
+  flex: none;
+}

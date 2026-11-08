@@ -8,6 +8,7 @@ import { CanvasTexture, LinearMipmapLinearFilter, SRGBColorSpace } from 'three';
 import type { AreaFeature, AreaKind, FeatureSet, LineFeature, LineKind } from '../geo/osm';
 import type { SeaMask } from '../geo/sea';
 import type { Layers } from '../state';
+import type { GroundPainter } from '../data/types';
 
 export const PALETTE = {
   ground: '#ebe6dc',
@@ -52,6 +53,8 @@ export class Overlay {
   readonly canvas: HTMLCanvasElement;
   readonly texture: CanvasTexture;
   private seaLayer: HTMLCanvasElement | null = null;
+  /** data layers painted on top of the map (a route), in local metres */
+  painters: GroundPainter[] = [];
 
   constructor(readonly px: number) {
     this.canvas = document.createElement('canvas');
@@ -96,6 +99,7 @@ export class Overlay {
     ctx.fillStyle = PALETTE.ground;
     ctx.fillRect(0, 0, W, W);
     if (!features) {
+      this.paintData(ctx, sizeM);
       ctx.restore();
       this.texture.needsUpdate = true;
       return;
@@ -157,8 +161,20 @@ export class Overlay {
       ctx.strokeStyle = PALETTE.rail;
       for (const l of features.lines) if (l.kind === 'rail') strokeLine(ctx, l, Math.max(l.widthM * 0.6, minW));
     }
+    this.paintData(ctx, sizeM);
     ctx.restore();
     this.texture.needsUpdate = true;
+  }
+
+  /** Data layers over the map, with the canvas in local metres (north up). */
+  private paintData(ctx: CanvasRenderingContext2D, sizeM: number): void {
+    if (!this.painters.length) return;
+    const s = this.px / sizeM;
+    const h = sizeM / 2;
+    ctx.save();
+    ctx.setTransform(s, 0, 0, -s, h * s, h * s);
+    for (const paint of this.painters) paint(ctx, sizeM);
+    ctx.restore();
   }
 
   dispose(): void {

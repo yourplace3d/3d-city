@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased (2.0)
+
+- Routes on the model: load a GPX or TCX file (Strava, Garmin, a race website) from the start page, the settings or by dropping it on the page. A course longer than the model shows the stretch you pick, the finish first; the line runs on the terrain with start, finish and km markers, and a replay moves along it at the recorded pace with the race clock. Hide the first and last 500 m where a run from home starts and ends. The file is read in the browser and never uploaded or stored; share links include the route only if you tick that. Suggested on Reddit.
+- The first overlay of the new data-layer engine (`src/data/`): sources, matching to the model, time and playback, and displays, ready for more open data.
+
 ## 1.7.0 — 2026-11-06
 
 - Your Place in Spanish, for Latin America and Spain, with Mexico's way of writing numbers (1.5 × 1.5 km). It follows the browser's language, or pick Español in the settings.

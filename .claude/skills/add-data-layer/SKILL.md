@@ -1,0 +1,96 @@
+---
+name: add-data-layer
+description: Step-by-step guide to plugging a new data set (a file the user picks, a file we host, or a live API) into Your Place's data-layer engine as an overlay on the 3D model. Use when adding traffic, noise, energy, routes or any other open data on top of the model.
+---
+
+# Add a data layer to Your Place
+
+The engine lives in `src/data/`. Every overlay goes through the same four parts:
+
+| Part | Folder | Job |
+| --- | --- | --- |
+| Source | `src/data/sources/` | Read the data into lon/lat (+ time). Pure parsing, no DOM, so Node tests can run it. |
+| Match | `src/data/match/` | Place it in the model's local metres (E, N from the square's centre). |
+| Time | `src/data/time/` | A position or value per moment, and `Playback` (0 → 1 over a set time). |
+| Display | `src/data/display/` | Draw it: a `ModelOverlay` (ground paint and/or 3D objects). |
+
+The contracts are in `src/data/types.ts`. The worked example is the route layer: `sources/trackFile.ts`
+(GPX/TCX), `sources/routeLink.ts` (opt-in share link), `match/route.ts`, `time/playback.ts`,
+`display/route.ts`, wired up by `src/ui/route.ts`.
+
+## 1. Check the source first
+
+Write down, before any code:
+
+- **Licence and attribution text.** Open data only. Note the exact credit line the licence asks for.
+- **Format and size** for one model square (up to 4 × 4 km). Is it one request, or a large file we'd have to cut down?
+- **Coverage** (one city, one country, the world) and **update rhythm** (live, daily, yearly).
+- **CORS:** can a browser on `yourplace3d.github.io` read it directly? The app has no server. If not, the data has to be
+  prepared ahead of time and hosted as a static file (a separate public data repo with a scheduled job; ask first).
+- **Cost:** ask before anything that needs an account, a key or money.
+
+The sandbox blocks many hosts. If a source is blocked, say so and test with a fixture; the user can check real data
+through a preview build (`npm run build`, then `npx vite preview --host 0.0.0.0 --port 4173 --strictPort`).
+
+## 2. Source adapter (`src/data/sources/<name>.ts`)
+
+- Split **fetching** (takes an `AbortSignal`; `loadPlace` aborts when the user moves on) from **parsing** (a pure function from text/JSON to lon/lat records).
+- Parse defensively: skip bad values, cap sizes, throw a typed error with a reason the UI can explain.
+- Export an `Attribution` (`src/data/types.ts`) for third-party data. The user's own data has none.
+- Coverage: export a `covers(bbox)` check so the UI only offers the layer where it has data.
+
+## 3. Matching (`src/data/match/<name>.ts`)
+
+- Local metres: `makeProjector(center).toLocal(lon, lat)` (`src/geo/projection.ts`) or `toLocal(points, center)` from `match/route.ts`.
+- Heights on the model: `ModelSurface.groundY(e, n)` (the `CityModel` implements it), never your own terrain sampling.
+- Distances: `distanceM` from `match/route.ts` (WGS84 metres per degree; a sphere is 0.3 % off east–west).
+- Drop or clip what falls outside the square (`|e|, |n| <= sizeM / 2`).
+
+## 4. Time (`src/data/time/playback.ts`)
+
+- One `Playback` per layer; drive it from `viewer.onFrame((dt) => playback.advance(dt) && viewer.requestRender())`.
+  The viewer only draws frames when asked, so a paused layer costs nothing.
+- Never start playing by itself. With `prefers-reduced-motion`, show a still and a control.
+- Put values on fixed steps (24 hours, 96 quarter hours) in typed arrays; interpolate between steps when drawing.
+
+## 5. Display (`src/data/display/<name>.ts`)
+
+Implement `ModelOverlay`:
+
+- `paint(ctx, sizeM)`: draws into the ground texture in local metres, north up, after roads/water/green. Glued to the
+  terrain at any exaggeration, costs no triangles. **Static only:** repainting the 4096 px texture every frame is too
+  slow on phones. Call `model.repaint()` when what it draws changes.
+- `object`: 3D things (labels, columns, a moving marker), added to the model's group.
+- `place(surface)`: stand the 3D objects on the terrain; called when added and whenever the exaggeration changes.
+- `dispose()`: free geometries, materials and textures.
+
+For animation, change 3D objects or shader uniforms per frame (e.g. column heights, a texture of all time steps
+sampled by a `time` uniform), not the ground canvas. Labels: sprites with `sizeAttenuation: false` keep their
+size on screen; see `makeLabel` and `declutter` in `display/route.ts`. Must stay smooth on phones.
+
+## 6. Wire it into the app
+
+- A controller in `src/ui/<name>.ts` (see `RouteController`): owns the layer's state and its panel, and
+  `attach(model, center)` puts a fresh display on each new `CityModel`. `src/main.ts` calls it in `loadPlace`
+  right after the model is made, and adds a `debug` hook for the e2e test.
+- Panel markup in `index.html` with `data-t` keys; every text in **all four** dictionaries (`src/i18n/en.ts`,
+  `es.ts`, `pt.ts`, `de.ts`). `tests/i18n.test.ts` fails if one is missing or still in English.
+- Credit third-party data in the app's attribution line and on the poster (`ATTRIBUTION_TEXT` in `src/ui/poster.ts`).
+- Share links (`src/state.ts`): only add a parameter when it's safe for anyone to see it.
+- Add a sentence to the accessible description (`describe()` in `src/main.ts`).
+
+## 7. Privacy checklist
+
+- The user's own files are read in the browser only: no upload, no storage. Reloading forgets them.
+- Don't send positions derived from the user's data to third parties (e.g. no reverse geocoding of a route).
+- Nothing personal in share links unless the user turns it on, and then the minimum (the route link has no times
+  or name).
+
+## 8. Tests
+
+- Unit tests in `tests/<name>.test.ts` (Vitest, Node): parsing with small inline fixtures, matching, time steps,
+  and anything the share link carries. `npm test`.
+- End-to-end: answer the source's host from a fixture with `context.route(...)` in `routeAll` (`e2e/smoke.mjs`),
+  add checks like `e2e/route-checks.mjs`, and call them from `smoke.mjs`. No real network in tests; fail on
+  console errors. `npm run e2e` (it builds first).
+- `npm run typecheck` before committing. All existing features must keep passing.

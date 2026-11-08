@@ -75,6 +75,8 @@ export class Viewer {
   private readonly pointersDown = new Set<number>();
   private tapStart: { id: number; x: number; y: number; t: number; slop: number } | null = null;
   private readonly doubleTapListeners = new Set<(x: number, y: number) => void>();
+  private readonly frameListeners = new Set<(dtMs: number) => void>();
+  private lastFrame = 0;
   private lastTap: { x: number; y: number; t: number } | null = null;
   private reducedMotion = prefersReducedMotion();
   /** CSS px covered by UI on the left (desktop settings panel); the model is centred in the rest */
@@ -143,6 +145,15 @@ export class Viewer {
   onDoubleTap(fn: (x: number, y: number) => void): () => void {
     this.doubleTapListeners.add(fn);
     return () => this.doubleTapListeners.delete(fn);
+  }
+
+  /**
+   * Called on every animation frame with the time since the last one (ms), before drawing:
+   * for playback. Call requestRender() when something changed; frames are only drawn then.
+   */
+  onFrame(fn: (dtMs: number) => void): () => void {
+    this.frameListeners.add(fn);
+    return () => this.frameListeners.delete(fn);
   }
 
   /** What is under a point of the canvas (client coordinates). */
@@ -408,6 +419,9 @@ export class Viewer {
   }
 
   private tick(now: number): void {
+    const dt = this.lastFrame ? now - this.lastFrame : 0;
+    this.lastFrame = now;
+    this.frameListeners.forEach((fn) => fn(dt));
     if (this.animation) {
       const { from, to, start, ms } = this.animation;
       const k = Math.min(1, (now - start) / ms);

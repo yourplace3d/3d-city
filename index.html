@@ -107,6 +107,7 @@
         <p class="lede" data-t="welcomeLede">Your first home, where you met, the town you left. Type the address and get it as a model on its real terrain, every building standing on top. Share it, hang it as a poster, or 3D print it.</p>
         <p class="presets-label" data-t="presetsLabel">Or explore a place with dramatic terrain</p>
         <div class="presets" id="presets"></div>
+        <p class="welcome-route"><button type="button" class="link-btn" id="route-landing-btn" data-t="routeLanding">Or load a route: a run, a ride, a race (GPX or TCX)</button></p>
         <p class="welcome-more"><a href="./about/" data-t="aboutLink">How it works, 3D printing tips and data sources</a></p>
         <label class="lang"><span data-t="language">Language</span> <select class="lang-select"></select></label>
       </section>
@@ -190,6 +191,33 @@
             </div>
           </div>
 
+          <div class="control route-control" id="route-control">
+            <div class="control-label">
+              <span id="route-label" data-t="route">Route</span>
+              <small id="route-summary"></small>
+            </div>
+            <div id="route-empty">
+              <button type="button" class="btn btn-wide" id="route-load-btn" data-t="routeLoad">Load a GPX or TCX file</button>
+              <p class="route-note" data-t="routeLocal">The file stays on this device. It’s never uploaded.</p>
+            </div>
+            <div class="route-loaded" id="route-loaded" hidden>
+              <p class="route-name" id="route-name"></p>
+              <div class="route-play-row">
+                <button type="button" class="btn" id="route-play" aria-pressed="false" data-t="routePlay">Replay</button>
+                <output class="route-clock" id="route-clock"></output>
+              </div>
+              <div class="route-stretch" id="route-stretch">
+                <div class="control-label"><label for="route-from" data-t="routeFrom">From km</label><output id="route-from-out" for="route-from"></output></div>
+                <input type="range" id="route-from" min="0" max="1000" step="10" value="0" />
+                <div class="control-label"><label for="route-to" data-t="routeTo">To km</label><output id="route-to-out" for="route-to"></output></div>
+                <input type="range" id="route-to" min="0" max="1000" step="10" value="1000" />
+                <p class="route-note" data-t="routeFits">The model shows up to 4 × 4 km, so it follows the stretch you pick.</p>
+              </div>
+              <label class="check" id="route-trim-row"><input type="checkbox" id="route-trim" /> <span><span data-t="routeTrim">Hide the first and last 500 m</span><br /><small data-t="routeTrimNote">where a run from home starts and ends</small></span></label>
+              <button type="button" class="btn btn-wide" id="route-remove" data-t="routeRemove">Remove route</button>
+            </div>
+          </div>
+
           <div class="about">
             <p id="gesture-hint" class="gesture-hint"></p>
             <p id="describe" class="describe"></p>
@@ -220,6 +248,7 @@
             <input id="share-url" type="text" readonly aria-label="Share link" data-t-attr="aria-label:shareLink" />
             <button type="button" class="btn" id="copy-btn" data-t="copyLink">Copy link</button>
           </div>
+          <label class="check" id="share-route-row" hidden><input type="checkbox" id="share-route" /> <span><span data-t="shareRoute">Include the route in the link</span><br /><small data-t="shareRouteNote">Off unless you turn it on: a route can show where someone lives.</small></span></label>
           <button type="button" class="btn btn-wide" id="native-share-btn" data-t="shareNative" hidden>Share…</button>
           <div class="title-fields">
             <div class="field">
@@ -261,6 +290,8 @@
       </dialog>
 
       <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+      <!-- a route file is read in the browser only; no accept filter, as iOS greys out .gpx files with one -->
+      <input type="file" id="route-file" hidden />
 
       <div class="unsupported" id="unsupported" hidden>
         <h1 data-t="unsupportedTitle">This browser can’t show the 3D model</h1>

@@ -28,6 +28,7 @@ import type { PrintRoad } from '../export/roads';
 import { areaMask, waterMask } from '../export/water';
 import { Overlay } from './overlay';
 import { TerrainModel } from './terrainMesh';
+import type { ModelOverlay, ModelSurface } from '../data/types';
 
 export interface ModelStats {
   minElev: number;
@@ -53,7 +54,7 @@ const WATER_LINES = new Set(['river', 'canal', 'stream']);
 /** Buildings up to this size (m) get the pin in their middle; bigger ones where they were tapped. */
 const PIN_MIDDLE_MAX_M = 40;
 
-export class CityModel {
+export class CityModel implements ModelSurface {
   readonly group = new Group();
   readonly uniforms: ElevationUniforms = makeElevationUniforms();
   readonly contour: IUniform<number> = { value: 0 };
@@ -76,6 +77,8 @@ export class CityModel {
   private style: BuildingStyle = 'white';
   private seaFraction = 0;
   private layers: Layers = { roads: true, water: true, green: true };
+  /** data layers on the model (a route): ground paint and 3D objects */
+  private readonly overlays: ModelOverlay[] = [];
 
   constructor(
     readonly grid: HeightGrid,
@@ -98,6 +101,40 @@ export class CityModel {
 
   get exaggeration(): number {
     return this.terrain.exaggeration;
+  }
+
+  /** Scene y of the ground at a point (metres E, N from the centre). */
+  groundY(e: number, n: number): number {
+    return this.terrain.y(sampleGrid(this.grid, e, n));
+  }
+
+  /** Put a data layer on the model; the model disposes it with itself unless it's removed first. */
+  addOverlay(o: ModelOverlay): void {
+    this.overlays.push(o);
+    if (o.object) this.group.add(o.object);
+    o.place?.(this);
+    this.repaint();
+  }
+
+  /** Take a data layer off and dispose it; `repaint: false` when another one is added right after. */
+  removeOverlay(o: ModelOverlay, repaint = true): void {
+    const i = this.overlays.indexOf(o);
+    if (i < 0) return;
+    this.overlays.splice(i, 1);
+    if (o.object) this.group.remove(o.object);
+    o.dispose?.();
+    if (repaint) this.repaint();
+  }
+
+  /** Paint the ground texture again, e.g. after a data layer changed what it draws. */
+  repaint(): void {
+    this.overlay.painters = this.overlays.flatMap((o) => (o.paint ? [o.paint] : []));
+    this.overlay.draw(this.features, this.grid.sizeM, this.layers);
+  }
+
+  /** Show or hide the pin (hidden on a route's square until the user places it). */
+  showPin(visible: boolean): void {
+    this.pin.visible = visible;
   }
 
   /** Top of the model at the centre (scene y), used to aim the camera. */
@@ -157,8 +194,8 @@ export class CityModel {
     this.refreshPin();
   }
 
-  pinInfo(): { e: number; n: number; buildings: number; marked: boolean } {
-    return { e: this.pinAt[0], n: this.pinAt[1], buildings: this.pinned.length, marked: this.markPinned && this.pinned.length > 0 };
+  pinInfo(): { e: number; n: number; buildings: number; marked: boolean; visible: boolean } {
+    return { e: this.pinAt[0], n: this.pinAt[1], buildings: this.pinned.length, marked: this.markPinned && this.pinned.length > 0, visible: this.pin.visible };
   }
 
   /** Grid points under water (lakes, rivers drawn as areas, the sea) for sunken water in prints; null if none. */
@@ -254,6 +291,7 @@ export class CityModel {
     this.terrain.setExaggeration(ex);
     if (this.buildings) setBuildingsExaggeration(this.buildings.build, ex, this.grid.min);
     this.placePin();
+    for (const o of this.overlays) o.place?.(this);
   }
 
   /**
@@ -415,6 +453,7 @@ export class CityModel {
   }
 
   dispose(): void {
+    for (const o of this.overlays.splice(0)) o.dispose?.();
     this.clearBuildings();
     this.terrain.dispose();
     this.overlay.dispose();

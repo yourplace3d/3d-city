@@ -18,6 +18,7 @@ import { exportFileName, makePoster, posterFileName } from './ui/poster';
 import { setupSearch } from './ui/search';
 import { NoticeView } from './ui/notice';
 import { StatusView } from './ui/status';
+import { RouteController } from './ui/route';
 import { area, direction, distance, num, scale as localScale, t, translatePage } from './i18n';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -48,6 +49,8 @@ let placeLabel = '';
 let placeNear = '';
 let loadToken = 0;
 let abort: AbortController | null = null;
+/** the square was built around a route's stretch (no searched point: the pin stays hidden until placed) */
+let routeSquare = false;
 const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#c8431a';
 
 const status = new StatusView($('status'));
@@ -68,6 +71,7 @@ const debug = {
   pick: (x: number, y: number) => viewer.pick(x, y),
   /** used by tools/video to drive the camera frame by frame */
   setCamera: (c: Parameters<Viewer['setCameraState']>[0]) => viewer.setCameraState(c),
+  route: () => route.debugInfo(),
 };
 (window as unknown as { __yourPlace: typeof debug }).__yourPlace = debug;
 
@@ -84,6 +88,29 @@ viewer.onCameraChange(() => {
   scheduleHashWrite();
 });
 viewer.onTap(movePinTo);
+const route = new RouteController({
+  viewer,
+  accent,
+  model: () => model,
+  open: (center, size, label, detail) => {
+    markOwnPlace();
+    routeSquare = true;
+    state.size = clampSize(size);
+    state.pin = null;
+    syncControls();
+    notice.hide();
+    void loadPlace(center, { label, detail });
+  },
+  changed: () => {
+    writeHash();
+    describe();
+    const url = $<HTMLInputElement>('share-url');
+    if ($<HTMLDialogElement>('share-dialog').open) url.value = location.href;
+    if (model) applyPin(model);
+    viewer.requestRender();
+  },
+  say: (message, ms) => toast(message, ms),
+});
 
 renderPresets();
 renderLegend();
@@ -116,6 +143,8 @@ const updateInsets = () => {
 new ResizeObserver(updateInsets).observe($('sheet'));
 wide.addEventListener('change', updateInsets);
 
+if (state.route && !route.openLink(state.route)) state.route = null;
+routeSquare = !!state.route;
 if (state.center) {
   void loadPlace(state.center, { camera: state.camera });
 } else {
@@ -125,13 +154,18 @@ if (state.center) {
 window.addEventListener('hashchange', () => {
   const next = decodeState(location.hash, state);
   if (!next.center) return;
+  // a pasted link with a route: show that one (the link without one keeps what's loaded)
+  const newRoute = !!next.route && next.route !== state.route && route.openLink(next.route);
+  if (newRoute) routeSquare = true;
   if (!samePlace(next.center, state.center) || next.size !== state.size) {
     state = next;
     syncControls();
     void loadPlace(next.center, { camera: next.camera });
-  } else if (!samePlace(next.pin, state.pin)) {
-    state.pin = next.pin;
+  } else {
+    if (newRoute && model && state.center) route.attach(model, state.center);
+    if (!samePlace(next.pin, state.pin)) state.pin = next.pin;
     if (model) applyPin(model);
+    describe();
     viewer.requestRender();
   }
 });
@@ -206,6 +240,7 @@ async function resolvePick(p: Place): Promise<Place> {
 
 async function openPlace(p: Place, opts: { size?: AreaSize; ex?: number } = {}): Promise<void> {
   markOwnPlace();
+  routeSquare = false;
   if (opts.size) state.size = opts.size;
   if (opts.ex) state.exaggeration = opts.ex;
   state.pin = null;
@@ -330,6 +365,7 @@ async function loadPlace(center: LngLat, opts: { label?: string; detail?: string
   next.setContours(state.contours);
   next.setStyle(state.style);
   next.setLayers(state.layers);
+  route.attach(next, center);
   applyPin(next);
   const old = model;
   model = next;
@@ -445,10 +481,15 @@ function applyPin(m: CityModel): void {
   if (state.pin && state.center) {
     const [e, n] = makeProjector(state.center).toLocal(state.pin.lon, state.pin.lat);
     const h = state.size / 2;
-    if (Math.abs(e) <= h && Math.abs(n) <= h) return m.setPin(e, n, true);
+    if (Math.abs(e) <= h && Math.abs(n) <= h) {
+      m.showPin(true);
+      return m.setPin(e, n, true);
+    }
     state.pin = null; // outside a smaller square
   }
   m.setPin(0, 0, false);
+  // a route's square has no searched point at its centre
+  m.showPin(!(routeSquare && route.active));
 }
 
 /** A click or tap on the model moves the pin there; share links carry it. */
@@ -457,6 +498,7 @@ function movePinTo(x: number, y: number): void {
   const hit = viewer.pick(x, y);
   if (!hit) return;
   model.setPin(hit.e, hit.n, true);
+  model.showPin(true);
   state.pin = makeProjector(state.center).toLngLat(hit.e, hit.n);
   viewer.requestRender();
   writeHash();
@@ -475,7 +517,7 @@ function centreOnPin(): void {
 
 function resetPin(): void {
   state.pin = null;
-  model?.setPin(0, 0, false);
+  if (model) applyPin(model);
   viewer.requestRender();
   writeHash();
 }
@@ -733,6 +775,8 @@ function describe(): void {
   if (model.hasBuildings) {
     lines.push(s.buildings ? t.buildingCount(num(s.buildings), num(Math.round(s.tallest))) : t.noBuildingsSquare);
   }
+  const routeLine = route.describe();
+  if (routeLine) lines.push(routeLine);
   $('describe').textContent = lines.join(' ');
   const note = $('estimate-note');
   if (model.hasBuildings && s.estimatedShare >= 0.05) {
@@ -758,6 +802,8 @@ function scheduleHashWrite(): void {
 function writeHash(): void {
   if (!state.center || !model) return;
   state.camera = viewer.getCameraState();
+  // the route goes into the link only when the user turned that on
+  state.route = route.linkCode();
   const h = encodeState(state);
   if (`#${h}` !== location.hash) history.replaceState(null, '', `#${h}`);
 }

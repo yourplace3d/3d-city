@@ -24,7 +24,7 @@ function texts(m: Messages): Map<string, string> {
 const SAME: Record<string, string[]> = {
   es: ['legendTop', 'legendTop#1', 'printSquare', 'printSquare#1'],
   pt: ['legendTop', 'legendTop#1', 'printSquare', 'printSquare#1'],
-  de: ['legendTop', 'legendTop#1', 'printSquare', 'printSquare#1', 'docTitle', 'docTitle#1', 'shareInApp', 'shareInApp#1', 'optional', 'style.sand'],
+  de: ['legendTop', 'legendTop#1', 'printSquare', 'printSquare#1', 'docTitle', 'docTitle#1', 'shareInApp', 'shareInApp#1', 'optional', 'style.sand', 'routeStart', 'routePause'],
 };
 
 describe('languages', () => {

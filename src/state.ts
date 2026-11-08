@@ -44,6 +44,11 @@ export interface ViewState {
   camera: CameraState | null;
   /** where the user put the pin ("this one is ours"); null = at the centre */
   pin: LngLat | null;
+  /**
+   * A route's stretch as a link code (src/data/sources/routeLink.ts). Only set when the user
+   * turned on "include the route in the link": a route can show where someone lives.
+   */
+  route: string | null;
 }
 
 export const DEFAULT_STATE: ViewState = {
@@ -55,6 +60,7 @@ export const DEFAULT_STATE: ViewState = {
   layers: { roads: true, water: true, green: true },
   camera: null,
   pin: null,
+  route: null,
 };
 
 export const EXAGGERATION_MIN = 1;
@@ -76,19 +82,20 @@ export function encodeState(s: ViewState): string {
     p.set('cam', [round(c.azimuth, 1), round(c.tilt, 1), Math.round(c.distance), Math.round(c.targetE), Math.round(c.targetN)].join(','));
   }
   if (s.pin) p.set('pin', `${round(s.pin.lat, 5).toFixed(5)},${round(s.pin.lon, 5).toFixed(5)}`);
+  if (s.route) p.set('rt', s.route);
   // commas are fine in a fragment and keep links readable
   return p.toString().replace(/%2C/g, ',');
 }
 
 export function decodeState(raw: string, base: ViewState = DEFAULT_STATE): ViewState {
   const p = new URLSearchParams(raw.replace(/^[#?]/, ''));
-  const s: ViewState = { ...base, layers: { ...base.layers }, camera: null, pin: null };
+  const s: ViewState = { ...base, layers: { ...base.layers }, camera: null, pin: null, route: null };
   const lat = Number(p.get('lat'));
   const lon = Number(p.get('lon'));
   if (p.has('lat') && p.has('lon') && validLatLon(lat, lon)) {
     s.center = { lat, lon };
   } else {
-    return { ...base, center: null, pin: null };
+    return { ...base, center: null, pin: null, route: null };
   }
   const km = Number(p.get('km'));
   if (p.has('km') && Number.isFinite(km) && km > 0) s.size = clampSize(km * 1000);
@@ -105,6 +112,8 @@ export function decodeState(raw: string, base: ViewState = DEFAULT_STATE): ViewS
   }
   const pin = p.get('pin')?.split(',').map(Number);
   if (pin && pin.length === 2 && validLatLon(pin[0], pin[1])) s.pin = { lat: pin[0], lon: pin[1] };
+  const rt = p.get('rt');
+  if (rt && /^[A-Za-z0-9_-]{6,12000}$/.test(rt)) s.route = rt;
   return s;
 }
 
