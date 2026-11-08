@@ -64,7 +64,7 @@ export class Overlay {
     this.texture.colorSpace = SRGBColorSpace;
     this.texture.minFilter = LinearMipmapLinearFilter;
     this.texture.generateMipmaps = true;
-    this.draw(null, 1000, { roads: true, water: true, green: true });
+    this.draw(null, 1000, { roads: true, water: true, green: true, steep: false });
   }
 
   /** Pre-render the sea mask once; draw() composites it under the water layer. */

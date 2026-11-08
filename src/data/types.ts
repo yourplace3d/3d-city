@@ -52,6 +52,8 @@ export interface ModelSurface {
 export interface ModelOverlay {
   /** drawn into the ground texture, on top of roads, water and green */
   paint?: GroundPainter;
+  /** painting order among data layers: higher is drawn on top (default 0) */
+  order?: number;
   /** 3D objects, added to the model */
   object?: Object3D;
   /** stand the 3D objects on the terrain again; called when added and whenever the terrain's height changes */

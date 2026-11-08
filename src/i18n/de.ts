@@ -123,7 +123,7 @@ export const de: Messages = {
   legendTop: (m) => `${m}+ m`,
   area: 'Gebiet',
   mapLayers: 'Kartenebenen',
-  layer: { roads: 'Straßen', water: 'Wasser', green: 'Grün' },
+  layer: { roads: 'Straßen', water: 'Wasser', green: 'Grün', steep: 'Steigung' },
   terrainTimes: (x) => `Gelände ×${x}`,
   attribution: 'Kartendaten © OpenStreetMap-Mitwirkende (ODbL), Kartenkacheln © OpenMapTiles über OpenFreeMap. Gelände: Mapzen, AWS Terrain Tiles.',
   footerContributors: 'Mitwirkende',
@@ -230,4 +230,16 @@ export const de: Messages = {
   routeDescribe: (name, km, from, to) => `Die Strecke „${name}“ führt durch das Modell: ${km} km davon, von km ${from} bis ${to}.`,
   shareRoute: 'Strecke in den Link aufnehmen',
   shareRouteNote: 'Aus, bis du es einschaltest: Eine Strecke kann zeigen, wo jemand wohnt.',
+
+  // Steigung von Straßen, Wegen und einer Strecke
+  steepRange: (lo, hi) => `${lo}–${hi} %`,
+  steepOver: (lo) => `über ${lo} %`,
+  steepNote: 'Straßen und Wege unter 3 % bleiben, wie sie sind. Geschätzt aus Geländedaten mit Punkten alle 10–30 m, kurze Rampen können also fehlen; Brücken sind ausgenommen.',
+  steepSummary: (over6, over10) => `Straßen und Wege steiler als 6 %: ${over6} km, steiler als 10 %: ${over10} km.`,
+  climbLabel: (pct, length) => `${pct} % · ${length}`,
+  profile: 'Höhenprofil',
+  profileSummary: (up, down) => `${up} m bergauf, ${down} m bergab`,
+  steepest: (pct, km) => `am steilsten ${pct} % bei km ${km}`,
+  profileAt: (km, m, pct) => `km ${km} · ${m} m · ${pct} %`,
+  profileLabel: (summary) => `Höhenprofil des Abschnitts: ${summary}.`,
 };

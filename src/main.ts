@@ -19,6 +19,7 @@ import { setupSearch } from './ui/search';
 import { NoticeView } from './ui/notice';
 import { StatusView } from './ui/status';
 import { RouteController } from './ui/route';
+import { SteepController } from './ui/steepness';
 import { area, direction, distance, num, scale as localScale, t, translatePage } from './i18n';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -72,6 +73,7 @@ const debug = {
   /** used by tools/video to drive the camera frame by frame */
   setCamera: (c: Parameters<Viewer['setCameraState']>[0]) => viewer.setCameraState(c),
   route: () => route.debugInfo(),
+  steep: () => steep.debugInfo(),
 };
 (window as unknown as { __yourPlace: typeof debug }).__yourPlace = debug;
 
@@ -88,10 +90,12 @@ viewer.onCameraChange(() => {
   scheduleHashWrite();
 });
 viewer.onTap(movePinTo);
+const steep = new SteepController({ viewer, model: () => model });
 const route = new RouteController({
   viewer,
   accent,
   model: () => model,
+  steep: () => steep.on,
   open: (center, size, label, detail) => {
     markOwnPlace();
     routeSquare = true;
@@ -143,6 +147,7 @@ const updateInsets = () => {
 new ResizeObserver(updateInsets).observe($('sheet'));
 wide.addEventListener('change', updateInsets);
 
+steep.set(state.layers.steep);
 if (state.route && !route.openLink(state.route)) state.route = null;
 routeSquare = !!state.route;
 if (state.center) {
@@ -383,6 +388,8 @@ async function loadPlace(center: LngLat, opts: { label?: string; detail?: string
     (apply) => {
       if (stale()) return;
       apply(next);
+      // the buildings can take roofs out of the terrain: measure steepness again
+      dataLayersChanged();
       viewer.requestRender();
       status.set('buildings', 'done');
       debug.timings.buildings = performance.now() - t0;
@@ -410,6 +417,8 @@ async function loadPlace(center: LngLat, opts: { label?: string; detail?: string
     (features) => {
       if (stale()) return;
       next.setFeatures(features);
+      // roads for steepness, bridges for the route
+      dataLayersChanged();
       updateContourNote();
       describe();
       viewer.retarget();
@@ -430,6 +439,12 @@ async function loadPlace(center: LngLat, opts: { label?: string; detail?: string
     showGestureTip();
     offerOwnPlace();
   }
+}
+
+/** The model's roads or terrain changed: steepness and the route measure again. */
+function dataLayersChanged(): void {
+  steep.refresh();
+  if (route.active) route.refresh();
 }
 
 // ------------------------------------------------------------------ shared links: "make one of your own"
@@ -663,6 +678,11 @@ function bindControls(): void {
       state.layers = { ...state.layers, [key]: !state.layers[key] };
       chip.setAttribute('aria-pressed', String(state.layers[key]));
       model?.setLayers(state.layers);
+      if (key === 'steep') {
+        steep.set(state.layers.steep);
+        if (route.active) route.refresh();
+        describe();
+      }
       viewer.requestRender();
       scheduleHashWrite();
     });
@@ -775,6 +795,8 @@ function describe(): void {
   if (model.hasBuildings) {
     lines.push(s.buildings ? t.buildingCount(num(s.buildings), num(Math.round(s.tallest))) : t.noBuildingsSquare);
   }
+  const steepLine = steep.describe();
+  if (steepLine) lines.push(steepLine);
   const routeLine = route.describe();
   if (routeLine) lines.push(routeLine);
   $('describe').textContent = lines.join(' ');

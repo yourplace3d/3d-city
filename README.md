@@ -23,8 +23,11 @@ works on your phone.**
   or double-tap / double-click a spot to load the area there in one go.
 - **In your language:** English, Spanish, Portuguese (Brazil) or German, from the browser's language or the picker in
   the settings. Share links carry no language, so each visitor sees their own.
+- **See where it gets steep:** colour roads and paths by how steep they are, anywhere, from the terrain the model
+  already has. Planning a run, a ride, a hike or a stroll? This is where it climbs.
 - **Show a route:** load a GPX or TCX file (Strava, Garmin, a race website) and pick the stretch to show; the
-  model follows it, with the line on the terrain, start, finish and km markers, and a replay at the recorded pace.
+  model follows it, with the line on the terrain, start, finish and km markers, a replay at the recorded pace,
+  and a height profile. With steepness on, the route takes its colours and its steepest climbs are labelled.
   The file is read in your browser and never uploaded.
 - **Share it:** the link opens the same view with the same house pinned. It holds coordinates only, never the address you typed.
 - **Keep it:** download a poster image with the place name and coordinates, or an STL file to 3D print
@@ -85,8 +88,8 @@ search ─▶ geocode (Photon / Nominatim)
 - `src/scene/` — rendering: terrain + plinth, merged building mesh, the draped map-layer texture,
   shader patches (contour lines, contact darkening), the viewer (camera, lights, controls, export).
 - `src/data/` — the data-layer engine for overlays on the model: sources (files, links, later live APIs),
-  matching to the model's local metres, time and playback, and displays (ground paint, 3D labels). The first
-  layer is a route from a GPX or TCX file.
+  matching to the model's local metres, time and playback, and displays (ground paint, 3D labels). The layers so
+  far: a route from a GPX or TCX file, and steepness of roads, paths and routes (derived from the terrain).
 - `src/ui/` — search combobox, loading status, poster composition, the route panel. `src/main.ts` wires it together.
 
 Design notes:
@@ -94,6 +97,10 @@ Design notes:
 - **Exaggeration applies to terrain only.** Each building vertex keeps its ground elevation and its
   height above ground, so moving the slider re-evaluates `y = (ground − ref) × ex + height` without
   rebuilding geometry; contour lines are computed per fragment from the real elevation.
+- **Steepness is measured over 60 m, not between neighbouring points.** The terrain data has points 10–30 m
+  apart; grades between neighbours would turn every wobble into a ramp. Runs shorter than 25 m join their
+  neighbours, bridges are left out (the terrain under them is the valley), and a route runs straight across
+  bridges. Steepness uses the real heights, whatever the exaggeration on screen.
 - **Map layers are a texture, not geometry.** Rasterising roads/water/green into one canvas keeps
   them glued to the terrain at any exaggeration and costs no triangles; toggling a layer is a redraw.
 - **The sea comes from coastlines, not elevation.** Terrain tiles report harbour water as ~0 m while
@@ -188,8 +195,9 @@ only the stretch shown, without times or a name.
 `npm test` covers projection, terrain decoding/resampling, polygon clipping and ring assembly,
 OSM parsing (multipolygons, courtyards, building parts, clipping), the height rule, the sea fill,
 building-mesh winding and exaggeration, URL state, the STL export (every shell closed and
-outward-facing, volumes, binary format), and routes (GPX and TCX parsing, distances, the stretch that fits
-the model, hiding the ends, the replay clock, the share-link code).
+outward-facing, volumes, binary format), routes (GPX and TCX parsing, distances, the stretch that fits
+the model, hiding the ends, the replay clock, the share-link code), and steepness (grades over a window,
+classes, bridges, climbs, height totals, the profile).
 
 `npm run e2e` serves the build, answers Overpass and geocoding from a deterministic synthetic city
 (`e2e/fixtures/synthetic-city.mjs`), uses real terrain tiles, and drives search, every control,
@@ -197,8 +205,8 @@ keyboard camera, pinning a building (click, drag, share-link round-trip, "Centre
 Shift-arrow and two-finger sliding, share link round-trip, poster download, STL download (size and
 base checked), an Overpass outage with retry, a phone
 viewport, and dark mode with reduced motion. Routes: a GPX from the start page, the stretch picker,
-replay, hiding the ends, the opt-in route link and opening it, a dropped TCX file, a FIT file, a phone, and
-that the file never leaves the browser. It fails on any console error.
+replay, the height profile, steepness on roads and on the route, hiding the ends, the opt-in route link and
+opening it, a dropped TCX file, a FIT file, a phone, and that the file never leaves the browser. It fails on any console error.
 
 ## Licence
 

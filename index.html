@@ -188,6 +188,11 @@
               <button type="button" class="chip" data-layer="roads" aria-pressed="true"><i class="swatch swatch-roads"></i><span data-t="layer.roads">Roads</span></button>
               <button type="button" class="chip" data-layer="water" aria-pressed="true"><i class="swatch swatch-water"></i><span data-t="layer.water">Water</span></button>
               <button type="button" class="chip" data-layer="green" aria-pressed="true"><i class="swatch swatch-green"></i><span data-t="layer.green">Green</span></button>
+              <button type="button" class="chip" data-layer="steep" aria-pressed="false"><i class="swatch swatch-steep"></i><span data-t="layer.steep">Steepness</span></button>
+            </div>
+            <div class="steep-legend" id="steep-legend" hidden>
+              <ul class="steep-scale" id="steep-scale"></ul>
+              <p class="route-note" data-t="steepNote">Roads and paths under 3% stay as they are. Estimated from terrain data with points 10–30 m apart, so short ramps can be missed; bridges are left out.</p>
             </div>
           </div>
 
@@ -206,6 +211,18 @@
                 <button type="button" class="btn" id="route-play" aria-pressed="false" data-t="routePlay">Replay</button>
                 <output class="route-clock" id="route-clock"></output>
               </div>
+              <figure class="profile" id="route-profile" hidden>
+                <figcaption class="profile-head"><span data-t="profile">Height profile</span> <small id="profile-summary"></small></figcaption>
+                <div class="profile-chart" id="profile-chart" role="img">
+                  <div class="profile-plot" id="profile-plot"></div>
+                  <span class="profile-y" id="profile-y1"></span>
+                  <span class="profile-y" id="profile-y0"></span>
+                  <div class="profile-cross" id="profile-cross" hidden></div>
+                  <div class="profile-dot" id="profile-hover-dot" hidden></div>
+                  <div class="profile-dot profile-runner" id="profile-runner" hidden></div>
+                </div>
+                <div class="profile-x"><span id="profile-x0"></span><output id="profile-readout"></output><span id="profile-x1"></span></div>
+              </figure>
               <div class="route-stretch" id="route-stretch">
                 <div class="control-label"><label for="route-from" data-t="routeFrom">From km</label><output id="route-from-out" for="route-from"></output></div>
                 <input type="range" id="route-from" min="0" max="1000" step="10" value="0" />

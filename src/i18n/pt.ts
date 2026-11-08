@@ -123,7 +123,7 @@ export const pt: Messages = {
   legendTop: (m) => `${m}+ m`,
   area: 'Área',
   mapLayers: 'Camadas do mapa',
-  layer: { roads: 'Ruas', water: 'Água', green: 'Verde' },
+  layer: { roads: 'Ruas', water: 'Água', green: 'Verde', steep: 'Inclinação' },
   terrainTimes: (x) => `relevo ×${x}`,
   attribution: 'Dados do mapa © colaboradores do OpenStreetMap (ODbL), tiles © OpenMapTiles via OpenFreeMap. Relevo: Mapzen, AWS Terrain Tiles.',
   footerContributors: 'colaboradores',
@@ -230,4 +230,16 @@ export const pt: Messages = {
   routeDescribe: (name, km, from, to) => `O percurso “${name}” cruza a maquete: ${km} km dele, do km ${from} ao ${to}.`,
   shareRoute: 'Incluir o percurso no link',
   shareRouteNote: 'Desligado, a menos que você ligue: um percurso pode mostrar onde alguém mora.',
+
+  // inclinação de ruas, caminhos e um percurso
+  steepRange: (lo, hi) => `${lo}–${hi}%`,
+  steepOver: (lo) => `acima de ${lo}%`,
+  steepNote: 'Ruas e caminhos com menos de 3% ficam como estão. Estimado a partir de dados de relevo com pontos a cada 10–30 m, então rampas curtas podem não aparecer; pontes ficam de fora.',
+  steepSummary: (over6, over10) => `Ruas e caminhos com mais de 6% de inclinação: ${over6} km; com mais de 10%: ${over10} km.`,
+  climbLabel: (pct, length) => `${pct}% · ${length}`,
+  profile: 'Perfil de altimetria',
+  profileSummary: (up, down) => `${up} m de subida, ${down} m de descida`,
+  steepest: (pct, km) => `trecho mais íngreme: ${pct}% no km ${km}`,
+  profileAt: (km, m, pct) => `km ${km} · ${m} m · ${pct}%`,
+  profileLabel: (summary) => `Perfil de altimetria do trecho: ${summary}.`,
 };

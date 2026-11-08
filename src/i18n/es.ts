@@ -123,7 +123,7 @@ export const es: Messages = {
   legendTop: (m) => `${m}+ m`,
   area: 'Área',
   mapLayers: 'Capas del mapa',
-  layer: { roads: 'Calles', water: 'Agua', green: 'Verde' },
+  layer: { roads: 'Calles', water: 'Agua', green: 'Verde', steep: 'Pendiente' },
   terrainTimes: (x) => `relieve ×${x}`,
   attribution: 'Datos del mapa © colaboradores de OpenStreetMap (ODbL), teselas © OpenMapTiles vía OpenFreeMap. Relieve: Mapzen, AWS Terrain Tiles.',
   footerContributors: 'colaboradores',
@@ -230,4 +230,16 @@ export const es: Messages = {
   routeDescribe: (name, km, from, to) => `La ruta «${name}» cruza la maqueta: ${km} km de ella, del km ${from} al ${to}.`,
   shareRoute: 'Incluir la ruta en el enlace',
   shareRouteNote: 'Desactivado salvo que lo actives: una ruta puede mostrar dónde vive alguien.',
+
+  // pendiente de calles, caminos y una ruta
+  steepRange: (lo, hi) => `${lo}–${hi} %`,
+  steepOver: (lo) => `más de ${lo} %`,
+  steepNote: 'Las calles y caminos por debajo del 3 % quedan como están. Estimado a partir de datos de relieve con puntos cada 10–30 m, así que pueden faltar rampas cortas; los puentes quedan fuera.',
+  steepSummary: (over6, over10) => `Calles y caminos con más del 6 % de pendiente: ${over6} km; con más del 10 %: ${over10} km.`,
+  climbLabel: (pct, length) => `${pct} % · ${length}`,
+  profile: 'Perfil de altura',
+  profileSummary: (up, down) => `${up} m de subida, ${down} m de bajada`,
+  steepest: (pct, km) => `lo más empinado: ${pct} % en el km ${km}`,
+  profileAt: (km, m, pct) => `km ${km} · ${m} m · ${pct} %`,
+  profileLabel: (summary) => `Perfil de altura del tramo: ${summary}.`,
 };

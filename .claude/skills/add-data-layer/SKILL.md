@@ -14,9 +14,13 @@ The engine lives in `src/data/`. Every overlay goes through the same four parts:
 | Time | `src/data/time/` | A position or value per moment, and `Playback` (0 → 1 over a set time). |
 | Display | `src/data/display/` | Draw it: a `ModelOverlay` (ground paint and/or 3D objects). |
 
-The contracts are in `src/data/types.ts`. The worked example is the route layer: `sources/trackFile.ts`
-(GPX/TCX), `sources/routeLink.ts` (opt-in share link), `match/route.ts`, `time/playback.ts`,
-`display/route.ts`, wired up by `src/ui/route.ts`.
+The contracts are in `src/data/types.ts`. Two worked examples:
+
+- **Route** (data the user brings): `sources/trackFile.ts` (GPX/TCX), `sources/routeLink.ts` (opt-in share
+  link), `match/route.ts`, `time/playback.ts`, `display/route.ts`, wired up by `src/ui/route.ts`.
+- **Steepness** (derived from what the model already has, no source): `match/slope.ts` (grades along a
+  line from the terrain), `display/steepness.ts` (ground paint) and `display/profile.ts` (SVG profile),
+  wired up by `src/ui/steepness.ts` as a chip under Map layers (`Layers.steep` in `src/state.ts`).
 
 ## 1. Check the source first
 
@@ -62,6 +66,7 @@ Implement `ModelOverlay`:
   slow on phones. Call `model.repaint()` when what it draws changes.
 - `object`: 3D things (labels, columns, a moving marker), added to the model's group.
 - `place(surface)`: stand the 3D objects on the terrain; called when added and whenever the exaggeration changes.
+- `order`: painting order among data layers (steepness 0 under the route's 10).
 - `dispose()`: free geometries, materials and textures.
 
 For animation, change 3D objects or shader uniforms per frame (e.g. column heights, a texture of all time steps
@@ -70,9 +75,12 @@ size on screen; see `makeLabel` and `declutter` in `display/route.ts`. Must stay
 
 ## 6. Wire it into the app
 
-- A controller in `src/ui/<name>.ts` (see `RouteController`): owns the layer's state and its panel, and
-  `attach(model, center)` puts a fresh display on each new `CityModel`. `src/main.ts` calls it in `loadPlace`
-  right after the model is made, and adds a `debug` hook for the e2e test.
+- A controller in `src/ui/<name>.ts` (see `RouteController`, `SteepController`): owns the layer's state and its
+  panel, and puts a fresh display on each new `CityModel`. `src/main.ts` calls it in `loadPlace` right after
+  the model is made, and again from `dataLayersChanged()` when the model's roads arrive or its terrain changes
+  (buildings can take roof bumps out of it, the sea flattens it). Add a `debug` hook for the e2e test.
+- Heights for measuring: `CityModel.elevationAt(e, n)` (real metres, no exaggeration); roads and bridges:
+  `CityModel.featureSet`.
 - Panel markup in `index.html` with `data-t` keys; every text in **all four** dictionaries (`src/i18n/en.ts`,
   `es.ts`, `pt.ts`, `de.ts`). `tests/i18n.test.ts` fails if one is missing or still in English.
 - Credit third-party data in the app's attribution line and on the poster (`ATTRIBUTION_TEXT` in `src/ui/poster.ts`).

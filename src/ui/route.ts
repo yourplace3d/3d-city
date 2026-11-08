@@ -8,7 +8,7 @@
  * named after the route, so no search service learns where it runs.
  */
 
-import { num, t } from '../i18n';
+import { distance, num, t } from '../i18n';
 import type { LngLat } from '../geo/projection';
 import type { CityModel } from '../scene/cityModel';
 import type { Viewer } from '../scene/viewer';
@@ -33,6 +33,9 @@ import {
 import { decodeRouteLink, encodeRouteLink, MAX_LINK_POINTS } from '../data/sources/routeLink';
 import { readTrackFile, TrackFileProblem } from '../data/sources/trackFile';
 import { Playback } from '../data/time/playback';
+import { bridgeTester, classRuns, climbTotals, sampleClasses, sampleLine, steepClass, steepSections, type LineSample } from '../data/match/slope';
+import { steepColour } from '../data/display/steepness';
+import { profileScale, profileSvg, sampleAtFraction, type ProfileScale } from '../data/display/profile';
 
 /** How much of each end "hide the ends" removes (m). */
 export const TRIM_M = 500;
@@ -43,6 +46,8 @@ export interface RouteHost {
   viewer: Viewer;
   accent: string;
   model(): CityModel | null;
+  /** whether the steepness layer is on (the route then shows it too) */
+  steep(): boolean;
   /** build the model around a stretch */
   open(center: LngLat, size: number, label: string, detail: string): void;
   /** the share link or the description should follow */
@@ -64,6 +69,8 @@ export class RouteController {
   private trim = false;
   private share = false;
   private display: { model: CityModel; center: LngLat; overlay: RouteDisplay } | null = null;
+  /** the stretch's heights and grades on the current model, for the profile */
+  private profile: { samples: LineSample[]; scale: ProfileScale; climbs: string[] } | null = null;
   private readonly playback: Playback;
   private linkCache: { key: string; code: string } | null = null;
 
@@ -137,9 +144,16 @@ export class RouteController {
     this.detach(false);
     this.playback.reset();
     if (!this.route) return;
-    const overlay = new RouteDisplay(this.view(center, model.sizeM), this.host.accent, model.sizeM);
+    const overlay = new RouteDisplay(this.view(model, center), this.host.accent, model.sizeM);
     model.addOverlay(overlay);
     this.display = { model, center, overlay };
+    this.renderProfile();
+  }
+
+  /** Draw the route again: its model's roads arrived (bridges), its terrain changed, or steepness was switched. */
+  refresh(): void {
+    this.redraw();
+    this.host.changed();
   }
 
   remove(): void {
@@ -147,6 +161,8 @@ export class RouteController {
     this.playback.reset();
     this.base = null;
     this.route = null;
+    this.profile = null;
+    this.renderProfile();
     this.shared = false;
     this.share = false;
     this.syncPanel();
@@ -178,7 +194,9 @@ export class RouteController {
   /** A sentence for the model's description, or null without a route. */
   describe(): string | null {
     if (!this.route) return null;
-    return t.routeDescribe(this.name, num((this.toM - this.fromM) / 1000, 1), num(this.fromM / 1000, 1), num(this.toM / 1000, 1));
+    const line = t.routeDescribe(this.name, num((this.toM - this.fromM) / 1000, 1), num(this.fromM / 1000, 1), num(this.toM / 1000, 1));
+    const summary = this.profileSummary();
+    return summary ? `${line} ${t.profileLabel(summary)}` : line;
   }
 
   /** For tests (window.__yourPlace.route()). */
@@ -204,6 +222,9 @@ export class RouteController {
       playing: this.playback.playing,
       position: this.playback.position,
       runner: d?.overlay.runnerVisible ?? false,
+      steep: !!d?.overlay.view.steep,
+      climbs: this.profile?.climbs ?? [],
+      profile: this.profileSummary(),
     };
   }
 
@@ -227,23 +248,102 @@ export class RouteController {
     this.host.viewer.requestRender();
   }
 
-  /** The route in the model's local metres: the stretch, the rest of it faint, and its markers. */
-  private view(center: LngLat, sizeM: number) {
+  /**
+   * The route in the model's local metres: the stretch, the rest of it faint, and its markers;
+   * with steepness on, the stretch in its steepness colours and its steepest sections labelled.
+   * Also measures the stretch's heights for the profile.
+   */
+  private view(model: CityModel, center: LngLat) {
     const r = this.route!;
+    const sizeM = model.sizeM;
     const local = (p: { lat: number; lon: number }) => toLocal([p], center)[0];
     const h = sizeM / 2;
     const inside = (at: [number, number]) => Math.abs(at[0]) <= h && Math.abs(at[1]) <= h;
+    const stretch = toLocal(stretchOf(r, this.fromM, this.toM), center);
+    // heights from the model's terrain (not the file's GPS heights), straight across bridges
+    const bridges = (model.featureSet?.lines ?? []).filter((l) => l.bridge).map((l) => l.pts);
+    const all = sampleLine(stretch, (e, n) => model.elevationAt(e, n), { onBridge: bridgeTester(bridges) });
+    // only where the model has terrain: a smaller square can cut the stretch
+    const samples = all.filter((x) => inside([x.e, x.n]));
+
     const marks: RouteMark[] = [];
     const startShown = r.hasStart && this.fromM <= startOf(r) + 0.5;
     const finishShown = r.hasFinish && this.toM >= endOf(r) - 0.5;
     if (startShown) marks.push({ at: local(r.points[0]), label: t.routeStart, kind: 'start' });
     if (finishShown) marks.push({ at: local(r.points[r.points.length - 1]), label: t.routeFinish, kind: 'finish' });
+    const steep = this.host.steep();
+    const climbs: string[] = [];
+    if (steep) {
+      for (const c of steepSections(samples).slice(0, 3)) {
+        const label = t.climbLabel(signedPct(c.grade), distance(c.to - c.from));
+        climbs.push(label);
+        marks.push({ at: c.at, label, kind: 'climb', colour: steepColour(steepClass(c.grade)) ?? undefined });
+      }
+    }
     for (const km of kmMarks(this.fromM, this.toM)) marks.push({ at: local(pointAt(r, km * 1000)), label: `${num(km)} km`, kind: 'km' });
+    this.profile = samples.length >= 2 ? { samples, scale: profileScale(samples), climbs } : null;
     return {
       rest: toLocal(r.points, center),
-      stretch: toLocal(stretchOf(r, this.fromM, this.toM), center),
+      stretch,
+      steep: steep ? classRuns(all) : undefined,
       marks: declutter(marks.filter((m) => inside(m.at)), sizeM),
     };
+  }
+
+  /** "85 m up, 120 m down · steepest +9 % at km 7.2" */
+  private profileSummary(): string | null {
+    const p = this.profile;
+    if (!p) return null;
+    const { up, down } = climbTotals(p.samples);
+    let top = p.samples[0];
+    for (const x of p.samples) if (Math.abs(x.g) > Math.abs(top.g)) top = x;
+    const parts = [t.profileSummary(num(Math.round(up)), num(Math.round(down)))];
+    if (Math.abs(top.g) >= 0.03) parts.push(t.steepest(signedPct(top.g), num((this.fromM + top.d) / 1000, 1)));
+    return parts.join(' · ');
+  }
+
+  /** The height profile in the panel, with its labels; hidden without a route. */
+  private renderProfile(): void {
+    const p = this.profile;
+    $('route-profile').hidden = !p;
+    $('profile-cross').hidden = true;
+    $('profile-hover-dot').hidden = true;
+    $('profile-runner').hidden = true;
+    $('profile-readout').textContent = '';
+    if (!p) {
+      $('profile-plot').innerHTML = '';
+      return;
+    }
+    const s = p.samples;
+    $('profile-plot').innerHTML = profileSvg(s, p.scale, sampleClasses(s));
+    let low = s[0];
+    let high = s[0];
+    for (const x of s) {
+      if (x.h < low.h) low = x;
+      if (x.h > high.h) high = x;
+    }
+    const top = (hm: number) => `${((1 - (hm - p.scale.y0) / (p.scale.y1 - p.scale.y0)) * 100).toFixed(1)}%`;
+    const y1 = $('profile-y1');
+    y1.textContent = `${num(Math.round(high.h))} m`;
+    y1.style.top = top(high.h);
+    const y0 = $('profile-y0');
+    y0.textContent = `${num(Math.round(low.h))} m`;
+    y0.style.top = top(low.h);
+    // the same labels when the highest and lowest points are close: keep the top one only
+    y0.hidden = Math.round(high.h) === Math.round(low.h);
+    $('profile-x0').textContent = `${num((this.fromM + s[0].d) / 1000, 1)} km`;
+    $('profile-x1').textContent = `${num((this.fromM + s[s.length - 1].d) / 1000, 1)} km`;
+    const summary = this.profileSummary() ?? '';
+    $('profile-summary').textContent = summary;
+    $('profile-chart').setAttribute('aria-label', t.profileLabel(summary));
+  }
+
+  /** Put a profile marker (crosshair, hover dot or runner) at a sample; the crosshair only moves across. */
+  private placeOnProfile(el: HTMLElement, x: LineSample, across = false): void {
+    const p = this.profile!;
+    el.hidden = false;
+    el.style.left = `${((x.d / (p.scale.dMax || 1)) * 100).toFixed(2)}%`;
+    if (!across) el.style.top = `${((1 - (x.h - p.scale.y0) / (p.scale.y1 - p.scale.y0)) * 100).toFixed(2)}%`;
   }
 
   /** Build the model around the chosen stretch. */
@@ -267,10 +367,13 @@ export class RouteController {
     if (!playing && position === 0) {
       d.overlay.setRunner(null);
       $('route-clock').textContent = '';
+      $('profile-runner').hidden = true;
       return;
     }
     const at = replayAt(r, this.fromM, this.toM, position);
     d.overlay.setRunner(toLocal([at.point], d.center)[0]);
+    const p = this.profile;
+    if (p) this.placeOnProfile($('profile-runner'), sampleAtFraction(p.samples, (at.m - this.fromM) / (p.scale.dMax || 1)));
     $('route-clock').textContent = `${num(at.m / 1000, 1)} km${at.elapsed != null ? ` · ${formatClock(at.elapsed)}` : ''}`;
   }
 
@@ -360,6 +463,25 @@ export class RouteController {
 
     $('route-play').addEventListener('click', () => this.playback.toggle());
 
+    // the profile: what's under the pointer, as the crosshair moves along it
+    const chart = $('profile-chart');
+    const hover = (e: PointerEvent) => {
+      const p = this.profile;
+      if (!p) return;
+      const box = chart.getBoundingClientRect();
+      const x = sampleAtFraction(p.samples, (e.clientX - box.left) / box.width);
+      this.placeOnProfile($('profile-cross'), x, true);
+      this.placeOnProfile($('profile-hover-dot'), x);
+      $('profile-readout').textContent = t.profileAt(num((this.fromM + x.d) / 1000, 1), num(Math.round(x.h)), signedPct(x.g));
+    };
+    chart.addEventListener('pointermove', hover);
+    chart.addEventListener('pointerdown', hover);
+    chart.addEventListener('pointerleave', () => {
+      $('profile-cross').hidden = true;
+      $('profile-hover-dot').hidden = true;
+      $('profile-readout').textContent = '';
+    });
+
     $<HTMLInputElement>('route-trim').addEventListener('change', (e) => {
       if (!this.base || this.shared) return;
       this.trim = (e.target as HTMLInputElement).checked;
@@ -378,4 +500,10 @@ export class RouteController {
       this.host.changed();
     });
   }
+}
+
+/** "+9", "−12" (a real minus sign), "0" */
+function signedPct(grade: number): string {
+  const v = Math.round(grade * 100);
+  return v > 0 ? `+${num(v)}` : v < 0 ? `−${num(-v)}` : num(0);
 }

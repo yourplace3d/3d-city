@@ -23,6 +23,8 @@ export interface Layers {
   roads: boolean;
   water: boolean;
   green: boolean;
+  /** roads and paths coloured by steepness (a data layer, off unless chosen) */
+  steep: boolean;
 }
 
 /** Orbit camera: angles in degrees, distance in metres, target offset in metres (E, N). */
@@ -57,7 +59,7 @@ export const DEFAULT_STATE: ViewState = {
   exaggeration: 1.5,
   contours: false,
   style: 'white',
-  layers: { roads: true, water: true, green: true },
+  layers: { roads: true, water: true, green: true, steep: false },
   camera: null,
   pin: null,
   route: null,
@@ -75,7 +77,7 @@ export function encodeState(s: ViewState): string {
   p.set('ex', round(s.exaggeration, 1).toString());
   if (s.contours) p.set('ct', '1');
   if (s.style !== 'white') p.set('st', s.style);
-  const ly = `${s.layers.roads ? 'r' : ''}${s.layers.water ? 'w' : ''}${s.layers.green ? 'g' : ''}`;
+  const ly = `${s.layers.roads ? 'r' : ''}${s.layers.water ? 'w' : ''}${s.layers.green ? 'g' : ''}${s.layers.steep ? 's' : ''}`;
   if (ly !== 'rwg') p.set('ly', ly || '-');
   if (s.camera) {
     const c = s.camera;
@@ -105,7 +107,7 @@ export function decodeState(raw: string, base: ViewState = DEFAULT_STATE): ViewS
   const st = p.get('st');
   s.style = BUILDING_STYLES.find((x) => x === st) ?? 'white';
   const ly = p.get('ly');
-  if (ly != null) s.layers = { roads: ly.includes('r'), water: ly.includes('w'), green: ly.includes('g') };
+  if (ly != null) s.layers = { roads: ly.includes('r'), water: ly.includes('w'), green: ly.includes('g'), steep: ly.includes('s') };
   const cam = p.get('cam')?.split(',').map(Number);
   if (cam && cam.length === 5 && cam.every(Number.isFinite)) {
     s.camera = { azimuth: cam[0], tilt: cam[1], distance: cam[2], targetE: cam[3], targetN: cam[4] };

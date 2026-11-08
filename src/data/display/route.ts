@@ -6,11 +6,15 @@
 
 import { CanvasTexture, Color, Group, LinearFilter, Mesh, MeshStandardMaterial, SphereGeometry, Sprite, SpriteMaterial, SRGBColorSpace, type PerspectiveCamera } from 'three';
 import type { ModelOverlay, ModelSurface, Pt } from '../types';
+import type { ClassPiece } from '../match/slope';
+import { STEEP_COLOURS } from './steepness';
 
 export interface RouteMark {
   at: Pt;
   label: string;
-  kind: 'start' | 'finish' | 'km';
+  kind: 'start' | 'finish' | 'km' | 'climb';
+  /** a climb label's background: its steepness colour */
+  colour?: string;
 }
 
 export interface RouteView {
@@ -18,8 +22,13 @@ export interface RouteView {
   rest: Pt[];
   /** the stretch the user picked */
   stretch: Pt[];
+  /** the stretch cut by steepness, when the steepness layer is on: drawn in its colours */
+  steep?: ClassPiece[];
   marks: RouteMark[];
 }
+
+/** The route's line where it's flat, when it shows steepness (the accent would read as a steepness colour). */
+const ROUTE_INK = '#3d3832';
 
 /** Label height as a share of the view's height (the sprites keep their size on screen). */
 const LABEL_SCREEN = 0.026;
@@ -28,6 +37,8 @@ const INK = '#1e1c19';
 
 export class RouteDisplay implements ModelOverlay {
   readonly object = new Group();
+  /** over the steepness layer */
+  readonly order = 10;
   private readonly labels: Array<{ sprite: Sprite; at: Pt }> = [];
   private readonly runner: Mesh<SphereGeometry, MeshStandardMaterial>;
   private runnerAt: Pt | null = null;
@@ -40,10 +51,12 @@ export class RouteDisplay implements ModelOverlay {
   ) {
     this.object.name = 'route';
     for (const m of view.marks) {
-      const sprite = makeLabel(m.label, m.kind === 'km' ? { bg: CASING, fg: INK, border: accent } : { bg: accent, fg: '#ffffff', border: CASING });
+      const colours =
+        m.kind === 'km' ? { bg: CASING, fg: INK, border: accent } : m.kind === 'climb' ? { bg: m.colour ?? accent, fg: '#ffffff', border: CASING } : { bg: accent, fg: '#ffffff', border: CASING };
+      const sprite = makeLabel(m.label, colours);
       sprite.name = `route-${m.kind}`;
-      // start and finish over km markers
-      sprite.renderOrder = m.kind === 'km' ? 10 : 11;
+      // start and finish over climbs over km markers
+      sprite.renderOrder = m.kind === 'km' ? 10 : m.kind === 'climb' ? 11 : 12;
       this.labels.push({ sprite, at: m.at });
       this.object.add(sprite);
     }
@@ -71,17 +84,26 @@ export class RouteDisplay implements ModelOverlay {
     ctx.lineWidth = w * 0.55;
     stroke(ctx, this.view.rest);
     ctx.globalAlpha = 1;
-    // a light casing keeps the line readable on roads, water and in building shadows
+    const steep = this.view.steep;
+    // a light casing keeps the line readable on roads, water and in building shadows; wider when the
+    // line takes the steepness colours, so it still stands out from the coloured roads
     ctx.strokeStyle = CASING;
-    ctx.lineWidth = w * 1.9;
+    ctx.lineWidth = w * (steep ? 2.5 : 1.9);
     stroke(ctx, this.view.stretch);
-    ctx.strokeStyle = this.accent;
+    ctx.strokeStyle = steep ? ROUTE_INK : this.accent;
     ctx.lineWidth = w;
     stroke(ctx, this.view.stretch);
+    if (steep) {
+      for (const p of steep) {
+        if (!p.cls) continue;
+        ctx.strokeStyle = STEEP_COLOURS[p.cls - 1];
+        stroke(ctx, p.pts);
+      }
+    }
     for (const m of this.view.marks) {
       ctx.beginPath();
       ctx.arc(m.at[0], m.at[1], w * 1.3, 0, Math.PI * 2);
-      ctx.fillStyle = m.kind === 'km' ? CASING : this.accent;
+      ctx.fillStyle = m.kind === 'km' ? CASING : m.kind === 'climb' ? (m.colour ?? this.accent) : this.accent;
       ctx.fill();
       ctx.lineWidth = w * 0.55;
       ctx.strokeStyle = m.kind === 'km' ? this.accent : CASING;
@@ -125,7 +147,7 @@ export class RouteDisplay implements ModelOverlay {
 }
 
 /**
- * Leave out markers whose labels would overlap: start and finish first, then the km markers in
+ * Leave out markers whose labels would overlap: start and finish first, then climbs, then the km markers in
  * order, each at least 14 % of the square from those already placed (labels keep their size on
  * screen, and the whole square fills the view).
  */

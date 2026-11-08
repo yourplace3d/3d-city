@@ -839,6 +839,10 @@ input[type='range'] {
   background: #b4c69c;
 }
 
+.swatch-steep {
+  background: linear-gradient(90deg, #e4864e 0 25%, #cc5727 25% 50%, #a82f1f 50% 75%, #6b1d26 75%);
+}
+
 .legend {
   margin-top: 10px;
 }
@@ -1295,4 +1299,142 @@ input[type='range'] {
 #share-route-row input {
   margin-top: 2px;
   flex: none;
+}
+
+/* ------------------------------------------------------------------ steepness */
+
+.steep-legend {
+  margin-top: 10px;
+}
+
+.steep-scale {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.steep-scale li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.steep-swatch {
+  width: 18px;
+  height: 8px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+/* the height profile sits on a strip of the model's paper, so its colours read as on the model, in light and dark */
+.profile {
+  margin: 2px 0 0;
+}
+
+.profile-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin-bottom: 6px;
+  font-size: 13.5px;
+  font-weight: 560;
+}
+
+.profile-head small {
+  font-size: 12.5px;
+  font-weight: 450;
+  color: var(--muted);
+}
+
+.profile-chart {
+  position: relative;
+  height: 84px;
+  border-radius: 8px;
+  background: #f1ede5;
+  box-shadow: inset 0 0 0 1px rgba(40, 33, 24, 0.08);
+  touch-action: pan-y;
+  cursor: crosshair;
+  overflow: hidden;
+}
+
+.profile-plot,
+.profile-plot svg {
+  position: absolute;
+  inset: 6px 0 0;
+  display: block;
+  width: 100%;
+  height: calc(100% - 6px);
+}
+
+.profile-plot svg {
+  inset: 0;
+  height: 100%;
+}
+
+.profile-area {
+  fill: rgba(40, 33, 24, 0.07);
+  stroke: none;
+}
+
+.profile-y {
+  position: absolute;
+  left: 4px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(241, 237, 229, 0.85);
+  color: #4d4740;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.profile-cross {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(40, 33, 24, 0.45);
+  pointer-events: none;
+}
+
+.profile-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border: 2px solid #1e1c19;
+  border-radius: 50%;
+  background: #fbfaf7;
+  pointer-events: none;
+}
+
+.profile-runner {
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border-color: #fbfaf7;
+  background: #c8431a;
+}
+
+.profile-x {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.profile-x output {
+  color: var(--text);
+  text-align: center;
 }

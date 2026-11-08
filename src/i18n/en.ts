@@ -128,7 +128,7 @@ export const en = {
   legendTop: (m: string) => `${m}+ m`,
   area: 'Area',
   mapLayers: 'Map layers',
-  layer: { roads: 'Roads', water: 'Water', green: 'Green' },
+  layer: { roads: 'Roads', water: 'Water', green: 'Green', steep: 'Steepness' },
   terrainTimes: (x: string) => `terrain ×${x}`,
   attribution: 'Map data © OpenStreetMap contributors (ODbL), map tiles © OpenMapTiles via OpenFreeMap. Terrain: Mapzen, AWS Terrain Tiles.',
   footerContributors: 'contributors',
@@ -235,5 +235,18 @@ export const en = {
   routeDescribe: (name: string, km: string, from: string, to: string) => `The route “${name}” crosses the model: ${km} km of it, from km ${from} to ${to}.`,
   shareRoute: 'Include the route in the link',
   shareRouteNote: 'Off unless you turn it on: a route can show where someone lives.',
+
+  // steepness of roads, paths and a route
+  steepRange: (lo: string, hi: string) => `${lo}–${hi}%`,
+  steepOver: (lo: string) => `over ${lo}%`,
+  steepNote: 'Roads and paths under 3% stay as they are. Estimated from terrain data with points 10–30 m apart, so short ramps can be missed; bridges are left out.',
+  steepSummary: (over6: string, over10: string) => `Roads and paths steeper than 6%: ${over6} km, steeper than 10%: ${over10} km.`,
+  climbLabel: (pct: string, length: string) => `${pct}% · ${length}`,
+  profile: 'Height profile',
+  profileSummary: (up: string, down: string) => `${up} m up, ${down} m down`,
+  steepest: (pct: string, km: string) => `steepest ${pct}% at km ${km}`,
+  profileAt: (km: string, m: string, pct: string) => `km ${km} · ${m} m · ${pct}%`,
+  profileLabel: (summary: string) => `Height profile of the stretch: ${summary}.`,
 };
+
 export type Messages = typeof en;

@@ -76,7 +76,7 @@ export class CityModel implements ModelSurface {
   private markPinned = false;
   private style: BuildingStyle = 'white';
   private seaFraction = 0;
-  private layers: Layers = { roads: true, water: true, green: true };
+  private layers: Layers = { roads: true, water: true, green: true, steep: false };
   /** data layers on the model (a route): ground paint and 3D objects */
   private readonly overlays: ModelOverlay[] = [];
 
@@ -101,6 +101,16 @@ export class CityModel implements ModelSurface {
 
   get exaggeration(): number {
     return this.terrain.exaggeration;
+  }
+
+  /** Ground height at a point (metres above sea level; metres E, N from the centre). */
+  elevationAt(e: number, n: number): number {
+    return sampleGrid(this.grid, e, n);
+  }
+
+  /** Roads, water and green as loaded (null until they arrive). */
+  get featureSet(): FeatureSet | null {
+    return this.features;
   }
 
   /** Scene y of the ground at a point (metres E, N from the centre). */
@@ -128,7 +138,8 @@ export class CityModel implements ModelSurface {
 
   /** Paint the ground texture again, e.g. after a data layer changed what it draws. */
   repaint(): void {
-    this.overlay.painters = this.overlays.flatMap((o) => (o.paint ? [o.paint] : []));
+    const sorted = [...this.overlays].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    this.overlay.painters = sorted.flatMap((o) => (o.paint ? [o.paint] : []));
     this.overlay.draw(this.features, this.grid.sizeM, this.layers);
   }
 
