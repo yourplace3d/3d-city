@@ -46,22 +46,39 @@ function ease(k: number): number {
   return 0.3 * k + 0.7 * smooth;
 }
 
+const TURN_DEG = 15; // the heading turns gently by twice this over the flight, like a banking plane
+
 /**
- * The camera at point k (0…1) of the flight: it starts inside one corner, flies along the diagonal
- * past the centre and stays clear of the highest building.
+ * The camera at point k (0…1) of the flight: it starts inside one corner and flies along the
+ * diagonal past the centre on a gentle curve, turning right (↗) or left (↖) by 30°, sinking a little
+ * and staying clear of the highest building. Height, distance and speed are shares of the square, so
+ * the picture moves at the same pace for a 500 m square as for a 4 km one.
  */
 export function flyoverPose(k: number, dir: FlyDirection, space: FlightSpace): CapturePose {
   const s = space.sizeM;
-  const [ue, un] = dir === 'ne' ? [Math.SQRT1_2, Math.SQRT1_2] : [-Math.SQRT1_2, Math.SQRT1_2];
-  const camY = Math.max(space.topY + 0.04 * s, space.groundY + 0.11 * s);
+  const e = ease(Math.min(1, Math.max(0, k)));
+  // forward along the diagonal, and to its left (mirrored for ↖, so both turn away from the centre line the same way)
+  const fwd = dir === 'ne' ? [Math.SQRT1_2, Math.SQRT1_2] : [-Math.SQRT1_2, Math.SQRT1_2];
+  const left = dir === 'ne' ? [-fwd[1], fwd[0]] : [fwd[1], -fwd[0]];
+  const at = (x: number, y: number): [number, number] => [fwd[0] * x + left[0] * y, fwd[1] * x + left[1] * y];
+
+  // an arc over the chord from -0.5 s to +0.1 s along the diagonal; it bulges to the left by 2% of the side
+  const turn = (TURN_DEG * Math.PI) / 180;
+  const half = 0.3 * s;
+  const radius = half / Math.sin(turn);
+  const phi = -turn + 2 * turn * e;
+  const x = -0.2 * s + radius * Math.sin(phi);
+  const y = radius * (Math.cos(phi) - Math.cos(turn));
+  const heading = [Math.cos(phi), -Math.sin(phi)]; // in (forward, left)
+
+  const clear = Math.max(space.topY + 0.04 * s, space.groundY + 0.11 * s);
+  const camY = clear + 0.03 * s * (1 - e);
   const height = camY - space.groundY;
   // look a little below the horizon, but never at a point beyond the square
   const ahead = Math.min(height / Math.tan((PITCH_DEG * Math.PI) / 180), 0.35 * s);
-  const along = -0.5 * s + 0.6 * s * ease(Math.min(1, Math.max(0, k)));
-  return {
-    pos: [ue * along, un * along, camY],
-    look: [ue * (along + ahead), un * (along + ahead), space.groundY],
-  };
+  const [pe, pn] = at(x, y);
+  const [le, ln] = at(x + heading[0] * ahead, y + heading[1] * ahead);
+  return { pos: [pe, pn, camY], look: [le, ln, space.groundY] };
 }
 
 /** "your-place-kleinfelde-2km-flyover.mp4" */

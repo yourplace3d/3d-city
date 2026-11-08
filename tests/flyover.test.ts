@@ -46,6 +46,28 @@ describe('flyover path', () => {
     expect(ne[20][1]).toBeGreaterThan(0);
   });
 
+  it('turns gently: right for ↗, left for ↖, by about 30°', () => {
+    const heading = (k: number, dir: 'ne' | 'nw') => {
+      const { pos, look } = flyoverPose(k, dir, space);
+      return (Math.atan2(look[1] - pos[1], look[0] - pos[0]) * 180) / Math.PI;
+    };
+    expect(heading(0, 'ne') - heading(1, 'ne')).toBeCloseTo(30, 0);
+    expect(heading(1, 'nw') - heading(0, 'nw')).toBeCloseTo(30, 0);
+    // and evenly: no sudden swing along the way
+    for (let i = 1; i < steps.length; i++) expect(Math.abs(heading(steps[i], 'ne') - heading(steps[i - 1], 'ne'))).toBeLessThan(4);
+  });
+
+  it('feels the same for small and big squares', () => {
+    // ground covered per unit of height: the speed you see on screen
+    const pace = (sizeM: number) => {
+      const sp = { sizeM, groundY: 0, topY: 0.01 * sizeM };
+      const a = flyoverPose(0.4, 'ne', sp).pos;
+      const b = flyoverPose(0.6, 'ne', sp).pos;
+      return Math.hypot(b[0] - a[0], b[1] - a[1]) / a[2];
+    };
+    expect(pace(500)).toBeCloseTo(pace(4000), 6);
+  });
+
   it('names the file after the place', () => {
     expect(flyoverFileName('Kleinfelde', 2000)).toBe('your-place-kleinfelde-2km-flyover.mp4');
     expect(flyoverFileName('São Paulo', 500)).toBe('your-place-sao-paulo-500m-flyover.mp4');
