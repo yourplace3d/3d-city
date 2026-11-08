@@ -15,6 +15,11 @@ on:
         description: Also make the app's flyover video of each place (ne or nw; empty for none)
         required: false
         default: ''
+      quiz:
+        description: Make the flyovers quiz videos (no place name, "Guess the city" label)
+        required: false
+        default: false
+        type: boolean
       action:
         description: publish or delete
         required: true
@@ -28,7 +33,7 @@ permissions:
 jobs:
   inspect:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 150
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -49,6 +54,7 @@ jobs:
         env:
           INSPECT_PLACE: ${{ inputs.place }}
           INSPECT_FLYOVER: ${{ inputs.flyover }}
+          INSPECT_QUIZ: ${{ inputs.quiz }}
         run: |
           npm ci && npm run build
           npm i --no-save --no-audit --no-fund playwright@1.64.1 && npx playwright install --with-deps chromium

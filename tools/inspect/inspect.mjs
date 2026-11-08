@@ -2,7 +2,9 @@
 // models from user reports ("what is happening in my hometown?"). Runs on GitHub Actions through
 // .github/workflows/inspect.yml; writes pictures and stats.json to inspect-out/.
 // With INSPECT_FLYOVER set to ne or nw, it also makes the app's flyover video of each place, the way
-// a visitor would (the share dialog's button), to check it with real map data.
+// a visitor would (the share dialog's button), to check it with real map data. A place can pick its
+// own direction with "&fly=nw" in its hash. INSPECT_QUIZ=true makes quiz videos: no place name, the
+// label "Guess the city" from the first frame and "Which city? / Guess in the comments" at the end.
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
@@ -14,6 +16,7 @@ const out = join(root, 'inspect-out');
 mkdirSync(out, { recursive: true });
 // one or more places (the part of a share link after "#"), separated by spaces
 const places = (process.env.INSPECT_PLACE || 'lat=51.9244&lon=4.4778&km=4&ex=1.4').split(/\s+/).filter(Boolean).map((h) => h.replace(/^#/, ''));
+const QUIZ = process.env.INSPECT_QUIZ === 'true';
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.jpg': 'image/jpeg' };
 const server = createServer((req, res) => {
@@ -26,7 +29,10 @@ const server = createServer((req, res) => {
 await new Promise((r) => server.listen(4321, '127.0.0.1', r));
 
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-for (const [pi, hash] of places.entries()) {
+for (const [pi, full] of places.entries()) {
+  // "&fly=nw" picks this place's flyover direction; the app never sees it
+  const flyHere = /(?:^|&)fly=(ne|nw)(?:&|$)/.exec(full)?.[1];
+  const hash = full.replace(/&?fly=(ne|nw)/, '').replace(/^&/, '');
   const tag = places.length > 1 ? `-${pi + 1}` : '';
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1, reducedMotion: 'reduce' });
   await ctx.addInitScript(() => { try { localStorage.setItem('yp:tip-pin', '1'); localStorage.setItem('yp:own', '1'); localStorage.setItem('yp:hint-mouse', '1'); } catch {} });
@@ -59,19 +65,29 @@ for (const [pi, hash] of places.entries()) {
     await page.screenshot({ path: join(out, `${name}${tag}.jpg`), type: 'jpeg', quality: 85 });
   }
 
-  const fly = process.env.INSPECT_FLYOVER;
+  const fly = flyHere ?? process.env.INSPECT_FLYOVER;
   if (fly === 'ne' || fly === 'nw') {
     const t0 = Date.now();
-    await page.evaluate((dir) => {
-      document.getElementById('share-btn').click();
-      document.querySelector(`#flyover-dir-group [data-value="${dir}"]`).click();
-    }, fly);
-    const [video] = await Promise.all([
-      page.waitForEvent('download', { timeout: 30 * 60000 }),
-      page.evaluate(() => document.getElementById('flyover-btn').click()),
-    ]);
-    await video.saveAs(join(out, `flyover${tag}.mp4`));
-    console.log(`  flyover: ${video.suggestedFilename()} in ${Math.round((Date.now() - t0) / 1000)} s`);
+    try {
+      await page.evaluate(({ dir, quiz }) => {
+        document.getElementById('share-btn').click();
+        document.querySelector(`#flyover-dir-group [data-value="${dir}"]`).click();
+        if (quiz) {
+          document.getElementById('print-title').value = 'Which city?';
+          document.getElementById('print-subtitle').value = 'Guess in the comments';
+          window.__yourPlace.flyoverOptions = { topLabel: 'Guess the city' };
+        }
+      }, { dir: fly, quiz: QUIZ });
+      const [video] = await Promise.all([
+        page.waitForEvent('download', { timeout: 30 * 60000 }),
+        page.evaluate(() => document.getElementById('flyover-btn').click()),
+      ]);
+      await video.saveAs(join(out, `flyover${tag}.mp4`));
+      console.log(`  flyover (${fly}): ${QUIZ ? 'quiz' : video.suggestedFilename()} in ${Math.round((Date.now() - t0) / 1000)} s`);
+    } catch (err) {
+      // one failed video shouldn't cost the others
+      console.log(`  flyover failed: ${err.message}`);
+    }
   }
   await ctx.close();
 }

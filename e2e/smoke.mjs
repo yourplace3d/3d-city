@@ -368,7 +368,7 @@ try {
   await page.keyboard.press('Escape');
 
   // the flyover video: a short, small one, made and encoded in the page
-  await page.evaluate(() => (window.__yourPlace.flyoverTest = { seconds: 1, width: 360, height: 640 }));
+  await page.evaluate(() => (window.__yourPlace.flyoverOptions = { seconds: 1, width: 360, height: 640, topLabel: 'Guess the city' }));
   await page.click('#share-btn');
   await page.waitForSelector('#share-dialog[open]');
   await page.click('#flyover-dir-group [data-value="nw"]');
@@ -380,7 +380,7 @@ try {
   expect(flyHead === 'ftyp' && statSync(flyPath).size > 10000, `flyover MP4 downloaded (${flyover.suggestedFilename()}, ${Math.round(statSync(flyPath).size / 1024)} KB)`);
   expect(/-flyover\.mp4$/.test(flyover.suggestedFilename()), 'the video file is named after the place');
   expect(await page.evaluate(() => window.__yourPlace.pin() !== null), 'the pin is back after the video');
-  await page.evaluate(() => (window.__yourPlace.flyoverTest = null));
+  await page.evaluate(() => (window.__yourPlace.flyoverOptions = null));
 
   // 3D print file: a binary STL of the chosen size in millimetres
   await page.click('#share-btn');

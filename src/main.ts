@@ -69,8 +69,8 @@ const debug = {
   pick: (x: number, y: number) => viewer.pick(x, y),
   /** used by tools/video to drive the camera frame by frame */
   setCamera: (c: Parameters<Viewer['setCameraState']>[0]) => viewer.setCameraState(c),
-  /** tests make a short, small flyover video with this */
-  flyoverTest: null as null | { seconds: number; width: number; height: number },
+  /** tests make a short, small flyover video with this; tools/inspect adds the quiz label */
+  flyoverOptions: null as null | { seconds?: number; width?: number; height?: number; topLabel?: string },
 };
 (window as unknown as { __yourPlace: typeof debug }).__yourPlace = debug;
 
@@ -924,7 +924,7 @@ function bindShare(): void {
     msg.textContent = t.renderingFlyover(num(0));
     try {
       const blob = await makeFlyover(viewer, model, { title: title(), subtitle: subtitle(), dir: flyDir }, {
-        ...debug.flyoverTest,
+        ...debug.flyoverOptions,
         signal: flying.signal,
         onProgress: (k) => {
           flyProgress.value = k;

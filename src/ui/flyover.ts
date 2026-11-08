@@ -107,6 +107,8 @@ export interface FlyoverOptions {
   seconds?: number;
   width?: number;
   height?: number;
+  /** a small label at the top from the first frame, e.g. "Guess the city" for quiz videos (tools only) */
+  topLabel?: string;
 }
 
 export async function makeFlyover(viewer: Viewer, model: CityModel, info: FlyoverInfo, opts: FlyoverOptions = {}): Promise<Blob> {
@@ -156,7 +158,7 @@ export async function makeFlyover(viewer: Viewer, model: CityModel, info: Flyove
       // the last frames hold the end of the flight
       capture.frame(flyoverPose(Math.min(1, i / (flightFrames - 1)), info.dir, space));
       const titleAlpha = Math.max(0, Math.min(1, (time - titleIn) / 0.8));
-      drawFrame(ctx, capture.canvas, W, H, info, titleAlpha);
+      drawFrame(ctx, capture.canvas, W, H, info, titleAlpha, opts.topLabel);
       await source.add(time, 1 / fps);
       opts.onProgress?.((i + 1) / total);
       // let the page show the progress now and then
@@ -175,7 +177,7 @@ export async function makeFlyover(viewer: Viewer, model: CityModel, info: Flyove
 }
 
 /** One frame: background, the rendered model, the credit, and the title as it fades in. */
-function drawFrame(ctx: CanvasRenderingContext2D, render: HTMLCanvasElement, W: number, H: number, info: FlyoverInfo, titleAlpha: number): void {
+function drawFrame(ctx: CanvasRenderingContext2D, render: HTMLCanvasElement, W: number, H: number, info: FlyoverInfo, titleAlpha: number, topLabel?: string): void {
   const sky = ctx.createLinearGradient(0, 0, 0, H);
   sky.addColorStop(0, SKY_TOP);
   sky.addColorStop(0.45, SKY_HAZE);
@@ -186,11 +188,11 @@ function drawFrame(ctx: CanvasRenderingContext2D, render: HTMLCanvasElement, W: 
   ctx.drawImage(render, 0, 0, W, H);
 
   // a dark veil at the bottom, for the credit and (stronger) the title
-  const veil = ctx.createLinearGradient(0, H * 0.55, 0, H);
+  const veil = ctx.createLinearGradient(0, H * 0.42, 0, H);
   veil.addColorStop(0, 'rgba(20, 18, 15, 0)');
   veil.addColorStop(1, `rgba(20, 18, 15, ${0.3 + 0.35 * titleAlpha})`);
   ctx.fillStyle = veil;
-  ctx.fillRect(0, H * 0.55, W, H * 0.45);
+  ctx.fillRect(0, H * 0.42, W, H * 0.58);
 
   const serif = "ui-serif, 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif";
   const sans = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
@@ -210,7 +212,8 @@ function drawFrame(ctx: CanvasRenderingContext2D, render: HTMLCanvasElement, W: 
       size -= 3;
       ctx.font = `500 ${size}px ${serif}`;
     }
-    const y = H * 0.8;
+    // above the bottom fifth, where Shorts, Reels and TikTok put their captions and buttons
+    const y = H * 0.64;
     ctx.fillStyle = '#c8431a';
     ctx.shadowBlur = 0;
     const bar = Math.round(W * 0.07);
@@ -227,6 +230,27 @@ function drawFrame(ctx: CanvasRenderingContext2D, render: HTMLCanvasElement, W: 
       }
       ctx.fillText(subtitle, W / 2, y + sub * 1.6);
     }
+  }
+
+  // a label at the top, on a dark pill so it reads on the light sky
+  const label = topLabel?.trim();
+  if (label) {
+    const size = Math.round(W * 0.042);
+    ctx.font = `600 ${size}px ${sans}`;
+    const w = ctx.measureText(label).width + size * 1.6;
+    const h = size * 1.9;
+    // below the top bar of TikTok and Reels
+    const y = H * 0.11;
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = 'rgba(20, 18, 15, 0.62)';
+    ctx.beginPath();
+    ctx.roundRect(W / 2 - w / 2, y, w, h, h / 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, W / 2, y + h / 2 + size * 0.04);
+    ctx.textBaseline = 'alphabetic';
   }
 
   // the data credit the licences ask for, on every frame
