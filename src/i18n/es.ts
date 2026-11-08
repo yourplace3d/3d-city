@@ -235,6 +235,7 @@ export const es: Messages = {
   steepRange: (lo, hi) => `${lo}–${hi} %`,
   steepOver: (lo) => `más de ${lo} %`,
   steepNote: 'Las calles y caminos por debajo del 3 % quedan como están. Estimado a partir de datos de relieve con puntos cada 10–30 m, así que pueden faltar rampas cortas; los puentes quedan fuera.',
+  steepRouteNote: 'Con una ruta cargada, solo se colorea la ruta.',
   steepSummary: (over6, over10) => `Calles y caminos con más del 6 % de pendiente: ${over6} km; con más del 10 %: ${over10} km.`,
   climbLabel: (pct, length) => `${pct} % · ${length}`,
   profile: 'Perfil de altura',

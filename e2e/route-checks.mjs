@@ -66,14 +66,12 @@ export async function routeChecks({ browser, base, routeAll, expect, watchConsol
   await page.mouse.move(chart.x + chart.width / 2, chart.y - 40);
   expect((await page.textContent('#profile-readout')) === '', 'the readout clears when the pointer leaves');
   await page.click('[data-layer="steep"]');
-  await page.waitForFunction(() => window.__yourPlace.steep().shown, null, { timeout: 15000 }).catch(() => undefined);
+  await page.waitForFunction(() => window.__yourPlace.route().steep, null, { timeout: 15000 }).catch(() => undefined);
   let s = await steep();
   r = await route();
-  expect(s.on && s.shown && s.pieces > 20 && s.lengths[2] + s.lengths[3] + s.lengths[4] > 0, `steepness colours the roads and paths (${s.pieces} pieces; m per class ${s.lengths.join(', ')})`);
-  expect((await page.isVisible('#steep-legend')) && (await page.locator('#steep-scale li').count()) === 4, 'a legend shows the four classes');
+  expect(s.on && s.routeOnly && !s.shown && r.steep, `with a route, steepness colours only the route (climbs: ${r.climbs.join(', ') || 'none'})`);
+  expect((await page.isVisible('#steep-legend')) && (await page.locator('#steep-scale li').count()) === 4 && (await page.isVisible('#steep-route-note')), 'a legend shows the four classes, and says only the route is coloured');
   expect(/ly=rwgs/.test(await page.evaluate(() => location.hash)), 'the link keeps steepness on');
-  expect(/steeper than 6%: [\d.]+ km/.test(await page.textContent('#describe')), 'the description says how much is steep');
-  expect(r.steep, `the route shows its steepness too (climbs: ${r.climbs.join(', ') || 'none'})`);
   await settle(page, 1500);
   await shot(page, 'r2b-route-steepness');
 
@@ -87,8 +85,7 @@ export async function routeChecks({ browser, base, routeAll, expect, watchConsol
   await reload(before);
   r = await route();
   expect(r.fromM === 0 && r.toM < r.endM && r.marks.includes('Start') && !r.marks.includes('Finish'), `moving the start builds the model around the new stretch (km 0–${(r.toM / 1000).toFixed(1)}, ${r.marks.join(', ')})`);
-  await page.waitForFunction(() => window.__yourPlace.steep().shown, null, { timeout: 15000 }).catch(() => undefined);
-  expect((await steep()).shown && r.steep, 'the new model is measured for steepness too');
+  expect(!(await steep()).shown && r.steep, 'the new stretch is measured for steepness too');
   expect(/^0(\.0)?$/.test(await page.textContent('#route-from-out')), 'the stretch readout follows');
   await settle(page, 1500);
   await shot(page, 'r3-route-start');
@@ -120,21 +117,25 @@ export async function routeChecks({ browser, base, routeAll, expect, watchConsol
   expect(shared.shared && Math.abs(shared.fromM - r.fromM) < 2 && Math.abs(shared.toM - r.toM) < 40 && !shared.hasTime, `a shared link shows the stretch with its km numbers, no times (km ${(shared.fromM / 1000).toFixed(1)}–${(shared.toM / 1000).toFixed(1)})`);
   expect(!shared.marks.includes('Start') && (await other.isHidden('#route-stretch')) && (await other.textContent('#route-name')) === 'Shared route', 'the hidden start stays hidden, and the shared route can’t be stretched');
   expect(!(await other.evaluate(() => window.__yourPlace.pin().visible)), 'the pin stays hidden on a shared route');
-  await other.waitForFunction(() => window.__yourPlace.steep().shown, null, { timeout: 15000 }).catch(() => undefined);
-  expect((await other.evaluate(() => window.__yourPlace.steep().shown)) && (await other.isVisible('#route-profile')), 'the link opens with steepness on and the profile shown');
+  await other.waitForFunction(() => window.__yourPlace.route().steep, null, { timeout: 15000 }).catch(() => undefined);
+  expect((await other.evaluate(() => window.__yourPlace.steep().on)) && (await other.isVisible('#route-profile')), 'the link opens with steepness on and the profile shown');
   await settle(other, 1500);
   await shot(other, 'r5-shared-route');
   await other.close();
 
-  // steepness off again
-  await page.click('[data-layer="steep"]');
-  s = await steep();
-  expect(!s.on && !s.shown && !(await route()).steep && !(await page.isVisible('#steep-legend')), 'steepness turns off');
-
-  // remove it
+  // remove the route: with steepness still on, all roads take the colours back
   await page.click('#route-remove');
   expect((await route()) === null && (await page.isVisible('#route-load-btn')) && !(await page.isVisible('#route-profile')), 'the route can be removed');
   expect(!/rt=/.test(await page.evaluate(() => location.hash)) && (await page.evaluate(() => window.__yourPlace.pin().visible)), 'removing it clears the link and shows the pin again');
+  await page.waitForFunction(() => window.__yourPlace.steep().shown, null, { timeout: 15000 }).catch(() => undefined);
+  s = await steep();
+  expect(s.on && !s.routeOnly && s.shown && s.pieces > 20 && s.lengths[2] + s.lengths[3] + s.lengths[4] > 0 && !(await page.isVisible('#steep-route-note')), `without a route, steepness colours all roads and paths (${s.pieces} pieces; m per class ${s.lengths.join(', ')})`);
+  expect(/steeper than 6%: [\d.]+ km/.test(await page.textContent('#describe')), 'the description says how much is steep');
+  await settle(page, 1500);
+  await shot(page, 'r5b-steepness-roads');
+  await page.click('[data-layer="steep"]');
+  s = await steep();
+  expect(!s.on && !s.shown && !(await page.isVisible('#steep-legend')), 'steepness turns off');
 
   // a TCX file dropped on the page, named after the file
   const drop = (name, text) =>

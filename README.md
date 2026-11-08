@@ -23,11 +23,14 @@ works on your phone.**
   or double-tap / double-click a spot to load the area there in one go.
 - **In your language:** English, Spanish, Portuguese (Brazil) or German, from the browser's language or the picker in
   the settings. Share links carry no language, so each visitor sees their own.
-- **See where it gets steep:** colour roads and paths by how steep they are, anywhere, from the terrain the model
-  already has. Planning a run, a ride, a hike or a stroll? This is where it climbs.
+- **See where it gets steep:** colour roads and paths by how steep they are, from golden yellow (3–6 %) to dark
+  red (over 15 %), anywhere, from the terrain the model already has. Planning a run, a ride, a hike or a
+  stroll? This is where it climbs. No green: on this map green is parks and woods, and red–green is what
+  colour-blind people can't tell apart; each step is darker than the last, so the order reads without colour.
 - **Show a route:** load a GPX or TCX file (Strava, Garmin, a race website) and pick the stretch to show; the
   model follows it, with the line on the terrain, start, finish and km markers, a replay at the recorded pace,
-  and a height profile. With steepness on, the route takes its colours and its steepest climbs are labelled.
+  and a height profile. With steepness on, only the route takes its colours (the other roads stay as they
+  are) and its steepest climbs are labelled.
   The file is read in your browser and never uploaded.
 - **Share it:** the link opens the same view with the same house pinned. It holds coordinates only, never the address you typed.
 - **Keep it:** download a poster image with the place name and coordinates, or an STL file to 3D print

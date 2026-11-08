@@ -1,15 +1,17 @@
 /**
  * Display: roads and paths coloured by how steep they are, painted into the ground texture.
- * Flat ones stay as they are. The colours are one light-to-dark ramp (orange to deep red),
- * checked to read in order and to stand out from the beige ground and the white roads;
- * no green or blue, which would look like parks or water.
+ * Flat ones stay as they are. The colours run golden yellow → orange → red → dark red: the
+ * traffic-light feel without its green (green is parks and woods on this map, and red–green is
+ * what colour-blind people can't tell apart). Each step is clearly darker than the one before,
+ * so the order reads without colour vision and in black-and-white prints; even the lightest
+ * stands out from the beige ground and the white roads.
  */
 
 import type { ClassPiece, SteepClass } from '../match/slope';
 import type { ModelOverlay } from '../types';
 
 /** gentle, moderate, steep, very steep */
-export const STEEP_COLOURS = ['#e4864e', '#cc5727', '#a82f1f', '#6b1d26'] as const;
+export const STEEP_COLOURS = ['#cd9a0a', '#cc6700', '#b52d1b', '#701e25'] as const;
 
 export function steepColour(cls: SteepClass): string | null {
   return cls > 0 ? STEEP_COLOURS[cls - 1] : null;

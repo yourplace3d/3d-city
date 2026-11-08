@@ -840,7 +840,7 @@ input[type='range'] {
 }
 
 .swatch-steep {
-  background: linear-gradient(90deg, #e4864e 0 25%, #cc5727 25% 50%, #a82f1f 50% 75%, #6b1d26 75%);
+  background: linear-gradient(90deg, #cd9a0a 0 25%, #cc6700 25% 50%, #b52d1b 50% 75%, #701e25 75%);
 }
 
 .legend {

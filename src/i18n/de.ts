@@ -235,6 +235,7 @@ export const de: Messages = {
   steepRange: (lo, hi) => `${lo}–${hi} %`,
   steepOver: (lo) => `über ${lo} %`,
   steepNote: 'Straßen und Wege unter 3 % bleiben, wie sie sind. Geschätzt aus Geländedaten mit Punkten alle 10–30 m, kurze Rampen können also fehlen; Brücken sind ausgenommen.',
+  steepRouteNote: 'Ist eine Strecke geladen, wird nur die Strecke eingefärbt.',
   steepSummary: (over6, over10) => `Straßen und Wege steiler als 6 %: ${over6} km, steiler als 10 %: ${over10} km.`,
   climbLabel: (pct, length) => `${pct} % · ${length}`,
   profile: 'Höhenprofil',

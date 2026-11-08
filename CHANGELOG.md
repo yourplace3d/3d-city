@@ -3,7 +3,7 @@
 ## Unreleased (2.0)
 
 - Routes on the model: load a GPX or TCX file (Strava, Garmin, a race website) from the start page, the settings or by dropping it on the page. A course longer than the model shows the stretch you pick, the finish first; the line runs on the terrain with start, finish and km markers, and a replay moves along it at the recorded pace with the race clock. Hide the first and last 500 m where a run from home starts and ends. The file is read in the browser and never uploaded or stored; share links include the route only if you tick that. Suggested on Reddit.
-- Where it gets steep: a Steepness layer colours roads and paths by how steep they are (3–6 %, 6–10 %, 10–15 %, over 15 %), anywhere, from the terrain the model already has. With a route loaded, the route takes the same colours, its three steepest climbs are labelled on the model ("+9 % · 400 m"), and the route panel shows a height profile with metres up and down, the steepest point, and what's under your finger. Share links keep the layer on.
+- Where it gets steep: a Steepness layer colours roads and paths by how steep they are, from golden yellow (3–6 %) through orange and red to dark red (over 15 %), anywhere, from the terrain the model already has. With a route loaded, only the route takes the colours, its three steepest climbs are labelled on the model ("+9 % · 400 m"), and the route panel shows a height profile with metres up and down, the steepest point, and what's under your finger. Share links keep the layer on.
 - The first overlays of the new data-layer engine (`src/data/`): sources, matching to the model, time and playback, and displays, ready for more open data.
 
 ## 1.7.0 — 2026-11-06

@@ -240,6 +240,7 @@ export const en = {
   steepRange: (lo: string, hi: string) => `${lo}–${hi}%`,
   steepOver: (lo: string) => `over ${lo}%`,
   steepNote: 'Roads and paths under 3% stay as they are. Estimated from terrain data with points 10–30 m apart, so short ramps can be missed; bridges are left out.',
+  steepRouteNote: 'With a route loaded, only the route is coloured.',
   steepSummary: (over6: string, over10: string) => `Roads and paths steeper than 6%: ${over6} km, steeper than 10%: ${over10} km.`,
   climbLabel: (pct: string, length: string) => `${pct}% · ${length}`,
   profile: 'Height profile',

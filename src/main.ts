@@ -90,8 +90,8 @@ viewer.onCameraChange(() => {
   scheduleHashWrite();
 });
 viewer.onTap(movePinTo);
-const steep = new SteepController({ viewer, model: () => model });
-const route = new RouteController({
+const steep: SteepController = new SteepController({ viewer, model: () => model, routeActive: () => route.active });
+const route: RouteController = new RouteController({
   viewer,
   accent,
   model: () => model,
@@ -106,6 +106,8 @@ const route = new RouteController({
     void loadPlace(center, { label, detail });
   },
   changed: () => {
+    // a route came or went: the roads give their steepness colours to it, or take them back
+    steep.sync();
     writeHash();
     describe();
     const url = $<HTMLInputElement>('share-url');
