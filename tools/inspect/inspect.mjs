@@ -1,6 +1,8 @@
 // Renders one place from live map data and reports on its buildings, to diagnose odd-looking
 // models from user reports ("what is happening in my hometown?"). Runs on GitHub Actions through
 // .github/workflows/inspect.yml; writes pictures and stats.json to inspect-out/.
+// With INSPECT_FLYOVER set to ne or nw, it also makes the app's flyover video of each place, the way
+// a visitor would (the share dialog's button), to check it with real map data.
 import { chromium } from 'playwright';
 import { createServer } from 'node:http';
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
@@ -55,6 +57,21 @@ for (const [pi, hash] of places.entries()) {
     if (cam) await page.evaluate((c) => window.__yourPlace.setCamera(c), cam);
     await page.waitForTimeout(800);
     await page.screenshot({ path: join(out, `${name}${tag}.jpg`), type: 'jpeg', quality: 85 });
+  }
+
+  const fly = process.env.INSPECT_FLYOVER;
+  if (fly === 'ne' || fly === 'nw') {
+    const t0 = Date.now();
+    await page.evaluate((dir) => {
+      document.getElementById('share-btn').click();
+      document.querySelector(`#flyover-dir-group [data-value="${dir}"]`).click();
+    }, fly);
+    const [video] = await Promise.all([
+      page.waitForEvent('download', { timeout: 30 * 60000 }),
+      page.evaluate(() => document.getElementById('flyover-btn').click()),
+    ]);
+    await video.saveAs(join(out, `flyover${tag}.mp4`));
+    console.log(`  flyover: ${video.suggestedFilename()} in ${Math.round((Date.now() - t0) / 1000)} s`);
   }
   await ctx.close();
 }

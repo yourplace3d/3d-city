@@ -157,6 +157,11 @@ export class CityModel {
     this.refreshPin();
   }
 
+  /** Show or hide the pin itself (the flyover video leaves it out). */
+  setPinVisible(visible: boolean): void {
+    this.pin.visible = visible;
+  }
+
   pinInfo(): { e: number; n: number; buildings: number; marked: boolean } {
     return { e: this.pinAt[0], n: this.pinAt[1], buildings: this.pinned.length, marked: this.markPinned && this.pinned.length > 0 };
   }

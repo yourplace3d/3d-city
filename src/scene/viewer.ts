@@ -4,8 +4,11 @@
  */
 
 import {
+  Box3,
   CanvasTexture,
+  Color,
   DirectionalLight,
+  Fog,
   Group,
   HemisphereLight,
   MathUtils,
@@ -430,6 +433,52 @@ export class Viewer {
     }
   }
 
+  /** The model's bounding box in scene coordinates, or null without a model. */
+  modelBounds(): Box3 | null {
+    return this.model ? new Box3().setFromObject(this.model.group) : null;
+  }
+
+  /**
+   * Render frame after frame at a fixed size, for the flyover video. The screen doesn't update until
+   * end(). Far-away parts fade into `fogColor` between `fogNear` and `fogFar` metres from the camera,
+   * so the edge of the square melts into the background.
+   */
+  startCapture(width: number, height: number, vfovDeg: number, fogColor: string, fogNear: number, fogFar: number): Capture {
+    const saved = { camera: this.getCameraState(), ratio: this.renderer.getPixelRatio(), fov: this.camera.fov };
+    this.renderer.setAnimationLoop(null);
+    this.animation = null;
+    this.renderer.setPixelRatio(1);
+    this.renderer.setSize(width, height, false);
+    this.camera.clearViewOffset();
+    this.camera.aspect = width / height;
+    this.camera.fov = vfovDeg;
+    this.camera.updateProjectionMatrix();
+    this.scene.fog = new Fog(new Color(fogColor), fogNear, fogFar);
+    let ended = false;
+    return {
+      canvas: this.renderer.domElement,
+      width,
+      height,
+      frame: ({ pos, look }) => {
+        if (ended) return;
+        this.camera.position.set(pos[0], pos[2], -pos[1]);
+        this.camera.lookAt(look[0], look[2], -look[1]);
+        this.camera.updateMatrixWorld();
+        this.renderer.render(this.scene, this.camera);
+      },
+      end: () => {
+        if (ended) return;
+        ended = true;
+        this.scene.fog = null;
+        this.renderer.setPixelRatio(saved.ratio);
+        this.camera.fov = saved.fov;
+        this.resize();
+        this.applyCamera(saved.camera);
+        this.renderer.setAnimationLoop((t) => this.tick(t));
+      },
+    };
+  }
+
   /** Render the current view at a fixed size, independent of the screen. */
   renderStill(width: number, height: number): HTMLCanvasElement {
     const gl = this.renderer.getContext();
@@ -458,6 +507,23 @@ export class Viewer {
     this.resize();
     return out;
   }
+}
+
+/** Where the video camera is and the point it looks at: metres east and north of the centre, and scene height. */
+export interface CapturePose {
+  pos: [e: number, n: number, y: number];
+  look: [e: number, n: number, y: number];
+}
+
+/** A frame-by-frame recording session (see Viewer.startCapture). */
+export interface Capture {
+  /** the renderer's canvas, holding the last frame until the next one is drawn */
+  readonly canvas: HTMLCanvasElement;
+  readonly width: number;
+  readonly height: number;
+  frame(pose: CapturePose): void;
+  /** Give the screen back: size, camera and live rendering as they were. */
+  end(): void;
 }
 
 /** A soft, blurred rectangle under the base: the model "sits" on the page. */

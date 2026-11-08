@@ -14,7 +14,8 @@ import { makeZip, type ZipEntry } from './export/zip';
 import { depthInMetres, GREEN_RAISE_MM, shiftMasked, sinkWater, WATER_DEPTH_MM } from './export/water';
 import { ROAD_RAISE_MM, type PrintRoad } from './export/roads';
 import { addLabel, loadGlyphs } from './export/label';
-import { exportFileName, makePoster, posterFileName } from './ui/poster';
+import { flyoverFileName, flyoverMaybeSupported, FlyoverUnsupportedError, makeFlyover, type FlyDirection } from './ui/flyover';
+import { exportFileName, makePoster, posterFileName, posterMeta } from './ui/poster';
 import { setupSearch } from './ui/search';
 import { NoticeView } from './ui/notice';
 import { StatusView } from './ui/status';
@@ -68,6 +69,8 @@ const debug = {
   pick: (x: number, y: number) => viewer.pick(x, y),
   /** used by tools/video to drive the camera frame by frame */
   setCamera: (c: Parameters<Viewer['setCameraState']>[0]) => viewer.setCameraState(c),
+  /** tests make a short, small flyover video with this */
+  flyoverTest: null as null | { seconds: number; width: number; height: number },
 };
 (window as unknown as { __yourPlace: typeof debug }).__yourPlace = debug;
 
@@ -844,6 +847,9 @@ function bindShare(): void {
   let autoTitle = '';
   const title = () => titleInput.value.trim() || autoTitle;
   const subtitle = () => subtitleInput.value.trim();
+  // the poster's small line: coordinates, area and terrain until the user replaces or clears it
+  const metaInput = $<HTMLInputElement>('print-meta');
+  let autoMeta = '';
 
   $('share-btn').addEventListener('click', () => {
     writeHash();
@@ -854,6 +860,10 @@ function bindShare(): void {
     if (!titleInput.value.trim() || titleInput.value === autoTitle) titleInput.value = place;
     autoTitle = place;
     titleInput.placeholder = place;
+    const meta = state.center ? posterMeta(state.center, state.size, state.exaggeration) : '';
+    if (metaInput.value === autoMeta) metaInput.value = meta;
+    autoMeta = meta;
+    metaInput.placeholder = meta;
     dialog.showModal();
   });
 
@@ -881,7 +891,7 @@ function bindShare(): void {
     posterBtn.disabled = true;
     msg.textContent = t.renderingPoster;
     try {
-      const blob = await makePoster(viewer, { title: title(), subtitle: subtitle(), center: state.center, sizeM: state.size, exaggeration: state.exaggeration });
+      const blob = await makePoster(viewer, { title: title(), subtitle: subtitle(), meta: metaInput.value, center: state.center, sizeM: state.size, exaggeration: state.exaggeration });
       saveBlob(blob, posterFileName(title(), state.size));
       msg.textContent = '';
       dialog.close();
@@ -891,6 +901,49 @@ function bindShare(): void {
       msg.textContent = t.posterFailed;
     } finally {
       posterBtn.disabled = false;
+    }
+  });
+
+  // the flyover video: made frame by frame on this device; closing the dialog cancels it
+  let flyDir: FlyDirection = 'ne';
+  radioGroup('flyover-dir-group', (v) => (flyDir = v === 'nw' ? 'nw' : 'ne'));
+  const flyBtn = $<HTMLButtonElement>('flyover-btn');
+  const flyProgress = $<HTMLProgressElement>('flyover-progress');
+  let flying: AbortController | null = null;
+  dialog.addEventListener('close', () => flying?.abort());
+  flyBtn.addEventListener('click', async () => {
+    if (!model || !state.center || flying) return;
+    if (!flyoverMaybeSupported()) {
+      msg.textContent = t.flyoverUnsupported;
+      return;
+    }
+    flying = new AbortController();
+    flyBtn.disabled = true;
+    flyProgress.value = 0;
+    flyProgress.hidden = false;
+    msg.textContent = t.renderingFlyover(num(0));
+    try {
+      const blob = await makeFlyover(viewer, model, { title: title(), subtitle: subtitle(), dir: flyDir }, {
+        ...debug.flyoverTest,
+        signal: flying.signal,
+        onProgress: (k) => {
+          flyProgress.value = k;
+          msg.textContent = t.renderingFlyover(num(Math.floor(k * 100)));
+        },
+      });
+      saveBlob(blob, flyoverFileName(title(), state.size));
+      msg.textContent = '';
+      dialog.close();
+      toast(t.flyoverSaved);
+    } catch (err) {
+      if (!(err instanceof DOMException && err.name === 'AbortError')) {
+        console.error(err);
+        msg.textContent = err instanceof FlyoverUnsupportedError ? t.flyoverUnsupported : t.flyoverFailed;
+      }
+    } finally {
+      flying = null;
+      flyBtn.disabled = false;
+      flyProgress.hidden = true;
     }
   });
 

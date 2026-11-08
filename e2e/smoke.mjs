@@ -354,6 +354,34 @@ try {
   const posterSize = statSync(posterPath).size;
   expect(posterSize > 200000, `poster PNG downloaded (${download.suggestedFilename()}, ${Math.round(posterSize / 1024)} KB)`);
 
+  // the poster's small line: the coordinates by default, replaceable
+  await page.click('#share-btn');
+  await page.waitForSelector('#share-dialog[open]');
+  expect(/° N, .*° E/.test(await page.inputValue('#print-meta')), 'the poster line shows the coordinates by default');
+  await page.fill('#print-meta', 'Which city?');
+  const [quizPoster] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.click('#poster-btn')]);
+  expect(statSync(await quizPoster.path()).size > 200000, 'a poster with its own small line downloads');
+  await page.click('#share-btn');
+  await page.waitForSelector('#share-dialog[open]');
+  expect((await page.inputValue('#print-meta')) === 'Which city?', 'the replaced poster line stays');
+  await page.fill('#print-meta', '');
+  await page.keyboard.press('Escape');
+
+  // the flyover video: a short, small one, made and encoded in the page
+  await page.evaluate(() => (window.__yourPlace.flyoverTest = { seconds: 1, width: 360, height: 640 }));
+  await page.click('#share-btn');
+  await page.waitForSelector('#share-dialog[open]');
+  await page.click('#flyover-dir-group [data-value="nw"]');
+  expect((await page.getAttribute('#flyover-dir-group [data-value="nw"]', 'aria-checked')) === 'true', 'the flyover direction can be picked');
+  const [flyover] = await Promise.all([page.waitForEvent('download', { timeout: 180000 }), page.click('#flyover-btn')]);
+  const flyPath = join(out, '06-flyover.mp4');
+  await flyover.saveAs(flyPath);
+  const flyHead = readFileSync(flyPath).subarray(4, 8).toString('latin1');
+  expect(flyHead === 'ftyp' && statSync(flyPath).size > 10000, `flyover MP4 downloaded (${flyover.suggestedFilename()}, ${Math.round(statSync(flyPath).size / 1024)} KB)`);
+  expect(/-flyover\.mp4$/.test(flyover.suggestedFilename()), 'the video file is named after the place');
+  expect(await page.evaluate(() => window.__yourPlace.pin() !== null), 'the pin is back after the video');
+  await page.evaluate(() => (window.__yourPlace.flyoverTest = null));
+
   // 3D print file: a binary STL of the chosen size in millimetres
   await page.click('#share-btn');
   await page.waitForSelector('#share-dialog[open]');

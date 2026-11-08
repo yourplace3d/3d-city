@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Flyover video: a 12-second upright MP4 that flies low along a diagonal of the square, north-east or north-west, with your title at the end. Made on your device, frame by frame, so it stays smooth on slow phones, and nothing is uploaded. Needs a recent Chrome, Edge, Safari or desktop Firefox.
+- The poster's small line (coordinates, area, terrain) can be replaced with your own text or left empty, like the title.
+
 ## 1.7.0 — 2026-11-06
 
 - Your Place in Spanish, for Latin America and Spain, with Mexico's way of writing numbers (1.5 × 1.5 km). It follows the browser's language, or pick Español in the settings.

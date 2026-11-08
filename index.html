@@ -223,15 +223,31 @@
           <button type="button" class="btn btn-wide" id="native-share-btn" data-t="shareNative" hidden>Share…</button>
           <div class="title-fields">
             <div class="field">
-              <label for="print-title" data-t="titleField">Title on the poster and print</label>
+              <label for="print-title" data-t="titleField">Title on the poster, video and print</label>
               <input id="print-title" type="text" maxlength="48" autocomplete="off" enterkeyhint="done" />
             </div>
             <div class="field">
               <label for="print-subtitle"><span data-t="secondLine">Second line</span> <small data-t="optional">optional</small></label>
               <input id="print-subtitle" type="text" maxlength="48" autocomplete="off" enterkeyhint="done" placeholder="Where we met · June 2019" data-t-attr="placeholder:secondLineExample" />
             </div>
+            <div class="field">
+              <label for="print-meta" data-t="metaField">Small line on the poster</label>
+              <input id="print-meta" type="text" maxlength="80" autocomplete="off" enterkeyhint="done" />
+            </div>
           </div>
           <button type="button" class="btn btn-wide btn-primary" id="poster-btn" data-t="posterButton">Download poster (PNG)</button>
+          <div class="flyover-block">
+            <div class="control-label">
+              <span id="flyover-label" data-t="flyoverLabel">Flyover video</span>
+              <small data-t="flyoverNote">About 12 seconds, upright for phones</small>
+            </div>
+            <div class="segmented" role="radiogroup" aria-labelledby="flyover-label" id="flyover-dir-group">
+              <button type="button" role="radio" data-value="nw" aria-checked="false" tabindex="-1" data-t="flyNW">↖ North-west</button>
+              <button type="button" role="radio" data-value="ne" aria-checked="true" data-t="flyNE">↗ North-east</button>
+            </div>
+            <button type="button" class="btn btn-wide" id="flyover-btn" data-t="flyoverButton">Make a flyover video (MP4)</button>
+            <progress id="flyover-progress" max="1" value="0" hidden></progress>
+          </div>
           <div class="print-block">
             <div class="control-label">
               <span id="print-label" data-t="printSize">3D print size</span>

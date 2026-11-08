@@ -24,7 +24,9 @@ works on your phone.**
 - **In your language:** English, Spanish, Portuguese (Brazil) or German, from the browser's language or the picker in
   the settings. Share links carry no language, so each visitor sees their own.
 - **Share it:** the link opens the same view with the same house pinned. It holds coordinates only, never the address you typed.
-- **Keep it:** download a poster image with the place name and coordinates, or an STL file to 3D print
+- **Fly over it:** a 12-second upright video (MP4) flying low along a diagonal of the square, with your
+  title at the end. It's made on your device, frame by frame, and never uploaded.
+- **Keep it:** download a poster image with the place name and coordinates (both can be replaced), or an STL file to 3D print
   (10, 15 or 20 cm wide; 2 km on 15 cm is 1:13,300), in one piece or in up to 8 × 8 tiles that fit your
   print bed. For painting, water sits 1 mm below the land, and roads (0.4 mm) and parks and woods (0.6 mm)
   can stand above it. Every exported shell is checked to be watertight.
@@ -81,7 +83,8 @@ search ─▶ geocode (Photon / Nominatim)
   the height rule, coastline sea fill, geocoding, an IndexedDB cache for Overpass responses.
 - `src/scene/` — rendering: terrain + plinth, merged building mesh, the draped map-layer texture,
   shader patches (contour lines, contact darkening), the viewer (camera, lights, controls, export).
-- `src/ui/` — search combobox, loading status, poster composition. `src/main.ts` wires it together.
+- `src/ui/` — search combobox, loading status, poster composition, the flyover video (encoded in the
+  browser with WebCodecs and [Mediabunny](https://mediabunny.dev), MPL-2.0). `src/main.ts` wires it together.
 
 Design notes:
 
@@ -137,8 +140,8 @@ Design notes:
 
 ## Data and licences
 
-- Map data © OpenStreetMap contributors, ODbL. Attribution is shown in the app, on posters and in
-  the STL file header; please keep “© OpenStreetMap contributors” next to anything you share.
+- Map data © OpenStreetMap contributors, ODbL. Attribution is shown in the app, on posters, in
+  flyover videos and in the STL file header; please keep “© OpenStreetMap contributors” next to anything you share.
 - Vector tiles: [OpenFreeMap](https://openfreemap.org), schema © [OpenMapTiles](https://openmaptiles.org).
   Fallback map data: the [Overpass API](https://overpass-api.de).
 - Terrain: Mapzen terrain tiles on AWS Open Data — see the
