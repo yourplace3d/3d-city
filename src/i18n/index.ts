@@ -102,7 +102,7 @@ export function lookup(key: string, messages: Messages = t): unknown {
 /** Put this language's texts into the page, and fill the language pickers. */
 export function translatePage(root: Document = document): void {
   root.documentElement.lang = locale;
-  root.title = t.homeTitle;
+  root.title = root.body?.dataset.app === 'data' ? t.dataHomeTitle : t.homeTitle;
   for (const el of root.querySelectorAll<HTMLElement>('[data-t]')) {
     const v = lookup(el.dataset.t!);
     if (typeof v === 'string') el.textContent = v;

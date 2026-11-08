@@ -141,7 +141,8 @@ describe('view state URL', () => {
       exaggeration: 2.5,
       contours: true,
       style: 'ramp',
-      layers: { roads: true, water: false, green: true, steep: true },
+      layers: { roads: true, water: false, green: true },
+      data: 'route',
       camera: { azimuth: 33.3, tilt: 41.2, distance: 3456, targetE: -120, targetN: 80 },
       pin: { lat: 48.77702, lon: 9.17654 },
     };

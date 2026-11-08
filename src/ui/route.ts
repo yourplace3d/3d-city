@@ -1,6 +1,7 @@
 /**
- * The route panel: load a GPX or TCX file (or a route from a share link), pick the stretch the
- * model shows, replay it, hide its ends, remove it.
+ * The route layer of Your Place · Data: load a GPX or TCX file (or a route from a share link),
+ * pick the stretch the model shows, replay it, see its height profile, hide its ends, remove it.
+ * Shown while it is the chosen data layer; the route stays loaded when another one is picked.
  *
  * Privacy: the file is read in this browser and never uploaded or stored; reloading the page
  * forgets it. A share link carries the stretch only when the user turns that on, and never
@@ -46,8 +47,10 @@ export interface RouteHost {
   viewer: Viewer;
   accent: string;
   model(): CityModel | null;
-  /** whether the steepness layer is on (the route then shows it too) */
+  /** whether the route shows its steepness colours and climbs */
   steep(): boolean;
+  /** a route was loaded from a file: make it the data layer shown */
+  showRoute(): void;
   /** build the model around a stretch */
   open(center: LngLat, size: number, label: string, detail: string): void;
   /** the share link or the description should follow */
@@ -69,6 +72,10 @@ export class RouteController {
   private trim = false;
   private share = false;
   private display: { model: CityModel; center: LngLat; overlay: RouteDisplay } | null = null;
+  /** the route is the data layer shown */
+  private shown = false;
+  /** the model it was last given, to show the route on when it's picked again */
+  private last: { model: CityModel; center: LngLat } | null = null;
   /** the stretch's heights and grades on the current model, for the profile */
   private profile: { samples: LineSample[]; scale: ProfileScale; climbs: string[] } | null = null;
   private readonly playback: Playback;
@@ -115,6 +122,7 @@ export class RouteController {
     this.trim = false;
     this.route = route;
     ({ fromM: this.fromM, toM: this.toM } = defaultStretch(route));
+    this.host.showRoute();
     this.syncPanel();
     this.host.say(t.routeLoaded(this.name, num(endOf(route) / 1000, 1)), 6000);
     this.openStretch();
@@ -138,12 +146,37 @@ export class RouteController {
     return true;
   }
 
-  /** Put the route on a newly built model. */
+  /** Show or hide the route (it is or isn't the data layer picked); it stays loaded either way. */
+  setShown(shown: boolean): void {
+    if (shown === this.shown) return;
+    this.shown = shown;
+    const last = this.last;
+    if (shown && last && last.model === this.host.model()) this.attach(last.model, last.center);
+    else if (!shown) {
+      this.detach();
+      this.playback.reset();
+      this.profile = null;
+      this.renderProfile();
+    }
+    this.syncPanel();
+    this.host.viewer.requestRender();
+  }
+
+  get visible(): boolean {
+    return this.shown && !!this.route;
+  }
+
+  /** Put the route on a newly built model (if it's the layer shown). */
   attach(model: CityModel, center: LngLat): void {
     // the ground is painted again when the new display is added (an old model is about to go anyway)
     this.detach(false);
     this.playback.reset();
-    if (!this.route) return;
+    this.last = { model, center };
+    if (!this.route || !this.shown) {
+      this.profile = null;
+      this.renderProfile();
+      return;
+    }
     const overlay = new RouteDisplay(this.view(model, center), this.host.accent, model.sizeM);
     model.addOverlay(overlay);
     this.display = { model, center, overlay };
@@ -173,7 +206,7 @@ export class RouteController {
   /** The link code for the stretch shown, or null unless the user turned sharing on. */
   linkCode(): string | null {
     const r = this.route;
-    if (!r || !this.share) return null;
+    if (!r || !this.share || !this.shown) return null;
     const key = this.linkKey();
     if (this.linkCache?.key === key) return this.linkCache.code;
     const points = stretchOf(r, this.fromM, this.toM);
@@ -193,7 +226,7 @@ export class RouteController {
 
   /** A sentence for the model's description, or null without a route. */
   describe(): string | null {
-    if (!this.route) return null;
+    if (!this.route || !this.shown) return null;
     const line = t.routeDescribe(this.name, num((this.toM - this.fromM) / 1000, 1), num(this.fromM / 1000, 1), num(this.toM / 1000, 1));
     const summary = this.profileSummary();
     return summary ? `${line} ${t.profileLabel(summary)}` : line;
@@ -206,6 +239,7 @@ export class RouteController {
     const d = this.display;
     return {
       name: this.name,
+      layerShown: this.shown,
       shared: this.shared,
       share: this.share,
       trim: this.trim,
@@ -382,7 +416,7 @@ export class RouteController {
     $('route-empty').hidden = !!r;
     $('route-loaded').hidden = !r;
     $<HTMLInputElement>('share-route').checked = this.share;
-    $('share-route-row').hidden = !r;
+    $('share-route-row').hidden = !r || !this.shown;
     if (!r) {
       $('route-summary').textContent = t.routeHint;
       return;

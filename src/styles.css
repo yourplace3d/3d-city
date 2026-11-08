@@ -1438,3 +1438,119 @@ input[type='range'] {
   color: var(--text);
   text-align: center;
 }
+
+/* ------------------------------------------------------------------ Your Place · Data, and the way between the apps */
+
+a.fab {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.welcome-data {
+  margin: 16px 0 0;
+  font-size: 14px;
+}
+
+.welcome-data a {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.welcome-data a:hover {
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.welcome-data strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.layer-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px;
+  text-align: left;
+}
+
+.layer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.layer-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+}
+
+.layer-card h2 .swatch {
+  width: 18px;
+  height: 10px;
+  border-radius: 5px;
+}
+
+.layer-card p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--muted);
+  text-wrap: pretty;
+}
+
+.layer-card .btn {
+  margin-top: auto;
+}
+
+.card-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.swatch-route {
+  background: linear-gradient(90deg, #3d3832 0 40%, #cc6700 40% 70%, #b52d1b 70%);
+}
+
+.layers-more {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--faint);
+}
+
+.data-layer .segmented button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.data-layer .segmented .swatch {
+  width: 14px;
+  height: 8px;
+  border-radius: 4px;
+}
+
+.part-of {
+  margin: 4px 0 8px;
+}
+
+.part-of a {
+  color: var(--muted);
+  text-underline-offset: 3px;
+}

@@ -5,6 +5,12 @@ description: Step-by-step guide to plugging a new data set (a file the user pick
 
 # Add a data layer to Your Place
 
+Data layers live in **Your Place · Data** (`data/`), a second app built from the same code as Your Place:
+`index.html` and `data/index.html` share their body (`src/app-body.html`, parts marked `only:place` /
+`only:data`), and `src/main.ts` knows which app it runs in (`APP`). Your Place itself stays simple and only
+links across. The data app shows **one layer at a time**, so each new layer adds one choice, not a panel full
+of buttons.
+
 The engine lives in `src/data/`. Every overlay goes through the same four parts:
 
 | Part | Folder | Job |
@@ -20,7 +26,7 @@ The contracts are in `src/data/types.ts`. Two worked examples:
   link), `match/route.ts`, `time/playback.ts`, `display/route.ts`, wired up by `src/ui/route.ts`.
 - **Steepness** (derived from what the model already has, no source): `match/slope.ts` (grades along a
   line from the terrain), `display/steepness.ts` (ground paint) and `display/profile.ts` (SVG profile),
-  wired up by `src/ui/steepness.ts` as a chip under Map layers (`Layers.steep` in `src/state.ts`).
+  wired up by `src/ui/steepness.ts`.
 
 ## 1. Check the source first
 
@@ -75,6 +81,10 @@ size on screen; see `makeLabel` and `declutter` in `display/route.ts`. Must stay
 
 ## 6. Wire it into the app
 
+- Add the layer's id to `DATA_LAYERS` in `src/state.ts` (links carry it as `dl=`), a radio button in the
+  `data-layer-group` of `src/app-body.html`, a card on the data app's start page (`layer-cards`) with one
+  sentence on what it shows, and its case in `setDataLayer()` in `src/main.ts`, which shows one layer and hides
+  the others.
 - A controller in `src/ui/<name>.ts` (see `RouteController`, `SteepController`): owns the layer's state and its
   panel, and puts a fresh display on each new `CityModel`. `src/main.ts` calls it in `loadPlace` right after
   the model is made, and again from `dataLayersChanged()` when the model's roads arrive or its terrain changes
@@ -99,6 +109,6 @@ size on screen; see `makeLabel` and `declutter` in `display/route.ts`. Must stay
 - Unit tests in `tests/<name>.test.ts` (Vitest, Node): parsing with small inline fixtures, matching, time steps,
   and anything the share link carries. `npm test`.
 - End-to-end: answer the source's host from a fixture with `context.route(...)` in `routeAll` (`e2e/smoke.mjs`),
-  add checks like `e2e/route-checks.mjs`, and call them from `smoke.mjs`. No real network in tests; fail on
+  add checks like `e2e/data-checks.mjs` (against `${base}data/`), and call them from `smoke.mjs`. No real network in tests; fail on
   console errors. `npm run e2e` (it builds first).
 - `npm run typecheck` before committing. All existing features must keep passing.

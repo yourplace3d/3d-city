@@ -1,8 +1,7 @@
 /**
- * The "Steepness" map layer: roads and paths coloured by how steep they are, with a legend.
- * Works anywhere, from the terrain and roads the model already has; nothing new is fetched.
- * With a route loaded only the route is coloured (RouteController does that), so the coloured
- * streets don't compete with it; without one, all roads are, for planning.
+ * The Steepness data layer of Your Place · Data: roads and paths coloured by how steep they
+ * are, with a legend. Works anywhere, from the terrain and roads the model already has;
+ * nothing new is fetched. (The route layer colours only the route, with the same colours.)
  */
 
 import { num, t } from '../i18n';
@@ -14,8 +13,6 @@ import { STEEP_COLOURS, SteepnessDisplay } from '../data/display/steepness';
 export interface SteepHost {
   viewer: Viewer;
   model(): CityModel | null;
-  /** a route is loaded: it carries the colours instead of the roads */
-  routeActive(): boolean;
 }
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -29,8 +26,6 @@ export function steepLabels(): string[] {
 export class SteepController {
   on = false;
   private display: { model: CityModel; overlay: SteepnessDisplay; lengths: number[] } | null = null;
-  /** whether the last refresh left the roads to a route */
-  private routeOnly = false;
 
   constructor(private readonly host: SteepHost) {
     const scale = $('steep-scale');
@@ -47,23 +42,16 @@ export class SteepController {
   }
 
   set(on: boolean): void {
+    if (on === this.on) return;
     this.on = on;
-    $('steep-legend').hidden = !on;
     this.refresh();
-  }
-
-  /** Refresh when a route came or went (the roads give their colours to it, or take them back). */
-  sync(): void {
-    if (this.host.routeActive() !== this.routeOnly) this.refresh();
   }
 
   /** Colour the roads of the current model again (its roads arrived, or its terrain changed). */
   refresh(): void {
     const model = this.host.model();
     const features = model?.featureSet;
-    this.routeOnly = this.host.routeActive();
-    $('steep-route-note').hidden = !this.routeOnly;
-    const roads = this.on && !!model && !!features && !this.routeOnly;
+    const roads = this.on && !!model && !!features;
     if (this.display) {
       // on a model that has been replaced, it went with that model
       if (this.display.model === model) model.removeOverlay(this.display.overlay, !roads);
@@ -90,6 +78,6 @@ export class SteepController {
 
   debugInfo(): unknown {
     const d = this.display;
-    return { on: this.on, routeOnly: this.routeOnly, shown: !!d && d.model === this.host.model(), pieces: d?.overlay.pieces.length ?? 0, lengths: d?.lengths.map(Math.round) ?? [] };
+    return { on: this.on, shown: !!d && d.model === this.host.model(), pieces: d?.overlay.pieces.length ?? 0, lengths: d?.lengths.map(Math.round) ?? [] };
   }
 }

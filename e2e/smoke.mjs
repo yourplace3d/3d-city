@@ -14,7 +14,7 @@ import { createRequire } from 'node:module';
 import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildWorld, VILLAGE, RURAL, synthesize } from './fixtures/synthetic-city.mjs';
-import { routeChecks } from './route-checks.mjs';
+import { dataAppChecks } from './data-checks.mjs';
 
 const require = createRequire(import.meta.url);
 let chromium;
@@ -205,6 +205,7 @@ try {
   await page.goto(base);
   await page.waitForSelector('#welcome', { state: 'visible' });
   expect((await page.locator('.preset').count()) === 6, 'landing shows 6 preset places');
+  expect((await page.getAttribute('#data-landing-link', 'href')) === './data/' && (await page.isVisible('#data-landing-link')), 'the start page leads to Your Place · Data');
   await shot(page, '01-landing-desktop');
   const head = await page.evaluate(() => {
     const meta = (sel) => document.querySelector(sel)?.getAttribute('content') ?? '';
@@ -224,11 +225,11 @@ try {
   expect(/^https:\/\/.+\/$/.test(head.canonical) && !head.canonical.includes('%'), `canonical link is an absolute URL (${head.canonical})`);
   expect(head.ogImage === `${head.canonical}og.jpg` && head.twitterCard === 'summary_large_image', 'link previews point at the preview image');
   expect(head.ld?.['@type'] === 'WebApplication' && head.ld.url === head.canonical, 'structured data describes the app');
-  for (const f of ['og.jpg', 'sitemap.xml', 'robots.txt', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'screenshot.jpg']) {
+  for (const f of ['og.jpg', 'sitemap.xml', 'robots.txt', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'screenshot.jpg', 'data/index.html', 'data/manifest.webmanifest', 'data/icon-192.png', 'data/icon-maskable-512.png', 'data/apple-touch-icon.png']) {
     expect(existsSync(join(dist, f)), `build includes ${f}`);
   }
   const sitemap = readFileSync(join(dist, 'sitemap.xml'), 'utf8');
-  expect(sitemap.includes(`<loc>${head.canonical}</loc>`) && sitemap.includes(`<loc>${head.canonical}about/</loc>`), 'sitemap lists the app and the about page');
+  expect(sitemap.includes(`<loc>${head.canonical}</loc>`) && sitemap.includes(`<loc>${head.canonical}data/</loc>`) && sitemap.includes(`<loc>${head.canonical}about/</loc>`), 'sitemap lists both apps and the about page');
 
   await page.fill('#search-input', 'Stuttgart');
   await page.waitForSelector('#suggestions li[role="option"]', { timeout: 5000 });
@@ -252,6 +253,11 @@ try {
   expect(/Stuttgart/.test(await page.textContent('#place-title')), 'sheet shows the place name');
   expect(/^Stuttgart.* in 3D · Your Place$/.test(await page.title()), `browser tab names the place (“${await page.title()}”)`);
   expect(/buildings/.test(await page.textContent('#describe')), 'text description lists buildings');
+  const doors = await page.evaluate(() => ({
+    dataControls: document.querySelectorAll('#route-control, #data-layer-group, #route-file, [data-layer="steep"]').length,
+    toData: document.getElementById('other-app').getAttribute('href'),
+  }));
+  expect(doors.dataControls === 0 && /^\.\/data\/#lat=48\.7765/.test(doors.toData), `Your Place stays as it was, with one button to the same place in Your Place · Data (${doors.toData.slice(0, 30)}…)`);
   await settle(page, 2200);
   await shot(page, '02-model-desktop');
 
@@ -796,8 +802,8 @@ try {
   await shot(ep, '12e-spanish');
   await esCtx.close();
 
-  // ---------------- routes (GPX, TCX)
-  await routeChecks({ browser, base, routeAll, expect, watchConsole, waitStage, settle, shot });
+  // ---------------- Your Place · Data: steepness, routes (GPX, TCX)
+  await dataAppChecks({ browser, base, routeAll, expect, watchConsole, waitStage, settle, shot });
 
   // ---------------- dark mode, reduced motion
   const dark = await browser.newContext({ viewport: { width: 1280, height: 800 }, colorScheme: 'dark', reducedMotion: 'reduce' });

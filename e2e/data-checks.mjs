@@ -1,33 +1,71 @@
 /**
- * End-to-end checks for routes (GPX, TCX), run by smoke.mjs: load a file from the landing page,
- * the stretch picker, replay, hiding the ends, the opt-in share link and opening it, removing
- * the route, a TCX file dropped on the page, a FIT file, and a phone. Also checks privacy: the
- * file never goes out in a request, no place-name lookup is made for it, and links carry no
- * route unless the user turns that on.
+ * End-to-end checks for Your Place · Data (data/), run by smoke.mjs: its own page and start
+ * page, the steepness layer from a preset, one data layer at a time, routes (GPX, TCX) with the
+ * stretch picker, replay, height profile, hiding the ends, the opt-in share link and opening it,
+ * removing the route, a TCX file dropped on the page, a FIT file, and a phone. Also checks
+ * privacy: the file never goes out in a request, no place-name lookup is made for it, and links
+ * carry no route unless the user turns that on.
  */
 
 import { routeGpx, routeTcx } from './fixtures/route.mjs';
 
-export async function routeChecks({ browser, base, routeAll, expect, watchConsole, waitStage, settle, shot }) {
+export async function dataAppChecks({ browser, base, routeAll, expect, watchConsole, waitStage, settle, shot }) {
+  const dataBase = `${base}data/`;
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 }, deviceScaleFactor: 1 });
   await routeAll(ctx);
   const page = await ctx.newPage();
-  watchConsole(page, 'route');
+  watchConsole(page, 'data');
   const requests = [];
   page.on('request', (r) => requests.push({ url: r.url(), body: r.postData() ?? '' }));
   const route = () => page.evaluate(() => window.__yourPlace.route());
+  const steep = () => page.evaluate(() => window.__yourPlace.steep());
   const reload = async (before) => {
     await page.waitForFunction((c) => JSON.stringify(window.__yourPlace.state().center) !== c, JSON.stringify(before), { timeout: 10000 }).catch(() => undefined);
     await waitStage(page, ['ready', 'error']);
   };
 
-  await page.goto(base);
+  // ---- its own page, part of the brand
+  await page.goto(dataBase);
   await page.waitForSelector('#route-landing-btn', { state: 'visible' });
-  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#route-landing-btn')]);
+  const head = await page.evaluate(async () => ({
+    app: window.__yourPlace.app,
+    title: document.title,
+    canonical: document.querySelector('link[rel="canonical"]')?.getAttribute('href') ?? '',
+    manifest: await fetch(document.querySelector('link[rel="manifest"]').href).then((r) => r.json()),
+    icon: await fetch(document.querySelector('link[rel="icon"]').href).then((r) => r.ok),
+    cards: document.querySelectorAll('.layer-card').length,
+    presets: document.querySelectorAll('#steep-presets button').length,
+    print: !!document.getElementById('stl-btn'),
+    home: document.getElementById('other-app').getAttribute('href'),
+  }));
+  expect(head.app === 'data' && /^Your Place · Data/.test(head.title) && head.title.length <= 60 && /\/data\/$/.test(head.canonical), `the data app has its own page (“${head.title}”, ${head.canonical})`);
+  expect(head.manifest.name === 'Your Place · Data' && head.icon, 'it installs as its own app, with its own icon');
+  expect(head.cards === 2 && head.presets === 3 && !head.print && head.home === '../', 'its start page shows the layers as cards, no 3D print, and the way back to Your Place');
+  await shot(page, 'd0-data-landing');
+
+  // ---- steepness, from a preset
+  await page.click('#steep-presets button:has-text("Stuttgart")');
+  await waitStage(page, ['ready', 'error']);
+  await page.waitForFunction(() => window.__yourPlace.steep().shown, null, { timeout: 15000 }).catch(() => undefined);
+  let s = await steep();
+  expect(s.on && s.shown && s.pieces > 20 && s.lengths[2] + s.lengths[3] + s.lengths[4] > 0, `steepness colours the roads and paths (${s.pieces} pieces; m per class ${s.lengths.join(', ')})`);
+  expect((await page.isVisible('#steep-legend')) && (await page.locator('#steep-scale li').count()) === 4 && (await page.isHidden('#route-control')), 'a legend shows the four classes; the route panel stays out of the way');
+  expect(/dl=steep/.test(await page.evaluate(() => location.hash)) && /^Stuttgart · Your Place Data$/.test(await page.title()), 'the link and the tab name the layer and the place');
+  expect(/steeper than 6%: [\d.]+ km/.test(await page.textContent('#describe')), 'the description says how much is steep');
+  const toPlace = await page.getAttribute('#other-app', 'href');
+  expect(/^\.\.\/#lat=48\.7765/.test(toPlace) && !/dl=|rt=/.test(toPlace), `the home button opens the same place in Your Place (${toPlace.slice(0, 40)}…)`);
+  await settle(page, 1500);
+  await shot(page, 'd1-steepness');
+
+  // ---- one layer at a time: the route layer takes over
+  await page.click('#data-layer-group [data-value="route"]');
+  s = await steep();
+  expect(!s.on && !s.shown && (await page.isVisible('#route-load-btn')) && /dl=route/.test(await page.evaluate(() => location.hash)), 'picking the route layer hides steepness on the roads and shows the route panel');
+  const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#route-load-btn')]);
   await chooser.setFiles({ name: 'test-city-half.gpx', mimeType: 'application/gpx+xml', buffer: Buffer.from(routeGpx()) });
-  await page.waitForFunction(() => window.__yourPlace.route()?.shown, null, { timeout: 60000 });
+  await page.waitForFunction(() => window.__yourPlace.route()?.shown && window.__yourPlace.route()?.name === 'Test City Half', null, { timeout: 60000 });
   const t = await waitStage(page, ['ready', 'error']);
-  expect(t.stage === 'ready', 'a GPX file from the landing page builds a model');
+  expect(t.stage === 'ready', 'a GPX file builds a model around the route');
   let r = await route();
   const st = await page.evaluate(() => window.__yourPlace.state());
   expect(r.name === 'Test City Half' && (await page.textContent('#place-title')) === 'Test City Half', `the model is named after the route (“${r.name}”)`);
@@ -54,7 +92,6 @@ export async function routeChecks({ browser, base, routeAll, expect, watchConsol
   expect(!(await route()).playing, 'replay pauses');
 
   // the height profile, and where it gets steep
-  const steep = () => page.evaluate(() => window.__yourPlace.steep());
   const summary = await page.textContent('#profile-summary');
   expect((await page.isVisible('#route-profile')) && /^\d[\d,]* m up, \d[\d,]* m down/.test(summary), `the route has a height profile (“${summary}”)`);
   await page.locator('#profile-chart').scrollIntoViewIfNeeded();
@@ -65,14 +102,10 @@ export async function routeChecks({ browser, base, routeAll, expect, watchConsol
   await shot(page, 'r2a-route-profile');
   await page.mouse.move(chart.x + chart.width / 2, chart.y - 40);
   expect((await page.textContent('#profile-readout')) === '', 'the readout clears when the pointer leaves');
-  await page.click('[data-layer="steep"]');
-  await page.waitForFunction(() => window.__yourPlace.route().steep, null, { timeout: 15000 }).catch(() => undefined);
-  let s = await steep();
+  s = await steep();
   r = await route();
-  expect(s.on && s.routeOnly && !s.shown && r.steep, `with a route, steepness colours only the route (climbs: ${r.climbs.join(', ') || 'none'})`);
-  expect((await page.isVisible('#steep-legend')) && (await page.locator('#steep-scale li').count()) === 4 && (await page.isVisible('#steep-route-note')), 'a legend shows the four classes, and says only the route is coloured');
-  expect(/ly=rwgs/.test(await page.evaluate(() => location.hash)), 'the link keeps steepness on');
-  await settle(page, 1500);
+  expect(!s.shown && r.steep && r.climbs.length > 0, `the route shows where it gets steep; the other roads stay as they are (climbs: ${r.climbs.join(', ')})`);
+  await settle(page, 600);
   await shot(page, 'r2b-route-steepness');
 
   // the stretch: from the start; the end is pulled in so it fits
@@ -85,7 +118,7 @@ export async function routeChecks({ browser, base, routeAll, expect, watchConsol
   await reload(before);
   r = await route();
   expect(r.fromM === 0 && r.toM < r.endM && r.marks.includes('Start') && !r.marks.includes('Finish'), `moving the start builds the model around the new stretch (km 0–${(r.toM / 1000).toFixed(1)}, ${r.marks.join(', ')})`);
-  expect(!(await steep()).shown && r.steep, 'the new stretch is measured for steepness too');
+  expect(r.steep && r.shown, 'the new stretch is measured for steepness too');
   expect(/^0(\.0)?$/.test(await page.textContent('#route-from-out')), 'the stretch readout follows');
   await settle(page, 1500);
   await shot(page, 'r3-route-start');
@@ -117,25 +150,26 @@ export async function routeChecks({ browser, base, routeAll, expect, watchConsol
   expect(shared.shared && Math.abs(shared.fromM - r.fromM) < 2 && Math.abs(shared.toM - r.toM) < 40 && !shared.hasTime, `a shared link shows the stretch with its km numbers, no times (km ${(shared.fromM / 1000).toFixed(1)}–${(shared.toM / 1000).toFixed(1)})`);
   expect(!shared.marks.includes('Start') && (await other.isHidden('#route-stretch')) && (await other.textContent('#route-name')) === 'Shared route', 'the hidden start stays hidden, and the shared route can’t be stretched');
   expect(!(await other.evaluate(() => window.__yourPlace.pin().visible)), 'the pin stays hidden on a shared route');
-  await other.waitForFunction(() => window.__yourPlace.route().steep, null, { timeout: 15000 }).catch(() => undefined);
-  expect((await other.evaluate(() => window.__yourPlace.steep().on)) && (await other.isVisible('#route-profile')), 'the link opens with steepness on and the profile shown');
+  expect(shared.steep && (await other.isVisible('#route-profile')) && /dl=route/.test(link), 'the link opens on the route layer, with the profile');
   await settle(other, 1500);
   await shot(other, 'r5-shared-route');
   await other.close();
 
-  // remove the route: with steepness still on, all roads take the colours back
+  // switch layers: the route steps aside and comes back
+  await page.click('#data-layer-group [data-value="steep"]');
+  await page.waitForFunction(() => window.__yourPlace.steep().shown, null, { timeout: 15000 }).catch(() => undefined);
+  r = await route();
+  s = await steep();
+  expect(s.shown && !r.shown && !r.layerShown && (await page.isHidden('#route-control')) && !/rt=/.test(await page.evaluate(() => location.hash)), 'switching to steepness hides the route (and keeps it out of the link)');
+  await page.click('#data-layer-group [data-value="route"]');
+  r = await route();
+  s = await steep();
+  expect(r.shown && !s.shown && r.name === 'Test City Half', 'switching back shows the same route again');
+
+  // remove the route
   await page.click('#route-remove');
   expect((await route()) === null && (await page.isVisible('#route-load-btn')) && !(await page.isVisible('#route-profile')), 'the route can be removed');
   expect(!/rt=/.test(await page.evaluate(() => location.hash)) && (await page.evaluate(() => window.__yourPlace.pin().visible)), 'removing it clears the link and shows the pin again');
-  await page.waitForFunction(() => window.__yourPlace.steep().shown, null, { timeout: 15000 }).catch(() => undefined);
-  s = await steep();
-  expect(s.on && !s.routeOnly && s.shown && s.pieces > 20 && s.lengths[2] + s.lengths[3] + s.lengths[4] > 0 && !(await page.isVisible('#steep-route-note')), `without a route, steepness colours all roads and paths (${s.pieces} pieces; m per class ${s.lengths.join(', ')})`);
-  expect(/steeper than 6%: [\d.]+ km/.test(await page.textContent('#describe')), 'the description says how much is steep');
-  await settle(page, 1500);
-  await shot(page, 'r5b-steepness-roads');
-  await page.click('[data-layer="steep"]');
-  s = await steep();
-  expect(!s.on && !s.shown && !(await page.isVisible('#steep-legend')), 'steepness turns off');
 
   // a TCX file dropped on the page, named after the file
   const drop = (name, text) =>
@@ -164,8 +198,8 @@ export async function routeChecks({ browser, base, routeAll, expect, watchConsol
   const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, reducedMotion: 'reduce' });
   await routeAll(phone);
   const pp = await phone.newPage();
-  watchConsole(pp, 'route-phone');
-  await pp.goto(base);
+  watchConsole(pp, 'data-phone');
+  await pp.goto(dataBase);
   await pp.waitForSelector('#route-landing-btn', { state: 'visible' });
   const [pc] = await Promise.all([pp.waitForEvent('filechooser'), pp.tap('#route-landing-btn')]);
   await pc.setFiles({ name: 'run.gpx', mimeType: 'application/gpx+xml', buffer: Buffer.from(routeGpx('Phone Run')) });

@@ -76,7 +76,7 @@ export class CityModel implements ModelSurface {
   private markPinned = false;
   private style: BuildingStyle = 'white';
   private seaFraction = 0;
-  private layers: Layers = { roads: true, water: true, green: true, steep: false };
+  private layers: Layers = { roads: true, water: true, green: true };
   /** data layers on the model (a route): ground paint and 3D objects */
   private readonly overlays: ModelOverlay[] = [];
 

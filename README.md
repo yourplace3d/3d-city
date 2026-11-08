@@ -23,20 +23,27 @@ works on your phone.**
   or double-tap / double-click a spot to load the area there in one go.
 - **In your language:** English, Spanish, Portuguese (Brazil) or German, from the browser's language or the picker in
   the settings. Share links carry no language, so each visitor sees their own.
-- **See where it gets steep:** colour roads and paths by how steep they are, from golden yellow (3–6 %) to dark
-  red (over 15 %), anywhere, from the terrain the model already has. Planning a run, a ride, a hike or a
-  stroll? This is where it climbs. No green: on this map green is parks and woods, and red–green is what
-  colour-blind people can't tell apart; each step is darker than the last, so the order reads without colour.
-- **Show a route:** load a GPX or TCX file (Strava, Garmin, a race website) and pick the stretch to show; the
-  model follows it, with the line on the terrain, start, finish and km markers, a replay at the recorded pace,
-  and a height profile. With steepness on, only the route takes its colours (the other roads stay as they
-  are) and its steepest climbs are labelled.
-  The file is read in your browser and never uploaded.
 - **Share it:** the link opens the same view with the same house pinned. It holds coordinates only, never the address you typed.
 - **Keep it:** download a poster image with the place name and coordinates, or an STL file to 3D print
   (10, 15 or 20 cm wide; 2 km on 15 cm is 1:13,300), in one piece or in up to 8 × 8 tiles that fit your
   print bed. For painting, water sits 1 mm below the land, and roads (0.4 mm) and parks and woods (0.6 mm)
   can stand above it. Every exported shell is checked to be watertight.
+
+## Your Place · Data
+
+A second app, at [`data/`](https://yourplace3d.github.io/3d-city/data/), puts open data on the same 3D model,
+one layer at a time, so neither app gets crowded. Your Place has one button to it (the layers icon), and it
+has one back, both keeping the place you're looking at.
+
+- **Steepness:** roads and paths coloured by how steep they are, from golden yellow (3–6 %) to dark red
+  (over 15 %), anywhere, from the terrain the model already has. Planning a run, a ride, a hike or a
+  stroll? This is where it climbs. No green: on this map green is parks and woods, and red–green is what
+  colour-blind people can't tell apart; each step is darker than the last, so the order reads without colour.
+- **Your route:** load a GPX or TCX file (Strava, Garmin, a race website) and pick the stretch to show; the
+  model follows it, with the line on the terrain in the steepness colours, start, finish, km markers and the
+  steepest climbs labelled, a replay at the recorded pace, and a height profile. The file is read in your
+  browser and never uploaded.
+- More layers are planned: traffic, water, energy.
 
 ## Controls
 
@@ -53,7 +60,7 @@ works on your phone.**
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173
+npm run dev        # http://localhost:5173 (Your Place) and http://localhost:5173/data/ (Your Place · Data)
 npm run build      # static site in dist/ — host it anywhere (relative paths)
 npm test           # unit tests (vitest)
 npm run e2e        # build + headless-browser test (needs Playwright), screenshots in e2e/out/
@@ -93,7 +100,11 @@ search ─▶ geocode (Photon / Nominatim)
 - `src/data/` — the data-layer engine for overlays on the model: sources (files, links, later live APIs),
   matching to the model's local metres, time and playback, and displays (ground paint, 3D labels). The layers so
   far: a route from a GPX or TCX file, and steepness of roads, paths and routes (derived from the terrain).
-- `src/ui/` — search combobox, loading status, poster composition, the route panel. `src/main.ts` wires it together.
+- `src/ui/` — search combobox, loading status, poster composition, the route and steepness panels. `src/main.ts`
+  wires it together, for whichever app the page is.
+- Two pages, one body: `index.html` (Your Place) and `data/index.html` (Your Place · Data) each have their own
+  head (title, link previews, install manifest and icon) and take their body from `src/app-body.html`; the build
+  keeps the parts marked for that app (`only:place`, `only:data`).
 
 Design notes:
 

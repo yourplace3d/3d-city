@@ -7,7 +7,7 @@ import { loadHeightGrid } from './geo/terrain';
 import { CityModel } from './scene/cityModel';
 import { BUILDING_COLOURS, HEIGHT_RAMP } from './scene/buildingsMesh';
 import { isWebGL2Available, Viewer } from './scene/viewer';
-import { clampSize, decodeState, encodeState, samePlace, type AreaSize, type BuildingStyle, type Layers, type ViewState } from './state';
+import { clampSize, decodeState, encodeState, samePlace, type AreaSize, type BuildingStyle, type DataLayerId, type Layers, type ViewState } from './state';
 import { buildPrint, PRINT_BASE_MM, printScale, toBinaryStl, Triangles } from './export/stl';
 import { buildTiledPrint, MAX_TILES, tileName } from './export/tiles';
 import { makeZip, type ZipEntry } from './export/zip';
@@ -23,6 +23,21 @@ import { SteepController } from './ui/steepness';
 import { area, direction, distance, num, scale as localScale, t, translatePage } from './i18n';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+
+/**
+ * Which app this page is: Your Place (the model, poster and print) or Your Place · Data (the
+ * data layers: steepness, routes). One codebase, two pages built from src/app-body.html.
+ */
+const APP: 'place' | 'data' = document.body.dataset.app === 'data' ? 'data' : 'place';
+/** the way back to the site's root, for the other app and the service worker */
+const ROOT = APP === 'data' ? '../' : './';
+
+/** Hilly places for the data app's steepness card. */
+const STEEP_PRESETS: Array<{ name: string; center: LngLat; size: AreaSize; ex: number }> = [
+  { name: 'Lisbon', center: { lat: 38.7139, lon: -9.1365 }, size: 2000, ex: 1.5 },
+  { name: 'San Francisco', center: { lat: 37.7935, lon: -122.4075 }, size: 2000, ex: 1.5 },
+  { name: 'Stuttgart', center: { lat: 48.7765, lon: 9.1772 }, size: 3000, ex: 1.5 },
+];
 
 const PRESETS: Array<{ name: string; detail: string; center: LngLat; size: AreaSize; ex: number }> = [
   { name: 'Stuttgart', detail: t.presets.stuttgart, center: { lat: 48.7765, lon: 9.1772 }, size: 4000, ex: 2 },
@@ -41,6 +56,11 @@ const app = $('app');
 /** the landing page's title; a loaded place puts its name in the tab instead */
 const HOME_TITLE = document.title;
 let state: ViewState = decodeState(location.hash);
+// each app reads only its own parts of a link
+if (APP === 'place') {
+  state.data = null;
+  state.route = null;
+}
 /** Set once this browser has opened a place of its own; until then a shared model ends with an invitation. */
 const OWN_KEY = 'yp:own';
 let inviteOwn = !!state.center && !readFlag(OWN_KEY);
@@ -72,8 +92,9 @@ const debug = {
   pick: (x: number, y: number) => viewer.pick(x, y),
   /** used by tools/video to drive the camera frame by frame */
   setCamera: (c: Parameters<Viewer['setCameraState']>[0]) => viewer.setCameraState(c),
-  route: () => route.debugInfo(),
-  steep: () => steep.debugInfo(),
+  app: APP,
+  route: () => route?.debugInfo() ?? null,
+  steep: () => steep?.debugInfo() ?? null,
 };
 (window as unknown as { __yourPlace: typeof debug }).__yourPlace = debug;
 
@@ -90,12 +111,15 @@ viewer.onCameraChange(() => {
   scheduleHashWrite();
 });
 viewer.onTap(movePinTo);
-const steep: SteepController = new SteepController({ viewer, model: () => model, routeActive: () => route.active });
-const route: RouteController = new RouteController({
+// the data layers, in Your Place · Data only
+const steep: SteepController | null = APP === 'data' ? new SteepController({ viewer, model: () => model }) : null;
+const route: RouteController | null = APP === 'data' ? new RouteController({
   viewer,
   accent,
   model: () => model,
-  steep: () => steep.on,
+  // the route layer is about where it gets steep
+  steep: () => true,
+  showRoute: () => setDataLayer('route'),
   open: (center, size, label, detail) => {
     markOwnPlace();
     routeSquare = true;
@@ -106,8 +130,6 @@ const route: RouteController = new RouteController({
     void loadPlace(center, { label, detail });
   },
   changed: () => {
-    // a route came or went: the roads give their steepness colours to it, or take them back
-    steep.sync();
     writeHash();
     describe();
     const url = $<HTMLInputElement>('share-url');
@@ -116,9 +138,10 @@ const route: RouteController = new RouteController({
     viewer.requestRender();
   },
   say: (message, ms) => toast(message, ms),
-});
+}) : null;
 
-renderPresets();
+if (APP === 'place') renderPresets();
+else renderSteepPresets();
 renderLegend();
 syncControls();
 bindControls();
@@ -149,9 +172,12 @@ const updateInsets = () => {
 new ResizeObserver(updateInsets).observe($('sheet'));
 wide.addEventListener('change', updateInsets);
 
-steep.set(state.layers.steep);
-if (state.route && !route.openLink(state.route)) state.route = null;
-routeSquare = !!state.route;
+if (route) {
+  // a shared route opens on the route layer; otherwise the layer the link names, or steepness
+  if (state.route && !route.openLink(state.route)) state.route = null;
+  routeSquare = !!state.route;
+  setDataLayer(state.route ? 'route' : (state.data ?? 'steep'));
+}
 if (state.center) {
   void loadPlace(state.center, { camera: state.camera });
 } else {
@@ -161,15 +187,20 @@ if (state.center) {
 window.addEventListener('hashchange', () => {
   const next = decodeState(location.hash, state);
   if (!next.center) return;
+  if (APP === 'place') {
+    next.data = null;
+    next.route = null;
+  }
   // a pasted link with a route: show that one (the link without one keeps what's loaded)
-  const newRoute = !!next.route && next.route !== state.route && route.openLink(next.route);
+  const newRoute = !!route && !!next.route && next.route !== state.route && route.openLink(next.route);
   if (newRoute) routeSquare = true;
+  if (route) setDataLayer(newRoute ? 'route' : (next.data ?? state.data ?? 'steep'));
   if (!samePlace(next.center, state.center) || next.size !== state.size) {
     state = next;
     syncControls();
     void loadPlace(next.center, { camera: next.camera });
   } else {
-    if (newRoute && model && state.center) route.attach(model, state.center);
+    if (newRoute && model && state.center) route?.attach(model, state.center);
     if (!samePlace(next.pin, state.pin)) state.pin = next.pin;
     if (model) applyPin(model);
     describe();
@@ -178,7 +209,8 @@ window.addEventListener('hashchange', () => {
 });
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  navigator.serviceWorker.register('./sw.js').catch(() => undefined);
+  // one worker for both apps, at the root
+  navigator.serviceWorker.register(`${ROOT}sw.js`).catch(() => undefined);
 }
 
 // ------------------------------------------------------------------ loading pipeline
@@ -372,7 +404,7 @@ async function loadPlace(center: LngLat, opts: { label?: string; detail?: string
   next.setContours(state.contours);
   next.setStyle(state.style);
   next.setLayers(state.layers);
-  route.attach(next, center);
+  route?.attach(next, center);
   applyPin(next);
   const old = model;
   model = next;
@@ -445,8 +477,26 @@ async function loadPlace(center: LngLat, opts: { label?: string; detail?: string
 
 /** The model's roads or terrain changed: steepness and the route measure again. */
 function dataLayersChanged(): void {
-  steep.refresh();
-  if (route.active) route.refresh();
+  steep?.refresh();
+  if (route?.visible) route.refresh();
+}
+
+/** Your Place · Data: show one data layer, with its panel; the route stays loaded when hidden. */
+function setDataLayer(layer: DataLayerId): void {
+  if (!route || !steep) return;
+  state.data = layer;
+  for (const b of $('data-layer-group').querySelectorAll<HTMLButtonElement>('[role="radio"]')) {
+    const on = b.dataset.value === layer;
+    b.setAttribute('aria-checked', String(on));
+    b.tabIndex = on ? 0 : -1;
+  }
+  $('route-control').hidden = layer !== 'route';
+  steep.set(layer === 'steep');
+  route.setShown(layer === 'route');
+  if (model) applyPin(model);
+  describe();
+  writeHash();
+  viewer.requestRender();
 }
 
 // ------------------------------------------------------------------ shared links: "make one of your own"
@@ -506,7 +556,7 @@ function applyPin(m: CityModel): void {
   }
   m.setPin(0, 0, false);
   // a route's square has no searched point at its centre
-  m.showPin(!(routeSquare && route.active));
+  m.showPin(!(routeSquare && route?.active));
 }
 
 /** A click or tap on the model moves the pin there; share links carry it. */
@@ -614,7 +664,7 @@ function setMode(mode: 'landing' | 'model'): void {
 function setPlaceTitle(title: string, detail: string): void {
   $('place-title').textContent = title;
   // tabs, history and bookmarks name the place
-  document.title = t.docTitle(title);
+  document.title = APP === 'data' ? t.dataDocTitle(title) : t.docTitle(title);
   placeMetaDetail = detail;
   updateMeta();
 }
@@ -680,15 +730,12 @@ function bindControls(): void {
       state.layers = { ...state.layers, [key]: !state.layers[key] };
       chip.setAttribute('aria-pressed', String(state.layers[key]));
       model?.setLayers(state.layers);
-      if (key === 'steep') {
-        steep.set(state.layers.steep);
-        if (route.active) route.refresh();
-        describe();
-      }
       viewer.requestRender();
       scheduleHashWrite();
     });
   }
+
+  if (APP === 'data') radioGroup('data-layer-group', (v) => setDataLayer(v as DataLayerId));
 
   $('compass-btn').addEventListener('click', () => viewer.resetNorth());
   $('reset-btn').addEventListener('click', () => viewer.resetView());
@@ -766,6 +813,23 @@ function renderPresets(): void {
   }
 }
 
+/** The data app's steepness card: hilly places that open with steepness on. */
+function renderSteepPresets(): void {
+  const host = $('steep-presets');
+  for (const p of STEEP_PRESETS) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip';
+    b.textContent = p.name;
+    b.addEventListener('click', () => {
+      $<HTMLInputElement>('search-input').value = p.name;
+      setDataLayer('steep');
+      void openPlace({ label: p.name, detail: t.dataLayers.steep, center: p.center }, { size: p.size, ex: p.ex });
+    });
+    host.append(b);
+  }
+}
+
 function renderLegend(): void {
   const max = HEIGHT_RAMP[HEIGHT_RAMP.length - 1][0];
   const pos = (h: number) => (Math.sqrt(h) / Math.sqrt(max)) * 100;
@@ -797,9 +861,9 @@ function describe(): void {
   if (model.hasBuildings) {
     lines.push(s.buildings ? t.buildingCount(num(s.buildings), num(Math.round(s.tallest))) : t.noBuildingsSquare);
   }
-  const steepLine = steep.describe();
+  const steepLine = steep?.describe();
   if (steepLine) lines.push(steepLine);
-  const routeLine = route.describe();
+  const routeLine = route?.describe();
   if (routeLine) lines.push(routeLine);
   $('describe').textContent = lines.join(' ');
   const note = $('estimate-note');
@@ -827,9 +891,17 @@ function writeHash(): void {
   if (!state.center || !model) return;
   state.camera = viewer.getCameraState();
   // the route goes into the link only when the user turned that on
-  state.route = route.linkCode();
+  state.route = route?.linkCode() ?? null;
   const h = encodeState(state);
   if (`#${h}` !== location.hash) history.replaceState(null, '', `#${h}`);
+  linkOtherApp();
+}
+
+/** The button to the other app opens the same place and view there (never a route: that stays here). */
+function linkOtherApp(): void {
+  const link = $<HTMLAnchorElement>('other-app');
+  const other = APP === 'place' ? 'data/' : '';
+  link.href = state.center ? `${ROOT}${other}#${encodeState({ ...state, route: null, data: null })}` : `${ROOT}${other}`;
 }
 
 let toastTimer = 0;
@@ -861,17 +933,21 @@ function bindShare(): void {
 
   let printMm = 150;
   let printTiles = 1;
+  // Your Place · Data has the link and the poster, not the 3D print
+  const print = APP === 'place';
   const updatePrintNote = () => {
+    if (!print) return;
     const note = `${localScale(state.size, printMm * printTiles)} · ${t.terrainTimes(num(state.exaggeration, 1))}`;
     const total = num((printMm * printTiles) / 10);
     $('print-label').textContent = printTiles > 1 ? t.tileSize : t.printSize;
     $('print-note').textContent = printTiles > 1 ? t.tilesNote(num(printTiles * printTiles), total, note) : note;
     $('stl-btn').textContent = printTiles > 1 ? t.stlTilesButton : t.stlButton;
   };
-  radioGroup('print-size-group', (v) => {
-    printMm = Number(v);
-    updatePrintNote();
-  });
+  if (print)
+    radioGroup('print-size-group', (v) => {
+      printMm = Number(v);
+      updatePrintNote();
+    });
   /**
    * The print's terrain and roads, as ticked: water sunk, parks and woods raised (where the square
    * has them), raised roads. `done` lists what was changed, for the message and the tiles' note.
@@ -901,8 +977,8 @@ function bindShare(): void {
     return { grid, roads, done, note };
   };
   const tilesRange = $<HTMLInputElement>('tiles-range');
-  tilesRange.max = String(MAX_TILES);
-  tilesRange.addEventListener('input', () => {
+  if (tilesRange) tilesRange.max = String(MAX_TILES);
+  tilesRange?.addEventListener('input', () => {
     printTiles = Number(tilesRange.value);
     $('tiles-out').textContent = printTiles > 1 ? t.tilesOut(printTiles) : t.onePiece;
     updatePrintNote();
@@ -966,7 +1042,7 @@ function bindShare(): void {
 
   // 3D print: terrain block + buildings as one watertight STL, in millimetres
   const stlBtn = $<HTMLButtonElement>('stl-btn');
-  stlBtn.addEventListener('click', async () => {
+  stlBtn?.addEventListener('click', async () => {
     if (!model || !state.center) return;
     if (debug.stage === 'loading' || debug.stage === 'terrain') {
       msg.textContent = t.stillLoading;
