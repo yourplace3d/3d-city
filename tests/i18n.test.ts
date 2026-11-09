@@ -22,9 +22,9 @@ function texts(m: Messages): Map<string, string> {
 
 /** Texts that are rightly the same as in English (names, units, words the languages share). */
 const SAME: Record<string, string[]> = {
-  es: ['legendTop', 'legendTop#1', 'printSquare', 'printSquare#1', 'dataDocTitle', 'dataDocTitle#1', 'trafficHour', 'trafficHour#1'],
-  pt: ['legendTop', 'legendTop#1', 'printSquare', 'printSquare#1', 'steepRange', 'steepRange#1', 'climbLabel', 'climbLabel#1', 'profileAt', 'profileAt#1', 'dataDocTitle', 'dataDocTitle#1'],
-  de: ['legendTop', 'legendTop#1', 'printSquare', 'printSquare#1', 'docTitle', 'docTitle#1', 'shareInApp', 'shareInApp#1', 'optional', 'style.sand', 'routeStart', 'routePause', 'dataDocTitle', 'dataDocTitle#1'],
+  es: ['legendTop', 'legendTop#1', 'printSquare', 'printSquare#1', 'dataDocTitle', 'dataDocTitle#1', 'trafficHour', 'trafficHour#1', 'transitSpeeds[0]', 'transitSpeeds[1]', 'transitSpeeds[2]'],
+  pt: ['legendTop', 'legendTop#1', 'printSquare', 'printSquare#1', 'steepRange', 'steepRange#1', 'climbLabel', 'climbLabel#1', 'profileAt', 'profileAt#1', 'dataDocTitle', 'dataDocTitle#1', 'transitSpeeds[0]', 'transitSpeeds[1]', 'transitSpeeds[2]'],
+  de: ['legendTop', 'legendTop#1', 'printSquare', 'printSquare#1', 'docTitle', 'docTitle#1', 'shareInApp', 'shareInApp#1', 'optional', 'style.sand', 'routeStart', 'routePause', 'dataDocTitle', 'dataDocTitle#1', 'transitFreiburg'],
 };
 
 describe('languages', () => {

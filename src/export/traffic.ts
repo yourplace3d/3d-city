@@ -43,7 +43,7 @@ export function trafficForPrint(s: TrafficStreets, shares: ArrayLike<number>, mm
  * The points to keep: every one where leaving it out would move the line more than `tolM` or
  * its height more than `tolMm` (a straight, evenly rising stretch needs only its ends).
  */
-function thin(pts: Pt[], raises: number[], tolM: number, tolMm: number): number[] {
+export function thin(pts: Pt[], raises: number[], tolM: number, tolMm: number): number[] {
   const keep = [0];
   let a = 0;
   while (a < pts.length - 1) {

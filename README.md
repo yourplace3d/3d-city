@@ -50,6 +50,18 @@ shows over whichever layer you pick.
   and the streets rise and fall; tap a dot for that point's day. The chart is also a table. In the 3D print
   the traffic streets stand 0.5 to 2 mm high by traffic, at least 0.8 mm wide: a gentle relief, no spikes.
   Only Hamburg so far; elsewhere the panel says so and offers Hamburg.
+- **Public transport, from your city's timetable:** load the timetable file your transit operator publishes
+  (GTFS, a ZIP) and trams, buses, trains, U-Bahn and ferries move through the square as the timetable has
+  them, with the same panel as Traffic: a bar chart of the trips into the square per hour, a clock, a
+  replay at 1 minute, 10 minutes or 1 hour a second, and the lines as chips. Tap a vehicle or a chip to see
+  one line; pick any day the timetable has. The file is read in the browser, in a background worker, and
+  never uploaded: a city's or a region's file works (Hamburg's 39 MB file opens in about 10 seconds), a
+  whole country's is too big. If the square shown has none of its lines, the app goes to where it is
+  busiest. "Try Freiburg's timetable" loads Freiburg's, which we host. Lines are painted in their mode's
+  colour (trains green, U-Bahn blue and dashed, trams red, buses grey, ferries dark yellow), vehicles are
+  blocks longer for trains than for buses; it's the plan, not live, so delays don't show. In the 3D print
+  the lines that run that day stand 0.4 to 1.2 mm high by the trips on them, adding up where lines share a
+  street.
 - **Your route:** load a GPX or TCX file (Strava, Garmin, a race website) and pick the stretch to show; the
   model follows it, over any layer. On Steepness the line takes the steepness colours (and only the route is
   coloured), with start, finish, km markers and the
@@ -189,6 +201,10 @@ Design notes:
 - Traffic counts (Your Place · Data): Freie und Hansestadt Hamburg, Behörde für Verkehr und
   Mobilitätswende, [Datenlizenz Deutschland – Namensnennung 2.0](https://www.govdata.de/dl-de/by-2-0),
   from the city's open [SensorThings API](https://iot.hamburg.de/). Credited in the panel and on posters.
+- Freiburg's timetable (the public transport demo, `public/timetables/`): Freiburger Verkehrs AG (VAG),
+  [dl-de/by-2-0](https://www.govdata.de/dl-de/by-2-0), cut down to the files and columns the app reads.
+  It runs until 12 December 2026; replace it with the next year's file. A timetable of your own is
+  credited with the operators named in it.
 - Photon, Nominatim and Overpass are shared community services with fair-use limits. If the app gets
   very popular, the address search should move to an own or paid geocoder.
 
@@ -199,7 +215,8 @@ your browser to Photon or Nominatim; share links hold only coordinates and the v
 loaded is cached on your device. A route file is read in your browser and never uploaded or stored, and
 no search service is asked where it runs; a share link includes the route only if you tick that, and then
 only the stretch shown, without times or a name. With the traffic layer on in Hamburg, the corners of the
-square shown go to the City of Hamburg's traffic server to fetch its counts.
+square shown go to the City of Hamburg's traffic server to fetch its counts. A timetable file (GTFS) is
+read in your browser and never uploaded or stored; reloading the page forgets it.
 
 ## Known limitations
 
@@ -229,7 +246,10 @@ building-mesh winding and exaggeration, URL state, the STL export (every shell c
 outward-facing, volumes, binary format), routes (GPX and TCX parsing, distances, the stretch that fits
 the model, hiding the ends, the replay clock, the share-link code), steepness (grades over a window,
 classes, bridges, climbs, height totals, the profile), and traffic counts (the request, parsing, the last
-24 hours, adding up both directions of a road, the chart's scale).
+24 hours, adding up both directions of a road, the chart's scale), and timetables (ZIP reading, CSV with
+quotes, times past midnight, days and exceptions, route types, the cut to the square for trips that stop
+in it, run through it on a shape or cross it straight, positions between stops, the evening before after
+midnight, the print's heights).
 
 `npm run e2e` serves the build, answers Overpass and geocoding from a deterministic synthetic city
 (`e2e/fixtures/synthetic-city.mjs`), uses real terrain tiles, and drives search, every control,
@@ -241,7 +261,11 @@ replay, the height profile, steepness on roads and on the route, hiding the ends
 opening it, a dropped TCX file, a FIT file, a phone, and that the file never leaves the browser. Traffic
 (Hamburg's API answered from `e2e/fixtures/traffic.mjs`): outside Hamburg, a failed answer and retry, the
 traffic streets, the spread slider and its link, the chart by pointer and keyboard, a counting point of its
-own, the table, replay, bikes, the traffic streets in the 3D print, and a route riding on them. It fails on any console error.
+own, the table, replay, bikes, the traffic streets in the 3D print, and a route riding on them. Public
+transport (a made-up timetable, `e2e/fixtures/transit.mjs`): the Freiburg demo, the day, the chart by
+pointer and keyboard, a vehicle tapped, a line's chip, replay and its speed, the table, the 3D print, a
+file of your own that opens where it runs, a square it doesn't reach, a file that isn't one, a phone, and
+that the file never leaves the browser. It fails on any console error.
 
 ## Licence
 

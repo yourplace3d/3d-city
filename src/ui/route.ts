@@ -490,7 +490,8 @@ export class RouteController {
       if (!hasFile(e)) return;
       e.preventDefault();
       const file = e.dataTransfer!.files[0];
-      if (file) void this.loadFile(file);
+      // a ZIP is a timetable, for the public transport layer
+      if (file && !/\.zip$/i.test(file.name)) void this.loadFile(file);
     });
 
     // the stretch: the readouts follow the sliders; the model is built when one is let go

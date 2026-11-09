@@ -16,3 +16,9 @@ declare module 'node:zlib' {
 declare module 'node:fs' {
   export function readFileSync(path: string, encoding: 'utf8'): string;
 }
+// The made-up timetable shared with the end-to-end test.
+declare module '*/fixtures/transit.mjs' {
+  export function zipFiles(files: Record<string, string | Uint8Array>, opts?: { deflate?: boolean; folder?: string }): Uint8Array;
+  export function gtfsFiles(center: { lat: number; lon: number }): Record<string, string>;
+  export function gtfsZip(center: { lat: number; lon: number }, opts?: { deflate?: boolean; folder?: string }): Uint8Array;
+}

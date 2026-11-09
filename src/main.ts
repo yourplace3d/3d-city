@@ -25,6 +25,8 @@ import { RouteController } from './ui/route';
 import { SteepController } from './ui/steepness';
 import { TrafficController, TRAFFIC_PRESETS } from './ui/traffic';
 import { TRAFFIC_ATTRIBUTION } from './data/sources/hamburgTraffic';
+import { TransitController } from './ui/transit';
+import { TRANSIT_PRINT_MM } from './export/transit';
 import { area, direction, distance, num, scale as localScale, t, translatePage } from './i18n';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -101,6 +103,9 @@ const debug = {
   route: () => route?.debugInfo() ?? null,
   steep: () => steep?.debugInfo() ?? null,
   traffic: () => traffic?.debugInfo() ?? null,
+  transit: () => transit?.debugInfo() ?? null,
+  /** show the timetable at a moment (s after midnight), for tools/video */
+  transitAt: (s: number) => transit?.frameAt(s),
 };
 (window as unknown as { __yourPlace: typeof debug }).__yourPlace = debug;
 
@@ -164,6 +169,23 @@ const traffic: TrafficController | null = APP === 'data' ? new TrafficController
     writeHash();
     describe();
   },
+}) : null;
+
+const transit: TransitController | null = APP === 'data' ? new TransitController({
+  viewer,
+  model: () => model,
+  open: (center, size, label) => {
+    $<HTMLInputElement>('search-input').value = label;
+    if (state.data !== 'transit') setDataLayer('transit');
+    void openPlace({ label, detail: t.dataLayers.transit, center }, { size });
+  },
+  select: () => setDataLayer('transit'),
+  changed: () => {
+    describe();
+    if (model) applyPin(model);
+  },
+  demoUrl: `${ROOT}timetables/freiburg-2026.zip`,
+  say: (message, ms) => toast(message, ms),
 }) : null;
 
 if (APP === 'place') renderPresets();
@@ -445,6 +467,7 @@ async function loadPlace(center: LngLat, opts: { label?: string; detail?: string
   viewer.setCameraState(state.camera ?? viewer.defaultCamera());
   // after the camera: the traffic layer writes the link when its counts start loading
   traffic?.attach(next, center);
+  transit?.attach(next, center);
   updateContourNote();
   status.set('terrain', 'done');
   debug.stage = 'terrain';
@@ -514,11 +537,12 @@ function dataLayersChanged(): void {
   steep?.refresh();
   if (route?.visible) route.refresh();
   traffic?.placeAgain();
+  transit?.placeAgain();
 }
 
 /** Your Place · Data: show one data layer, with its panel. A route of your own stays on over any of them. */
 function setDataLayer(layer: DataLayerId): void {
-  if (!route || !steep || !traffic) return;
+  if (!route || !steep || !traffic || !transit) return;
   const switched = layer !== state.data;
   state.data = layer;
   for (const b of $('data-layer-group').querySelectorAll<HTMLButtonElement>('[role="radio"]')) {
@@ -529,6 +553,8 @@ function setDataLayer(layer: DataLayerId): void {
   $('steep-legend').hidden = layer !== 'steep';
   $('traffic-control').hidden = layer !== 'traffic';
   traffic.set(layer === 'traffic');
+  $('transit-control').hidden = layer !== 'transit';
+  transit.set(layer === 'transit');
   syncSteep();
   // the route wears the steepness colours only on the steepness layer
   if (switched && route.visible) route.refresh();
@@ -608,6 +634,8 @@ function movePinTo(x: number, y: number): void {
   if (!model || !state.center) return;
   // a tap on a traffic column picks it
   if (traffic?.tap(x, y)) return;
+  // a tap on a vehicle picks its line
+  if (transit?.tap(x, y)) return;
   const hit = viewer.pick(x, y);
   if (!hit) return;
   model.setPin(hit.e, hit.n, true);
@@ -878,6 +906,16 @@ function renderDataPresets(): void {
   };
   for (const p of STEEP_PRESETS) add('steep-presets', 'steep', p.name, p.center, p.size, p.ex);
   for (const p of TRAFFIC_PRESETS) add('traffic-presets', 'traffic', p.name(), p.center, p.size);
+  // the timetable's demo: Freiburg's, which we host
+  const demo = document.createElement('button');
+  demo.type = 'button';
+  demo.className = 'chip';
+  demo.textContent = t.transitFreiburg;
+  demo.addEventListener('click', () => {
+    setDataLayer('transit');
+    void transit?.loadDemo();
+  });
+  $('transit-presets').append(demo);
 }
 
 function renderLegend(): void {
@@ -915,6 +953,8 @@ function describe(): void {
   if (steepLine) lines.push(steepLine);
   const trafficLine = traffic?.describe();
   if (trafficLine) lines.push(trafficLine);
+  const transitLine = transit?.describe();
+  if (transitLine) lines.push(transitLine);
   const routeLine = route?.describe();
   if (routeLine) lines.push(routeLine);
   $('describe').textContent = lines.join(' ');
@@ -1004,7 +1044,7 @@ function bindShare(): void {
     const m = model!;
     const metres = (mm: number) => depthInMetres(mm, totalMm, state.size, state.exaggeration);
     let grid = m.grid;
-    const done = { water: false, green: false, roads: false, route: false, traffic: false };
+    const done = { water: false, green: false, roads: false, route: false, traffic: false, transit: false };
     const water = $<HTMLInputElement>('print-water').checked ? m.printWater() : null;
     if (water) {
       grid = sinkWater(grid, water, metres(WATER_DEPTH_MM));
@@ -1021,20 +1061,26 @@ function bindShare(): void {
     // line, higher than the roads and over the traffic streets
     const mmPerM = totalMm / state.size;
     const trafficParts = traffic?.shown && $<HTMLInputElement>('print-traffic').checked ? traffic.printPieces(mmPerM) : [];
-    const routeParts = route && $<HTMLInputElement>('print-route').checked ? routeOverTraffic(route.printPieces(mmPerM), trafficParts) : [];
-    roads.push(...trafficParts, ...routeParts);
+    // …or the transit lines, as high as the trips on them
+    const transitParts = transit?.shown && $<HTMLInputElement>('print-transit').checked ? transit.printPieces(mmPerM) : [];
+    const under = [...trafficParts, ...transitParts];
+    const routeParts = route && $<HTMLInputElement>('print-route').checked ? routeOverTraffic(route.printPieces(mmPerM), under) : [];
+    roads.push(...under, ...routeParts);
     done.traffic = trafficParts.length > 0;
+    done.transit = transitParts.length > 0;
     done.route = routeParts.length > 0;
     const mm = (x: number) => num(x, Number.isInteger(x) ? 0 : 1);
     const trafficMm = [mm(TRAFFIC_PRINT_MM.low), mm(TRAFFIC_PRINT_MM.high)] as const;
+    const transitMm = [mm(TRANSIT_PRINT_MM.low), mm(TRANSIT_PRINT_MM.high)] as const;
     const note = [
       done.water ? t.waterSunk(num(WATER_DEPTH_MM)) : '',
       done.green ? t.greenRaised(num(GREEN_RAISE_MM, 1)) : '',
       done.roads ? t.roadsRaised(num(ROAD_RAISE_MM, 1)) : '',
       done.traffic ? t.trafficRaised(...trafficMm) : '',
+      done.transit ? t.transitRaised(...transitMm) : '',
       done.route ? t.routeRaised(num(ROUTE_RAISE_MM, 1)) : '',
     ].join('');
-    return { grid, roads, done, note, trafficMm };
+    return { grid, roads, done, note, trafficMm, transitMm };
   };
   const tilesRange = $<HTMLInputElement>('tiles-range');
   tilesRange.max = String(MAX_TILES);
@@ -1059,6 +1105,7 @@ function bindShare(): void {
     // Your Place · Data: the route can stand up in the print, when one is shown
     if (route) $('print-route-row').hidden = !route.visible;
     if (traffic) $('print-traffic-row').hidden = !traffic.shown;
+    if (transit) $('print-transit-row').hidden = !transit.shown;
     const place = placeLabel || (state.center ? formatLatLon(state.center) : '');
     if (!titleInput.value.trim() || titleInput.value === autoTitle) titleInput.value = place;
     autoTitle = place;
@@ -1091,7 +1138,7 @@ function bindShare(): void {
     msg.textContent = t.renderingPoster;
     try {
       // third-party data on the model is credited on the poster too
-      const credit = traffic?.describe() ? TRAFFIC_ATTRIBUTION.text : undefined;
+      const credit = traffic?.describe() ? TRAFFIC_ATTRIBUTION.text : (transit?.credit() ?? undefined);
       const blob = await makePoster(viewer, { title: title(), subtitle: subtitle(), center: state.center, sizeM: state.size, exaggeration: state.exaggeration, credit });
       saveBlob(blob, posterFileName(title(), state.size));
       msg.textContent = '';
@@ -1177,6 +1224,7 @@ function bindShare(): void {
       terrain.done.green ? t.readmeGreen(num(GREEN_RAISE_MM, 1)) : '',
       terrain.done.roads ? t.readmeRoads(num(ROAD_RAISE_MM, 1)) : '',
       terrain.done.traffic ? t.readmeTraffic(...terrain.trafficMm) : '',
+      terrain.done.transit ? t.readmeTransit(...terrain.transitMm) : '',
       terrain.done.route ? t.readmeRoute(num(ROUTE_RAISE_MM, 1)) : '',
       '',
       t.readmeCredit,

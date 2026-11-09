@@ -21,7 +21,7 @@ The engine lives in `src/data/`. Every overlay goes through the same four parts:
 | Time | `src/data/time/` | A position or value per moment, and `Playback` (0 → 1 over a set time). |
 | Display | `src/data/display/` | Draw it: a `ModelOverlay` (ground paint and/or 3D objects). |
 
-The contracts are in `src/data/types.ts`. Three worked examples:
+The contracts are in `src/data/types.ts`. Four worked examples:
 
 - **Route** (data the user brings): `sources/trackFile.ts` (GPX/TCX), `sources/routeLink.ts` (opt-in share
   link), `match/route.ts`, `time/playback.ts`, `display/route.ts`, wired up by `src/ui/route.ts`.
@@ -35,6 +35,20 @@ The contracts are in `src/data/types.ts`. Three worked examples:
   streets as one raised mesh whose heights and colours change per frame while replaying; counting points as
   discs) and `display/trafficChart.ts` (the bar chart's scale), wired up by `src/ui/traffic.ts`; in the print
   `export/traffic.ts`. The e2e fixture is `e2e/fixtures/traffic.mjs`.
+- **Public transport** (a big file the user brings: a city's GTFS timetable, up to a few hundred MB
+  unpacked): `sources/zipFile.ts` (a ZIP read one file at a time, in pieces, with the browser's
+  `DecompressionStream`), `sources/gtfs.ts` (streamed CSV, the cut to the square: one pass per file, only
+  what passes through it kept, for every day), `sources/gtfs.worker.ts` and `sources/timetable.ts` (all of
+  it in a worker, with progress; a new place stops the read), `match/transit.ts` (runs through the square,
+  positions between stops, one day's runs), `display/transit.ts` (lines painted on the ground, vehicles as
+  instanced blocks moved per frame), wired up by `src/ui/transit.ts`; in the print `export/transit.ts`. A
+  demo file is hosted in `public/timetables/`. The e2e fixture `e2e/fixtures/transit.mjs` makes a timetable
+  around any centre, also used by the unit tests.
+
+**Big files: stream them, cut them, keep them off the page's thread.** Read a file the user brings in a
+worker, in pieces (never `arrayBuffer()` on hundreds of MB), keep only what the square needs, and send back
+typed arrays (transferred, not copied). Say how far it got. Keep the `File` in memory, not in storage, so a
+new place can read it again.
 
 **Point data on streets: spread it, don't spike it.** A count at a point is shown along the streets around
 it, fading out, not as a column: columns look like spikes, hide what's behind them and can't be printed.

@@ -15,6 +15,7 @@ import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildWorld, VILLAGE, RURAL, synthesize } from './fixtures/synthetic-city.mjs';
 import { dataAppChecks } from './data-checks.mjs';
+import { transitChecks } from './transit-checks.mjs';
 import { trafficAnswer } from './fixtures/traffic.mjs';
 
 const require = createRequire(import.meta.url);
@@ -808,6 +809,7 @@ try {
 
   // ---------------- Your Place · Data: steepness, routes (GPX, TCX)
   await dataAppChecks({ browser, base, routeAll, expect, watchConsole, waitStage, settle, shot });
+  await transitChecks({ browser, base, routeAll, expect, watchConsole, waitStage, settle, shot });
 
   // ---------------- dark mode, reduced motion
   const dark = await browser.newContext({ viewport: { width: 1280, height: 800 }, colorScheme: 'dark', reducedMotion: 'reduce' });

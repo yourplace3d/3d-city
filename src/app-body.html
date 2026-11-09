@@ -54,7 +54,7 @@
         <p class="lede" data-t="welcomeLede">Your first home, where you met, the town you left. Type the address and get it as a model on its real terrain, every building standing on top. Share it, hang it as a poster, or 3D print it.</p>
         <p class="presets-label" data-t="presetsLabel">Or explore a place with dramatic terrain</p>
         <div class="presets" id="presets"></div>
-        <p class="welcome-data"><a href="./data/" id="data-landing-link"><strong>Your Place · Data</strong> <span data-t="dataTeaser">New: where it gets steep, traffic in Hamburg, your race route</span> →</a></p>
+        <p class="welcome-data"><a href="./data/" id="data-landing-link"><strong>Your Place · Data</strong> <span data-t="dataTeaser">New: where it gets steep, traffic in Hamburg, public transport, your race route</span> →</a></p>
         <!-- /only:place -->
         <!-- only:data -->
         <p class="eyebrow">Your Place · Data</p>
@@ -70,6 +70,12 @@
             <h2 id="card-traffic-title"><i class="swatch swatch-traffic" aria-hidden="true"></i><span data-t="dataLayers.traffic">Traffic</span></h2>
             <p data-t="cardTraffic">Cars and bikes counted every hour at hundreds of points, as red streets that rise with the traffic. Only in Hamburg so far. Try:</p>
             <div class="card-presets" id="traffic-presets"></div>
+          </section>
+          <section class="layer-card" aria-labelledby="card-transit-title">
+            <h2 id="card-transit-title"><i class="swatch swatch-transit" aria-hidden="true"></i><span data-t="dataLayers.transit">Public transport</span></h2>
+            <p data-t="cardTransit">Trams, buses, trains and ferries moving through the square as your city’s timetable has them. Load its timetable file (GTFS); it stays on your device. Or try:</p>
+            <div class="card-presets" id="transit-presets"></div>
+            <button type="button" class="btn" id="transit-landing-btn" data-t="transitLoad">Load a timetable (GTFS)</button>
           </section>
         </div>
         <section class="layer-card route-card" aria-labelledby="card-route-title">
@@ -95,7 +101,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5" /><path d="M5 12v7.5h14V12" /></svg>
         </button>
         <!-- only:place -->
-        <a class="fab" id="other-app" href="./data/" aria-label="Data layers for this place" title="Data layers for this place: steepness, traffic, your route" data-t-attr="aria-label:openData;title:openDataTitle">
+        <a class="fab" id="other-app" href="./data/" aria-label="Data layers for this place" title="Data layers for this place: steepness, traffic, public transport, your route" data-t-attr="aria-label:openData;title:openDataTitle">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 4 8 4-8 4-8-4z" /><path d="m4 12 8 4 8-4" /><path d="m4 16 8 4 8-4" /></svg>
         </a>
         <!-- /only:place -->
@@ -128,6 +134,7 @@
             <div class="segmented" role="radiogroup" aria-labelledby="data-layer-label" id="data-layer-group">
               <button type="button" role="radio" data-value="steep" aria-checked="true"><i class="swatch swatch-steep" aria-hidden="true"></i><span data-t="dataLayers.steep">Steepness</span></button>
               <button type="button" role="radio" data-value="traffic" aria-checked="false" tabindex="-1"><i class="swatch swatch-traffic" aria-hidden="true"></i><span data-t="dataLayers.traffic">Traffic</span></button>
+              <button type="button" role="radio" data-value="transit" aria-checked="false" tabindex="-1"><i class="swatch swatch-transit" aria-hidden="true"></i><span data-t="transitShort">Transport</span></button>
             </div>
             <div class="steep-legend" id="steep-legend">
               <ul class="steep-scale" id="steep-scale"></ul>
@@ -172,6 +179,56 @@
               </figure>
               <p class="route-note" data-t="trafficNote">Streets near a counting point (the white dots) rise and turn red with the traffic in the hour you pick. Each count spreads along its street and fades out over the distance you set; where counts meet, as at a crossing, they add up. Only the dots are counted: in between it’s an estimate. Tap a dot to see its day. The last 24 hours, Hamburg time.</p>
               <p class="route-note traffic-credit" data-t="trafficCredit">Traffic counts: Freie und Hansestadt Hamburg, Behörde für Verkehr und Mobilitätswende (dl-de/by-2-0), live from iot.hamburg.de.</p>
+            </div>
+            <div class="transit-control" id="transit-control" hidden>
+              <div id="transit-empty">
+                <button type="button" class="btn btn-wide" id="transit-load-btn" data-t="transitLoad">Load a timetable (GTFS)</button>
+                <button type="button" class="btn btn-wide" id="transit-demo" data-t="transitTryFreiburg">Try Freiburg’s timetable</button>
+                <p class="route-note"><span data-t="transitWhere">Transit operators publish their timetables as GTFS files (ZIP). Look for your city’s on its operator’s or open data website, or at transit.land or mobilitydatabase.org.</span> <span data-t="routeLocal">The file stays on this device. It’s never uploaded.</span></p>
+              </div>
+              <p class="traffic-status" id="transit-status" role="status" hidden></p>
+              <progress class="transit-progress" id="transit-progress" max="1" value="0" hidden></progress>
+              <div class="traffic-actions">
+                <button type="button" class="btn" id="transit-go" hidden></button>
+              </div>
+              <div class="transit-loaded" id="transit-loaded" hidden>
+                <p class="route-name" id="transit-name"></p>
+                <div class="transit-day" id="transit-day-row">
+                  <div class="control-label"><label for="transit-date" data-t="transitDay">Day</label></div>
+                  <input type="date" id="transit-date" />
+                  <p class="route-note" id="transit-covers"></p>
+                </div>
+                <figure class="tchart transit-chart" id="transit-figure" hidden>
+                  <figcaption class="profile-head">
+                    <span data-t="transitPerHour">Trips into the square per hour</span> <small id="transit-sub"></small>
+                    <button type="button" class="link-btn" id="transit-all" hidden data-t="transitShowAll">All lines</button>
+                  </figcaption>
+                  <div class="tchart-plot" id="transit-chart" role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="1439" aria-valuenow="480">
+                    <div class="tchart-grid" id="transit-grid" aria-hidden="true"></div>
+                    <div class="tchart-bars" id="transit-bars" aria-hidden="true"></div>
+                    <div class="tchart-cursor" aria-hidden="true"><span class="tchart-now" id="transit-now"></span></div>
+                  </div>
+                  <div class="tchart-x" id="transit-x" aria-hidden="true"></div>
+                  <div class="route-play-row">
+                    <button type="button" class="btn" id="transit-play" aria-pressed="false" data-t="routePlay">Replay</button>
+                    <div class="segmented segmented-small" role="radiogroup" aria-label="Replay speed" data-t-attr="aria-label:transitSpeed" id="transit-speed"></div>
+                  </div>
+                  <output class="route-clock transit-readout" id="transit-readout"></output>
+                  <details class="ttable">
+                    <summary data-t="trafficTable">Show as a table</summary>
+                    <table id="transit-table"></table>
+                  </details>
+                </figure>
+                <ul class="transit-modes" id="transit-modes" aria-label="Lines by colour"></ul>
+                <div class="chips transit-lines" id="transit-lines" role="group" aria-label="Lines" data-t-attr="aria-label:transitLines"></div>
+                <p class="route-note" data-t="transitNote">Vehicles move as the timetable plans them, not live: delays and cancellations don’t show. Tap a vehicle or a line to see that line on its own. U-Bahn and metro lines are dashed and their trains see-through, as most run underground.</p>
+                <p class="route-note" id="transit-shapes" hidden data-t="transitNoShapes">This file has no line shapes, so lines run straight from stop to stop.</p>
+                <p class="route-note traffic-credit" id="transit-credit"></p>
+                <div class="traffic-actions">
+                  <button type="button" class="btn" id="transit-another" data-t="transitAnother">Load another</button>
+                  <button type="button" class="btn" id="transit-remove" data-t="transitRemove">Remove timetable</button>
+                </div>
+              </div>
             </div>
           </div>
           <div class="control route-control" id="route-control">
@@ -337,6 +394,7 @@
               <!-- only:data -->
               <label class="check" id="print-route-row" hidden><input type="checkbox" id="print-route" checked /> <span data-t="raiseRoute">Raise the route 0.8 mm</span></label>
               <label class="check" id="print-traffic-row" hidden><input type="checkbox" id="print-traffic" checked /> <span data-t="raiseTraffic">Raise traffic streets 0.5–2 mm, by traffic</span></label>
+              <label class="check" id="print-transit-row" hidden><input type="checkbox" id="print-transit" checked /> <span data-t="raiseTransit">Raise transit lines 0.4–1.2 mm, by trips</span></label>
               <!-- /only:data -->
             </fieldset>
             <button type="button" class="btn btn-wide" id="stl-btn" data-t="stlButton">Download 3D print file (STL)</button>
@@ -349,6 +407,8 @@
       <!-- only:data -->
       <!-- a route file is read in the browser only; no accept filter, as iOS greys out .gpx files with one -->
       <input type="file" id="route-file" hidden />
+      <!-- a timetable (GTFS ZIP) is read in the browser only, in a worker -->
+      <input type="file" id="transit-file" accept=".zip,application/zip,application/x-zip-compressed" hidden />
       <!-- /only:data -->
 
       <div class="unsupported" id="unsupported" hidden>

@@ -47,7 +47,7 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   }));
   expect(head.app === 'data' && /^Your Place · Data/.test(head.title) && head.title.length <= 60 && /\/data\/$/.test(head.canonical), `the data app has its own page (“${head.title}”, ${head.canonical})`);
   expect(head.manifest.name === 'Your Place · Data' && head.icon, 'it installs as its own app, with its own icon');
-  expect(head.cards === 3 && head.presets === 3 && head.trafficPresets === 3 && head.print && head.home === '../', 'its start page shows the layers as cards, your route on its own, and the way back to Your Place');
+  expect(head.cards === 4 && head.presets === 3 && head.trafficPresets === 3 && head.print && head.home === '../', 'its start page shows the layers as cards, your route on its own, and the way back to Your Place');
   await shot(page, 'd0-data-landing');
 
   // ---- steepness, from a preset
@@ -57,7 +57,7 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   let s = await steep();
   expect(s.on && s.shown && s.pieces > 20 && s.lengths[2] + s.lengths[3] + s.lengths[4] > 0, `steepness colours the roads and paths (${s.pieces} pieces; m per class ${s.lengths.join(', ')})`);
   expect((await page.isVisible('#steep-legend')) && (await page.locator('#steep-scale li').count()) === 4 && (await page.isHidden('#traffic-control')), 'a legend shows the four classes');
-  expect((await page.isVisible('#route-load-btn')) && (await page.locator('#data-layer-group [role="radio"]').count()) === 2, 'your route has its own place under the layer switch, not one of the layers');
+  expect((await page.isVisible('#route-load-btn')) && (await page.locator('#data-layer-group [role="radio"]').count()) === 3, 'your route has its own place under the layer switch, not one of the layers');
   expect(/dl=steep/.test(await page.evaluate(() => location.hash)) && /^Stuttgart · Your Place Data$/.test(await page.title()), 'the link and the tab name the layer and the place');
   expect(/steeper than 6%: [\d.]+ km/.test(await page.textContent('#describe')), 'the description says how much is steep');
   const toPlace = await page.getAttribute('#other-app', 'href');

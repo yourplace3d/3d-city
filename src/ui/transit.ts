@@ -1,0 +1,804 @@
+/**
+ * The Public transport layer of Your Place · Data: trams, buses, trains and ferries moving
+ * through the square as a timetable (GTFS) has them. The user loads their city's timetable file
+ * (or tries Freiburg's, which we host); it is read in the browser, in a worker, and never
+ * uploaded. The panel is the Traffic layer's: a bar chart of the day (trips into the square per
+ * hour), a clock, a replay, and the lines as chips; tap a vehicle or a chip to see one line.
+ *
+ * The file stays in memory while the page is open, so moving to another square reads it again
+ * for that one; reloading the page forgets it.
+ */
+
+import { compact, locale, num, t } from '../i18n';
+import type { LngLat } from '../geo/projection';
+import type { CityModel } from '../scene/cityModel';
+import type { Viewer } from '../scene/viewer';
+import { readTimetable, TimetableProblem, type Timetable } from '../data/sources/timetable';
+import type { TransitMode } from '../data/sources/gtfs';
+import { DAY_S, dayRuns, dayWithin, runsPerHour, type TransitDay, type TransitLine } from '../data/match/transit';
+import { MODE_COLOURS, modesOn, TransitDisplay } from '../data/display/transit';
+import { barShares, chartTicks } from '../data/display/trafficChart';
+import { Playback } from '../data/time/playback';
+import { transitForPrint } from '../export/transit';
+import type { PrintRoad } from '../export/roads';
+
+export interface TransitHost {
+  viewer: Viewer;
+  model(): CityModel | null;
+  /** open a place with this layer on */
+  open(center: LngLat, size: number, label: string): void;
+  /** the share link and the description should follow */
+  changed(): void;
+  /** turn this layer on (a file was picked on the start page, or on another layer) */
+  select(): void;
+  /** where the hosted demo timetable is */
+  demoUrl: string;
+  say(message: string, ms?: number): void;
+}
+
+/** Freiburg's centre, for the demo: Bertoldsbrunnen, where all the tram lines meet. */
+export const TRANSIT_DEMO = { center: { lat: 47.99555, lon: 7.85065 }, size: 2000 } as const;
+/** A square opened for a timetable that was loaded before a place. */
+const OPEN_SIZE = 2000;
+/** Replay speeds: timetable seconds per second. */
+const SPEEDS = [60, 600, 3600] as const;
+/** A tap this close to a vehicle (px) picks its line. */
+const TAP_PX = 22;
+/** At most this many labels when paused. */
+const MAX_LABELS = 10;
+
+type Status = 'empty' | 'reading' | 'ready' | 'outside' | 'error';
+
+const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+const pad = (v: number) => String(v).padStart(2, '0');
+const clock = (s: number) => `${pad(Math.floor(s / 3600) % 24)}:${pad(Math.floor(s / 60) % 60)}`;
+const DAY_MS = 86_400_000;
+
+/** Today's date where the timetable runs, as days since 1 Jan 1970, and the time there (s). */
+function nowIn(timeZone: string): { day: number; time: number } {
+  let parts: Intl.DateTimeFormatPart[];
+  try {
+    parts = new Intl.DateTimeFormat('en-GB', { timeZone: timeZone || undefined, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+  } catch {
+    parts = new Intl.DateTimeFormat('en-GB', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+  }
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  return { day: Date.UTC(get('year'), get('month') - 1, get('day')) / DAY_MS, time: get('hour') * 3600 + get('minute') * 60 };
+}
+
+/** Whether a vehicle is in the square at `time` on the day. */
+function busyAt(d: TransitDay, time: number): boolean {
+  for (let i = 0; i < d.run.length; i++) {
+    const r = d.run[i];
+    const t = time - d.shift[i];
+    if (t >= d.runs.tIn[r] && t <= d.runs.tOut[r]) return true;
+  }
+  return false;
+}
+
+const isoDay = (day: number) => new Date(day * DAY_MS).toISOString().slice(0, 10);
+
+export class TransitController {
+  on = false;
+  private status: Status = 'empty';
+  private problem = '';
+  private file: Blob | null = null;
+  private demo = false;
+  private fileId = 0;
+  /** a file was just loaded: if the square has none of its lines, go where it runs */
+  private fresh = false;
+  /** a place was asked for (where the timetable runs): wait for it rather than look again */
+  private opening = false;
+  private last: { model: CityModel; center: LngLat } | null = null;
+  private timetable: Timetable | null = null;
+  private key = '';
+  private abort: AbortController | null = null;
+  private progress = 0;
+  private dayNo = NaN;
+  private dayData: TransitDay | null = null;
+  /** seconds after midnight of the day shown */
+  private time = 8 * 3600;
+  private picked: string | null = null;
+  private hover: number | null = null;
+  private speed: number = SPEEDS[0];
+  private display: { model: CityModel; overlay: TransitDisplay } | null = null;
+  private readonly playback: Playback;
+  private readonly dayFormat = new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+  private readonly longDay = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+
+  constructor(private readonly host: TransitHost) {
+    this.playback = new Playback(DAY_S * 1000 / this.speed, (pos, playing) => this.onPlayback(pos, playing));
+    host.viewer.onFrame((dt) => {
+      if (this.playback.advance(dt)) host.viewer.requestRender();
+    });
+    this.bind();
+    this.renderSpeeds();
+    this.syncPanel();
+  }
+
+  /** Show or hide the layer. */
+  set(on: boolean): void {
+    if (on === this.on) return;
+    this.on = on;
+    if (!on) {
+      this.playback.pause();
+      this.detach();
+      this.syncPanel();
+      this.host.viewer.requestRender();
+      return;
+    }
+    this.refresh();
+  }
+
+  /** A newly built model (a new place or size): the timetable for its square. */
+  attach(model: CityModel, center: LngLat): void {
+    this.last = { model, center };
+    this.opening = false;
+    this.playback.pause();
+    if (this.on) this.refresh();
+  }
+
+  /** The model's terrain changed: stand the vehicles on it again. */
+  placeAgain(): void {
+    const d = this.shownDisplay();
+    if (!d) return;
+    d.overlay.place(d.model);
+    this.host.viewer.requestRender();
+  }
+
+  /** Whether the lines are on the model now (for the print). */
+  get shown(): boolean {
+    return !!this.shownDisplay();
+  }
+
+  /** The lines that run on the day shown, for the 3D print at `mmPerM`, higher where more trips run. */
+  printPieces(mmPerM: number): PrintRoad[] {
+    const d = this.shownDisplay();
+    return d && this.dayData ? transitForPrint(this.dayData, this.pickedRoutes(), mmPerM) : [];
+  }
+
+  /** Open the file picker. */
+  pickFile(): void {
+    $<HTMLInputElement>('transit-file').click();
+  }
+
+  /** Who to credit on the poster, or null when no lines are shown. */
+  credit(): string | null {
+    const tt = this.timetable;
+    if (!this.shown || !tt) return null;
+    return this.demo ? 'Timetable: Freiburger Verkehrs AG (VAG), dl-de/by-2-0' : tt.agencies.length ? `Timetable: ${tt.agencies.join(', ')}` : null;
+  }
+
+  /** A timetable file the user picked (or the demo): read it for the square shown, or find where it runs. */
+  loadFile(file: Blob, demo = false, go = true): void {
+    this.file = file;
+    this.demo = demo;
+    this.fileId++;
+    this.fresh = !demo;
+    this.timetable = null;
+    this.key = '';
+    this.picked = null;
+    this.dayNo = NaN;
+    this.playback.pause();
+    this.detach();
+    if (!go) return;
+    // turning the layer on reads it; if it's on already, read it now
+    if (!this.on) this.host.select();
+    else this.refresh();
+  }
+
+  /** Freiburg's timetable, which we host: open its centre with it. */
+  async loadDemo(): Promise<void> {
+    this.abort?.abort();
+    this.abort = null;
+    this.status = 'reading';
+    this.progress = 0;
+    this.problem = '';
+    this.syncPanel(t.transitDemoLoading);
+    try {
+      const res = await fetch(this.host.demoUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      // in Freiburg already: read it for this square; elsewhere, go to its centre first
+      const c = this.last?.center;
+      const model = this.host.model();
+      const there = !!c && !!model && this.last?.model === model && Math.abs(c.lat - TRANSIT_DEMO.center.lat) < 0.03 && Math.abs(c.lon - TRANSIT_DEMO.center.lon) < 0.05;
+      this.loadFile(blob, true, there);
+      if (!there) this.go(TRANSIT_DEMO.center, TRANSIT_DEMO.size, t.transitFreiburg);
+    } catch (err) {
+      console.warn('Demo timetable could not be loaded', err);
+      this.fail('demo');
+    }
+  }
+
+  /** Open a place (where the timetable runs); the model it gets is read when it comes. */
+  private go(center: LngLat, size: number, label: string): void {
+    this.opening = true;
+    this.host.open(center, size, label);
+  }
+
+  /** Take the timetable away. */
+  remove(): void {
+    this.abort?.abort();
+    this.abort = null;
+    this.file = null;
+    this.timetable = null;
+    this.dayData = null;
+    this.key = '';
+    this.picked = null;
+    this.playback.pause();
+    this.detach();
+    this.status = 'empty';
+    this.syncPanel();
+    this.host.changed();
+    this.host.viewer.requestRender();
+  }
+
+  /** A tap on the model: true if it picked a vehicle's line. */
+  tap(clientX: number, clientY: number): boolean {
+    const d = this.shownDisplay();
+    if (!d) return false;
+    const v = this.host.viewer;
+    let best: string | null = null;
+    let bestD = TAP_PX;
+    for (const x of d.overlay.vehicles) {
+      const a = v.screenPoint(x.top[0], -x.top[2], x.top[1] - d.overlay.width * 0.4);
+      const dist = Math.hypot(clientX - a.x, clientY - a.y);
+      if (dist < bestD) {
+        bestD = dist;
+        best = this.lineOf(x.route)?.key ?? null;
+      }
+    }
+    if (best == null) return false;
+    this.pickLine(best === this.picked ? null : best);
+    return true;
+  }
+
+  /** One moment, without labels, for rendering a video frame by frame (tools/video). */
+  frameAt(s: number): void {
+    this.playback.pause();
+    this.time = Math.max(0, Math.min(DAY_S - 1, s));
+    const d = this.shownDisplay();
+    if (d) {
+      d.overlay.setLabels([]);
+      d.overlay.setTime(this.time);
+    }
+    this.renderChart();
+    this.host.viewer.requestRender();
+  }
+
+  /** A sentence for the model's description, or null. */
+  describe(): string | null {
+    const d = this.dayData;
+    if (!this.on || this.status !== 'ready' || !d || !d.run.length) return null;
+    const per = runsPerHour(d);
+    const top = per.indexOf(Math.max(...per));
+    return t.transitSummary(num(d.run.length), this.dayFormat.format(d.day * DAY_MS), num(per[top]), `${pad(top)}:00–${pad(top + 1)}:00`);
+  }
+
+  /** For tests (window.__yourPlace.transit()). */
+  debugInfo(): unknown {
+    const d = this.shownDisplay();
+    const day = this.dayData;
+    return {
+      on: this.on,
+      status: this.status,
+      problem: this.problem,
+      shown: !!d,
+      demo: this.demo,
+      day: Number.isFinite(this.dayNo) ? isoDay(this.dayNo) : null,
+      time: this.time,
+      runs: this.timetable?.runs.tIn.length ?? 0,
+      dayRuns: day?.run.length ?? 0,
+      lines: day?.lines.map((l) => `${l.mode}:${l.name}`) ?? [],
+      perHour: day ? runsPerHour(day, this.pickedRoutes()) : [],
+      vehicles: d?.overlay.vehicles.length ?? 0,
+      labels: d?.overlay.labelCount ?? 0,
+      picked: this.picked,
+      playing: this.playback.playing,
+      speed: this.speed,
+      // where a vehicle is on screen, for the end-to-end test
+      vehicleAt: (i: number) => {
+        const x = d?.overlay.vehicles[i];
+        if (!d || !x) return null;
+        return this.host.viewer.screenPoint(x.top[0], -x.top[2], x.top[1] - d.overlay.width * 0.4);
+      },
+    };
+  }
+
+  // ------------------------------------------------------------------ reading
+
+  private refresh(): void {
+    if (!this.on) return;
+    if (!this.file) {
+      this.status = 'empty';
+      this.detach();
+      this.syncPanel();
+      return;
+    }
+    // a place is on its way: read the timetable for it when it comes
+    if (this.opening) return;
+    const model = this.host.model();
+    const last = this.last;
+    if (!model || !last || last.model !== model) {
+      // no place yet (the file was picked on the start page): find where it runs, then go there
+      if (!model && !this.opening) this.read(null);
+      return;
+    }
+    const key = `${this.fileId}|${last.center.lat.toFixed(5)}|${last.center.lon.toFixed(5)}|${model.sizeM}`;
+    if (this.timetable && this.key === key) {
+      if (this.display?.model !== model) this.show(model);
+      return;
+    }
+    this.read({ model, center: last.center, key });
+  }
+
+  private read(square: { model: CityModel; center: LngLat; key: string } | null): void {
+    const file = this.file;
+    if (!file) return;
+    this.abort?.abort();
+    const ac = new AbortController();
+    this.abort = ac;
+    this.detach();
+    this.status = 'reading';
+    this.progress = 0;
+    this.problem = '';
+    this.syncPanel();
+    const center = square?.center ?? { lat: 0, lon: 0 };
+    let shown = 0;
+    readTimetable(
+      { file, center, sizeM: square ? square.model.sizeM : 0 },
+      (share) => {
+        if (this.abort !== ac) return;
+        this.progress = share;
+        // the panel's text once a percent
+        if (Math.floor(share * 100) !== shown) {
+          shown = Math.floor(share * 100);
+          this.syncPanel();
+        }
+      },
+      ac.signal,
+    ).then(
+      (tt) => {
+        if (this.abort !== ac) return;
+        this.abort = null;
+        if (!square) {
+          // where it runs: open that square (attach reads it again for the square)
+          this.fresh = false;
+          if (!tt.busiest) return this.fail('empty');
+          this.status = 'reading';
+          this.go({ lat: tt.busiest.lat, lon: tt.busiest.lon }, OPEN_SIZE, tt.busiest.name);
+          return;
+        }
+        if (this.host.model() !== square.model) return;
+        this.timetable = tt;
+        this.key = square.key;
+        if (!tt.runs.tIn.length) {
+          // a file just loaded with none of its lines here: go where it runs
+          if (this.fresh && tt.busiest) {
+            this.fresh = false;
+            this.status = 'reading';
+            this.syncPanel();
+            this.go({ lat: tt.busiest.lat, lon: tt.busiest.lon }, OPEN_SIZE, tt.busiest.name);
+            return;
+          }
+          this.status = 'outside';
+          this.dayData = null;
+          this.syncPanel();
+          this.host.changed();
+          return;
+        }
+        this.fresh = false;
+        this.status = 'ready';
+        this.setDay(Number.isFinite(this.dayNo) ? this.dayNo : NaN, true);
+      },
+      (err) => {
+        if (ac.signal.aborted || this.abort !== ac) return;
+        this.abort = null;
+        this.fail(err instanceof TimetableProblem ? err.kind : 'unreadable');
+      },
+    );
+  }
+
+  private fail(kind: string): void {
+    // a file that can't be read is let go: a new place won't try it again
+    this.file = null;
+    this.timetable = null;
+    this.status = 'error';
+    this.problem = kind;
+    this.detach();
+    this.syncPanel();
+    this.host.changed();
+  }
+
+  /** Show a day (NaN: today where the timetable runs, or the nearest day it has). */
+  private setDay(want: number, fresh = false): void {
+    const tt = this.timetable;
+    const model = this.host.model();
+    if (!tt || !model) return;
+    const now = nowIn(tt.timeZone);
+    const day = dayWithin(Number.isFinite(want) ? want : now.day, tt.firstDay, tt.lastDay);
+    if (day === this.dayNo && !fresh && this.dayData) return;
+    const first = !Number.isFinite(this.dayNo);
+    this.dayNo = day;
+    this.dayData = dayRuns(tt.runs, day);
+    // now, if it's today and something runs now; else the morning
+    if (first) this.time = day === now.day && busyAt(this.dayData, now.time) ? now.time : 8 * 3600;
+    // a line picked that doesn't run on this day: all of them
+    if (this.picked && !this.dayData.lines.some((l) => l.key === this.picked)) this.picked = null;
+    this.show(model);
+  }
+
+  private show(model: CityModel): void {
+    const day = this.dayData;
+    this.detach(false);
+    if (!day) {
+      model.repaint();
+      return;
+    }
+    const overlay = new TransitDisplay(day, model.sizeM);
+    overlay.pick(this.pickedRoutes());
+    overlay.setTime(this.time);
+    model.addOverlay(overlay);
+    this.display = { model, overlay };
+    this.renderLines();
+    this.renderChart(true);
+    this.updateLabels();
+    this.syncPanel();
+    this.host.changed();
+    this.host.viewer.requestRender();
+  }
+
+  private detach(repaint = true): void {
+    const d = this.display;
+    if (!d) return;
+    if (d.model === this.host.model()) d.model.removeOverlay(d.overlay, repaint);
+    this.display = null;
+  }
+
+  private shownDisplay(): { model: CityModel; overlay: TransitDisplay } | null {
+    const d = this.display;
+    return d && d.model === this.host.model() ? d : null;
+  }
+
+  // ------------------------------------------------------------------ picking
+
+  private lineOf(route: number): TransitLine | undefined {
+    return this.dayData?.lines.find((l) => l.routes.includes(route));
+  }
+
+  private pickedRoutes(): ReadonlySet<number> | null {
+    const line = this.picked ? this.dayData?.lines.find((l) => l.key === this.picked) : undefined;
+    return line ? new Set(line.routes) : null;
+  }
+
+  private pickLine(key: string | null): void {
+    this.picked = key;
+    const d = this.shownDisplay();
+    if (d) {
+      d.overlay.pick(this.pickedRoutes());
+      d.model.repaint();
+    }
+    this.renderLines();
+    this.renderChart(true);
+    this.updateLabels();
+    this.host.viewer.requestRender();
+  }
+
+  private setTime(s: number, fromPlayback = false): void {
+    const time = Math.max(0, Math.min(DAY_S - 60, s));
+    if (!fromPlayback) this.playback.pause();
+    const minuteChanged = Math.floor(time / 60) !== Math.floor(this.time / 60);
+    this.time = time;
+    this.shownDisplay()?.overlay.setTime(time);
+    if (minuteChanged || !fromPlayback) this.renderChart();
+    if (!fromPlayback) this.updateLabels();
+    this.host.viewer.requestRender();
+  }
+
+  /** Line names over the vehicles, a few, not on top of each other; none while replaying. */
+  private updateLabels(): void {
+    const d = this.shownDisplay();
+    if (!d) return;
+    if (this.playback.playing) {
+      d.overlay.setLabels([]);
+      return;
+    }
+    const picked = this.pickedRoutes();
+    const minM = d.model.sizeM * 0.08;
+    const kept: Array<{ run: number; e: number; n: number; text: string }> = [];
+    const list = [...d.overlay.vehicles].sort((a, b) => Number(!!picked && !picked.has(a.route)) - Number(!!picked && !picked.has(b.route)));
+    for (const v of list) {
+      if (kept.length >= MAX_LABELS) break;
+      if (picked && !picked.has(v.route)) continue;
+      if (kept.some((k) => Math.hypot(k.e - v.e, k.n - v.n) < minM)) continue;
+      const line = this.lineOf(v.route);
+      kept.push({ run: v.run, e: v.e, n: v.n, text: line?.name ?? '' });
+    }
+    d.overlay.setLabels(kept.map(({ run, text }) => ({ run, text })));
+  }
+
+  private onPlayback(pos: number, playing: boolean): void {
+    const btn = $('transit-play');
+    btn.textContent = playing ? t.routePause : t.routePlay;
+    btn.setAttribute('aria-pressed', String(playing));
+    if (playing) {
+      this.setTime(pos * DAY_S, true);
+      const d = this.shownDisplay();
+      if (d && d.overlay.labelCount) d.overlay.setLabels([]);
+    } else {
+      this.updateLabels();
+      this.renderChart();
+    }
+  }
+
+  // ------------------------------------------------------------------ the panel
+
+  private renderSpeeds(): void {
+    const group = $('transit-speed');
+    group.replaceChildren(
+      ...SPEEDS.map((v, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.setAttribute('role', 'radio');
+        b.dataset.value = String(v);
+        b.textContent = t.transitSpeeds[i];
+        b.setAttribute('aria-checked', String(v === this.speed));
+        b.tabIndex = v === this.speed ? 0 : -1;
+        b.addEventListener('click', () => this.setSpeed(v));
+        return b;
+      }),
+    );
+  }
+
+  private setSpeed(v: number): void {
+    this.speed = v;
+    this.playback.durationMs = (DAY_S * 1000) / v;
+    for (const b of $('transit-speed').querySelectorAll<HTMLButtonElement>('[role="radio"]')) {
+      const on = Number(b.dataset.value) === v;
+      b.setAttribute('aria-checked', String(on));
+      b.tabIndex = on ? 0 : -1;
+    }
+  }
+
+  private renderLines(): void {
+    const day = this.dayData;
+    const host = $('transit-lines');
+    if (!day) {
+      host.replaceChildren();
+      return;
+    }
+    host.replaceChildren(
+      ...day.lines.map((l) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'chip line-chip';
+        b.setAttribute('aria-pressed', String(this.picked === l.key));
+        b.title = t.transitLineTitle(`${t.transitModes[l.mode]} ${l.name}`, t.transitTrips(l.runs, num(l.runs)));
+        const sw = document.createElement('i');
+        sw.className = `swatch line-swatch mode-${l.mode}`;
+        sw.setAttribute('aria-hidden', 'true');
+        const name = document.createElement('span');
+        name.textContent = l.name;
+        b.append(sw, name);
+        b.addEventListener('click', () => this.pickLine(this.picked === l.key ? null : l.key));
+        return b;
+      }),
+    );
+    host.classList.toggle('picking', !!this.picked);
+    const modes = modesOn(day);
+    $('transit-modes').replaceChildren(
+      ...modes.map((m: TransitMode) => {
+        const li = document.createElement('li');
+        const sw = document.createElement('i');
+        sw.className = `swatch line-swatch mode-${m}`;
+        sw.setAttribute('aria-hidden', 'true');
+        li.append(sw, document.createTextNode(t.transitModes[m]));
+        return li;
+      }),
+    );
+  }
+
+  /** The bar chart of the day; `rebuild` when the data or the line changed, not only the time. */
+  private renderChart(rebuild = false): void {
+    const day = this.dayData;
+    if (!day) return;
+    const values = runsPerHour(day, this.pickedRoutes());
+    const bars = $('transit-bars');
+    const line = this.picked ? day.lines.find((l) => l.key === this.picked) : undefined;
+    if (rebuild || bars.children.length !== 24) {
+      const { top, ticks } = chartTicks(Math.max(0, ...values));
+      bars.replaceChildren(
+        ...barShares(values, top).map((s) => {
+          const bar = document.createElement('i');
+          bar.className = 'tbar';
+          bar.style.height = `${(s * 100).toFixed(2)}%`;
+          return bar;
+        }),
+      );
+      $('transit-grid').replaceChildren(
+        ...ticks.map((v) => {
+          const g = document.createElement('span');
+          g.className = 'tgrid';
+          g.style.bottom = `${((v / top) * 100).toFixed(2)}%`;
+          g.dataset.label = compact(v);
+          return g;
+        }),
+      );
+      $('transit-x').replaceChildren(
+        ...[0, 6, 12, 18].map((h) => {
+          const label = document.createElement('span');
+          label.style.left = `${(((h + 0.5) / 24) * 100).toFixed(2)}%`;
+          label.textContent = `${pad(h)}:00`;
+          return label;
+        }),
+      );
+      const fig = $('transit-figure');
+      if (line) {
+        fig.style.setProperty('--bar', `color-mix(in srgb, ${MODE_COLOURS[line.mode]} 45%, #f1ede5)`);
+        fig.style.setProperty('--bar-on', MODE_COLOURS[line.mode]);
+      } else {
+        fig.style.removeProperty('--bar');
+        fig.style.removeProperty('--bar-on');
+      }
+      $('transit-sub').textContent = line ? t.transitOneLine(line.name) : t.transitAllLines;
+      $('transit-all').hidden = !line;
+      this.renderTable(values);
+    }
+    const hour = Math.floor(this.time / 3600);
+    [...bars.children].forEach((bar, i) => {
+      bar.classList.toggle('on', i === hour);
+      bar.classList.toggle('hover', i === this.hover && i !== hour);
+    });
+    $('transit-now').style.left = `${((this.time / DAY_S) * 100).toFixed(3)}%`;
+    const when = `${this.dayFormat.format(day.day * DAY_MS)} ${clock(this.time)}`;
+    const count = this.shownDisplay()?.overlay.vehicles.length ?? 0;
+    const shown = this.hover != null ? `${pad(this.hover)}:00–${pad(this.hover + 1)}:00: ${t.transitTrips(values[this.hover], num(values[this.hover]))}` : `${when} · ${t.transitVehicles(count, num(count))}`;
+    $('transit-readout').textContent = shown;
+    const chart = $('transit-chart');
+    const minute = Math.floor(this.time / 60);
+    chart.setAttribute('aria-valuenow', String(minute));
+    chart.setAttribute('aria-valuetext', `${when}, ${t.transitVehicles(count, num(count))}, ${t.transitTrips(values[hour], num(values[hour]))} ${pad(hour)}:00–${pad(hour + 1)}:00`);
+    chart.setAttribute('aria-label', `${t.transitPerHour}, ${$('transit-sub').textContent}`);
+  }
+
+  private renderTable(values: number[]): void {
+    const head = document.createElement('tr');
+    for (const text of [t.trafficTableHour, t.transitPerHour]) {
+      const th = document.createElement('th');
+      th.scope = 'col';
+      th.textContent = text;
+      head.append(th);
+    }
+    const rows = values.map((v, i) => {
+      const tr = document.createElement('tr');
+      const th = document.createElement('th');
+      th.scope = 'row';
+      th.textContent = `${pad(i)}:00–${pad(i + 1)}:00`;
+      const td = document.createElement('td');
+      td.textContent = num(v);
+      tr.append(th, td);
+      return tr;
+    });
+    $('transit-table').replaceChildren(head, ...rows);
+  }
+
+  private syncPanel(override?: string): void {
+    const s = this.status;
+    const tt = this.timetable;
+    const ready = this.on && s === 'ready' && !!tt && !!this.dayData;
+    const loaded = !!this.file;
+    // the way to load one: until one is read, and again when it couldn't be
+    $('transit-empty').hidden = s === 'reading' || (loaded && s !== 'error');
+    const text =
+      override ??
+      (s === 'reading'
+        ? t.transitReading(`${num(Math.round(this.progress * 100))} %`)
+        : s === 'error'
+          ? (t.transitProblems[this.problem] ?? t.transitProblems.unreadable)
+          : s === 'outside'
+            ? t.transitOutside
+            : ready && !this.dayData!.run.length
+              ? t.transitNoTrips
+              : '');
+    $('transit-status').textContent = text;
+    $('transit-status').hidden = !text;
+    const bar = $<HTMLProgressElement>('transit-progress');
+    bar.hidden = s !== 'reading' || override != null;
+    bar.value = this.progress;
+    const go = $('transit-go');
+    go.hidden = !(s === 'outside' && tt?.busiest);
+    if (tt?.busiest) go.textContent = t.transitGoTo(tt.busiest.name);
+    $('transit-loaded').hidden = !(loaded && (s === 'ready' || s === 'outside'));
+    $('transit-figure').hidden = !ready;
+    $('transit-day-row').hidden = !ready;
+    if (tt) {
+      $('transit-name').textContent = this.demo ? 'Freiburger Verkehrs AG (VAG)' : tt.agencies.join(', ');
+      $('transit-credit').textContent = this.demo ? t.transitDemoCredit : t.transitCredit(tt.agencies.join(', ') || '–');
+      $('transit-shapes').hidden = tt.hasShapes;
+      const input = $<HTMLInputElement>('transit-date');
+      if (Number.isFinite(tt.firstDay)) {
+        input.min = isoDay(tt.firstDay);
+        input.max = isoDay(tt.lastDay);
+        $('transit-covers').textContent = t.transitCovers(this.longDay.format(tt.firstDay * DAY_MS), this.longDay.format(tt.lastDay * DAY_MS));
+      }
+      if (Number.isFinite(this.dayNo)) input.value = isoDay(this.dayNo);
+    }
+  }
+
+  private bind(): void {
+    const input = $<HTMLInputElement>('transit-file');
+    $('transit-load-btn').addEventListener('click', () => this.pickFile());
+    $('transit-another').addEventListener('click', () => this.pickFile());
+    $('transit-landing-btn').addEventListener('click', () => this.pickFile());
+    $('transit-remove').addEventListener('click', () => this.remove());
+    $('transit-demo').addEventListener('click', () => void this.loadDemo());
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      input.value = '';
+      if (file) this.loadFile(file);
+    });
+    // a ZIP dropped on the page is a timetable (a route is a GPX or TCX)
+    window.addEventListener('drop', (e) => {
+      const file = e.dataTransfer?.files[0];
+      if (!file || !/\.zip$/i.test(file.name)) return;
+      e.preventDefault();
+      this.loadFile(file);
+    });
+    $('transit-go').addEventListener('click', () => {
+      const b = this.timetable?.busiest;
+      if (b) this.go({ lat: b.lat, lon: b.lon }, OPEN_SIZE, b.name);
+    });
+    $('transit-all').addEventListener('click', () => this.pickLine(null));
+    $<HTMLInputElement>('transit-date').addEventListener('change', (e) => {
+      const v = (e.target as HTMLInputElement).value;
+      if (!v) return;
+      const [y, m, d] = v.split('-').map(Number);
+      this.setDay(Date.UTC(y, m - 1, d) / DAY_MS);
+    });
+    $('transit-play').addEventListener('click', () => {
+      if (!this.playback.playing) this.playback.seek(this.time >= DAY_S - 120 ? 0 : this.time / DAY_S);
+      this.playback.toggle();
+    });
+
+    const chart = $('transit-chart');
+    const timeAt = (clientX: number) => {
+      const r = $('transit-bars').getBoundingClientRect();
+      const u = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+      return Math.round((u * DAY_S) / 60) * 60;
+    };
+    chart.addEventListener('pointermove', (e) => {
+      const s = timeAt(e.clientX);
+      if (e.buttons & 1) {
+        this.hover = null;
+        this.setTime(s);
+      } else {
+        const h = Math.min(23, Math.floor(s / 3600));
+        if (h !== this.hover) {
+          this.hover = h;
+          this.renderChart();
+        }
+      }
+    });
+    chart.addEventListener('pointerleave', () => {
+      this.hover = null;
+      this.renderChart();
+    });
+    chart.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      this.hover = null;
+      this.setTime(timeAt(e.clientX));
+    });
+    chart.addEventListener('keydown', (e) => {
+      const step = e.shiftKey ? 3600 : 900;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowUp') this.setTime(this.time + step);
+      else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') this.setTime(this.time - step);
+      else if (e.key === 'PageUp') this.setTime(this.time + 3600);
+      else if (e.key === 'PageDown') this.setTime(this.time - 3600);
+      else if (e.key === 'Home') this.setTime(0);
+      else if (e.key === 'End') this.setTime(DAY_S - 60);
+      else return;
+      e.preventDefault();
+    });
+  }
+}

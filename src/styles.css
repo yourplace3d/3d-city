@@ -1766,3 +1766,150 @@ a.fab {
 .traffic-credit {
   font-size: 11.5px;
 }
+
+/* ------------------------------------------------------------------ public transport: a timetable's vehicles, a chart of the day */
+
+.swatch-transit {
+  background: linear-gradient(90deg, #008300 0 33%, #2a78d6 33% 66%, #e34948 66%);
+}
+
+.mode-rail {
+  background: #008300;
+}
+
+.mode-subway {
+  background: repeating-linear-gradient(90deg, #2a78d6 0 5px, transparent 5px 8px);
+}
+
+.mode-tram {
+  background: #e34948;
+}
+
+.mode-bus {
+  background: #5f5a55;
+}
+
+.mode-ferry {
+  background: repeating-linear-gradient(90deg, #c98500 0 4px, transparent 4px 7px);
+}
+
+.mode-other {
+  background: #9a5bd0;
+}
+
+.transit-control {
+  margin-top: 10px;
+}
+
+#transit-empty {
+  display: grid;
+  gap: 8px;
+}
+
+#transit-landing-btn {
+  margin-top: 4px;
+  align-self: flex-start;
+}
+
+.transit-progress {
+  display: block;
+  width: 100%;
+  height: 6px;
+  margin-top: 6px;
+  accent-color: var(--accent);
+}
+
+.transit-loaded {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.transit-day input[type='date'] {
+  min-height: 36px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-solid);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.transit-chart .tbar {
+  background: var(--bar, #8f877b);
+}
+
+.transit-chart .tbar.hover {
+  filter: brightness(0.82);
+}
+
+.transit-chart .tbar.on {
+  background: var(--bar-on, #2f2b26);
+  filter: none;
+}
+
+.tchart-cursor {
+  position: absolute;
+  inset: 4px 6px 0 30px;
+  pointer-events: none;
+}
+
+.tchart-now {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--text);
+}
+
+.transit-chart .route-play-row {
+  flex-wrap: wrap;
+}
+
+#transit-speed button {
+  white-space: nowrap;
+}
+
+.transit-readout {
+  display: block;
+  margin-top: 6px;
+}
+
+.transit-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 8px 0 2px;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.transit-modes li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.line-swatch {
+  width: 16px;
+  height: 6px;
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.transit-lines .chip {
+  min-height: 30px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* no line picked: every line in full colour */
+.transit-lines:not(.picking) .chip .swatch {
+  opacity: 1;
+}
