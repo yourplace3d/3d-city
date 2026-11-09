@@ -28,6 +28,8 @@ export interface PrintRoad {
   bridge: boolean;
   /** how far this one stands up (mm), when not the roads' height: a route stands higher */
   raiseMm?: number;
+  /** how far each point stands up (mm), when it changes along the road (traffic streets); over `raiseMm` */
+  raises?: number[];
 }
 
 type V = [number, number, number];
@@ -145,7 +147,9 @@ export function addRoads(t: Triangles, grid: HeightGrid, roads: PrintRoad[], opt
 
   roads.forEach((road, ri) => {
     if (road.widthM * s < ROAD_SKIP_MM || road.pts.length < 2) return;
-    const pts = road.pts.filter((p, k) => k === 0 || p[0] !== road.pts[k - 1][0] || p[1] !== road.pts[k - 1][1]);
+    const keep = road.pts.map((p, k) => k === 0 || p[0] !== road.pts[k - 1][0] || p[1] !== road.pts[k - 1][1]);
+    const pts = road.pts.filter((_, k) => keep[k]);
+    const raises = road.raises?.length === road.pts.length ? road.raises.filter((_, k) => keep[k]) : null;
     if (pts.length < 2) return;
     // skip roads wholly outside the square
     let bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity;
@@ -166,9 +170,19 @@ export function addRoads(t: Triangles, grid: HeightGrid, roads: PrintRoad[], opt
     const lengths = [0];
     for (let k = 1; k < pts.length; k++) lengths.push(lengths[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]));
     const total = lengths[lengths.length - 1];
+    // how far it stands up at a distance along it: the same all along, or between its points' heights
+    const lift = (along: number) => {
+      if (!raises) return raise;
+      let k = 1;
+      while (k < lengths.length - 1 && lengths[k] < along) k++;
+      const span = lengths[k] - lengths[k - 1];
+      const f = span > 0 ? Math.max(0, Math.min(1, (along - lengths[k - 1]) / span)) : 0;
+      return raises[k - 1] + (raises[k] - raises[k - 1]) * f;
+    };
     const topAt = (p: Pt, along: number) => {
-      const g = ground(p) + raise;
-      return road.bridge && total > 0 ? Math.max(g, deckFrom + ((deckTo - deckFrom) * along) / total + raise) : g;
+      const up = lift(along);
+      const g = ground(p) + up;
+      return road.bridge && total > 0 ? Math.max(g, deckFrom + ((deckTo - deckFrom) * along) / total + up) : g;
     };
 
     const piece = (corners: Pt[], along: number[]) => {
@@ -223,7 +237,10 @@ export function addRoads(t: Triangles, grid: HeightGrid, roads: PrintRoad[], opt
       // sample the ground along both edges and the middle; cut where it bends
       const count = Math.max(1, Math.ceil((to - from) / (step / 2)));
       const ds = Array.from({ length: count + 1 }, (_, i) => from + ((to - from) * i) / count);
-      const z = ds.map((d) => [-1, 0, 1].map((side) => ground(at(d, side))));
+      const z = ds.map((d) => {
+        const up = raises ? lift(lengths[k] + Math.max(0, Math.min(len, d))) : 0;
+        return [-1, 0, 1].map((side) => ground(at(d, side)) + up);
+      });
       const cuts = [0];
       let start = 0;
       for (let e = 2; e <= count; e++) {

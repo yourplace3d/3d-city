@@ -23,7 +23,7 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   const steep = () => page.evaluate(() => window.__yourPlace.steep());
   const traffic = () => page.evaluate(() => {
     const t = window.__yourPlace.traffic();
-    return t && { ...t, columnPoint: undefined };
+    return t && { ...t, columnPoint: undefined, columnAt: undefined };
   });
   const reload = async (before) => {
     await page.waitForFunction((c) => JSON.stringify(window.__yourPlace.state().center) !== c, JSON.stringify(before), { timeout: 10000 }).catch(() => undefined);
@@ -219,7 +219,7 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   expect(/^FIT files can’t be read yet/.test(await page.textContent('#toast')) && (await route())?.name === 'Lunch Run', 'a FIT file gets a clear message and changes nothing');
   await page.click('#route-remove');
 
-  // ---- traffic: Hamburg's hourly counts as columns and a bar chart of the day
+  // ---- traffic: Hamburg's hourly counts as red streets that rise with the traffic, and a bar chart of the day
   await page.click('#data-layer-group [data-value="traffic"]');
   await page.waitForSelector('#traffic-hamburg', { state: 'visible' });
   // the first answer is unusable: a clear message and a way to try again (a failed request
@@ -236,10 +236,12 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   await page.waitForFunction(() => window.__yourPlace.traffic().status === 'ready', null, { timeout: 20000 }).catch(() => undefined);
   tr = await traffic();
   const hh = await page.evaluate(() => ({ title: document.title, hash: location.hash }));
-  expect(tr.status === 'ready' && tr.shown && tr.points === 15 && tr.columns === 14, `the counting points in the square stand as columns, the two directions of a road as one (${tr.points} points, ${tr.columns} columns)`);
+  expect(tr.status === 'ready' && tr.shown && tr.points === 15 && tr.columns === 14, `the counting points in the square are on the model, the two directions of a road as one (${tr.points} points, ${tr.columns} on the model)`);
+  expect(tr.onStreet === 14 && tr.streets.samples > 200 && tr.streets.runs > 10 && tr.streets.highest > 0.5 && tr.spread === 300, `each count spreads 300 m along the streets around it (${tr.streets.samples} street points in ${tr.streets.runs} stretches, the highest at ${Math.round(tr.streets.highest * 100)} % of the day’s top)`);
+  expect((await page.isVisible('.traffic-ramp')) && /Less traffic/.test(await page.textContent('.traffic-legend')) && (await page.inputValue('#traffic-spread')) === '300', 'a legend shows the reds, and a slider the spread');
   expect(/Hamburg city centre/.test(hh.title) && /dl=traffic/.test(hh.hash) && !/tk=/.test(hh.hash), 'Show Hamburg opens Hamburg’s centre on the traffic layer, counting cars');
   const busiest = tr.totals.indexOf(Math.max(...tr.totals));
-  expect(tr.hour === busiest && tr.labels >= 1, `it opens on the busiest hour, with counts on the busiest columns (hour ${tr.hour}, ${tr.labels} labels)`);
+  expect(tr.hour === busiest && tr.labels >= 1, `it opens on the busiest hour, with counts on the busiest counting points (hour ${tr.hour}, ${tr.labels} labels)`);
   expect((await page.locator('#traffic-bars .tbar').count()) === 24 && (await page.locator('#traffic-bars .tbar.on').count()) === 1, 'the bar chart has a bar per hour, the hour shown marked');
   const tread = await page.textContent('#traffic-readout');
   expect(/^\w{3} \d\d:00–\d\d:00: [\d,]+ cars$/.test(tread) && /at 14 counting points, added up/.test(await page.textContent('#traffic-sub')), `the readout says when and how many (“${tread}”)`);
@@ -258,19 +260,39 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   expect(tr.hour === 1 && (await page.getAttribute('#traffic-chart', 'aria-valuenow')) === '1', 'arrow keys step through the hours');
   await page.keyboard.press('End');
 
-  // a column of its own
+  // a counting point of its own
   const cp = await page.evaluate(() => {
     const t = window.__yourPlace.traffic();
     return t.columnPoint(t.busiest);
   });
   await page.mouse.click(cp.x, cp.y);
   tr = await traffic();
-  expect(tr.column === tr.busiest && (await page.isVisible('#traffic-all')) && /the counting point you picked/.test(await page.textContent('#traffic-sub')), 'tapping a column shows that counting point’s day');
+  expect(tr.column === tr.busiest && (await page.isVisible('#traffic-all')) && /the counting point you picked/.test(await page.textContent('#traffic-sub')), 'tapping a counting point shows its day');
   expect(!(await page.evaluate(() => window.__yourPlace.pin().marked)), 'and doesn’t move the pin');
   await settle(page, 600);
   await shot(page, 't2-traffic-column');
   await page.click('#traffic-all');
   expect((await traffic()).column === null, 'All points goes back to the whole square');
+
+  // the spread: further, and into the link
+  const narrower = (await traffic()).streets.samples;
+  await page.locator('#traffic-spread').fill('500');
+  await page.waitForFunction(() => window.__yourPlace.traffic().streets?.samples && window.__yourPlace.traffic().spread === 500, null, { timeout: 5000 }).catch(() => undefined);
+  tr = await traffic();
+  expect(tr.spread === 500 && tr.streets.samples > narrower && /sp=500/.test(await page.evaluate(() => location.hash)) && (await page.textContent('#traffic-spread-out')) === '500 m', `a wider spread reaches more of the streets (${narrower} → ${tr.streets.samples} street points) and goes into the link`);
+  await page.locator('#traffic-spread').fill('300');
+  await page.waitForFunction(() => window.__yourPlace.traffic().spread === 300, null, { timeout: 5000 }).catch(() => undefined);
+  expect(!/sp=/.test(await page.evaluate(() => location.hash)), 'back at 300 m the link leaves it out');
+
+  // the traffic streets in the 3D print
+  await page.click('#share-btn');
+  expect((await page.isVisible('#print-traffic-row')) && (await page.isChecked('#print-traffic')), 'the 3D print offers the traffic streets raised, ticked');
+  await page.click('#print-size-group [data-value="150"]');
+  const [tdl] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.click('#stl-btn')]);
+  await page.waitForFunction(() => /^Saved/.test(document.getElementById('share-msg').textContent), null, { timeout: 120000 });
+  const tmsg = await page.textContent('#share-msg');
+  expect(/\.stl$/.test(tdl.suggestedFilename()) && / Traffic streets raised 0\.5–2 mm\./.test(tmsg), `the STL has the traffic streets raised by traffic (“${tmsg.slice(0, 90)}…”)`);
+  await page.keyboard.press('Escape');
 
   // the table view
   await page.click('.ttable summary');
@@ -299,7 +321,7 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   await page.waitForFunction(() => window.__yourPlace.traffic().status === 'ready', null, { timeout: 20000 }).catch(() => undefined);
   r = await route();
   tr = await traffic();
-  expect(r.shown && !r.steep && tr.shown && tr.columns > 0 && /dl=traffic/.test(await page.evaluate(() => location.hash)), `a route shows over the traffic columns (${tr.columns} columns)`);
+  expect(r.shown && !r.steep && r.lifted && tr.shown && tr.columns > 0 && /dl=traffic/.test(await page.evaluate(() => location.hash)), `a route rides on the traffic streets, never under them (${tr.columns} counting points)`);
   await settle(page, 1500);
   await shot(page, 't3-traffic-route');
   await ctx.close();

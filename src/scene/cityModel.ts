@@ -123,7 +123,8 @@ export class CityModel implements ModelSurface {
     this.overlays.push(o);
     if (o.object) this.group.add(o.object);
     o.place?.(this);
-    this.repaint();
+    // only a layer that paints the ground needs the texture drawn again
+    if (o.paint) this.repaint();
   }
 
   /** Take a data layer off and dispose it; `repaint: false` when another one is added right after. */
@@ -133,7 +134,7 @@ export class CityModel implements ModelSurface {
     this.overlays.splice(i, 1);
     if (o.object) this.group.remove(o.object);
     o.dispose?.();
-    if (repaint) this.repaint();
+    if (repaint && o.paint) this.repaint();
   }
 
   /** Paint the ground texture again, e.g. after a data layer changed what it draws. */

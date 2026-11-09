@@ -2,10 +2,17 @@
  * Fixture for the traffic layer: answers Hamburg's SensorThings API (iot.hamburg.de) the way it
  * answers the app, with made-up counting points inside the square asked for and hourly counts
  * that rise to an afternoon peak. Two points stand 6 m apart (both directions of one road), so
- * the app should add them up into one column. Plus a short route through Hamburg's centre.
+ * the app should add them up into one counting point. The points stand on the synthetic city's
+ * north–south streets (every 120 m from Hamburg's centre, synthetic-city.mjs), so the counts
+ * spread along them. Plus a short route through Hamburg's centre.
  */
 
 const HOUR = 3_600_000;
+/** the synthetic city's middle in Hamburg, and its street spacing (m) */
+const GRID = { lat: 53.5511, lon: 9.9937, block: 120 };
+const M_PER_LON = 111320 * Math.cos((GRID.lat * Math.PI) / 180);
+/** onto the nearest north–south street, 2 m to its east (counters stand at the roadside) */
+const onStreet = (lon) => GRID.lon + (Math.round(((lon - GRID.lon) * M_PER_LON) / GRID.block) * GRID.block + 2) / M_PER_LON;
 
 /** The answer to one Datastreams request (the URL the app sent). */
 export function trafficAnswer(url, now = Date.now()) {
@@ -24,7 +31,7 @@ export function trafficAnswer(url, now = Date.now()) {
     // spread over the middle of the square
     const fx = 0.2 + 0.6 * (((k * 7) % n) / (n - 1));
     const fy = 0.2 + 0.6 * (((k * 3) % n) / (n - 1));
-    const lon = west + (east - west) * fx;
+    const lon = onStreet(west + (east - west) * fx);
     const lat = south + (north - south) * fy;
     const base = (bikes ? 30 : 300) * (1 + (k % 5));
     const points = k === 0 ? [[lon, lat], [lon + 0.00009, lat]] : [[lon, lat]];

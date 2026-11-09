@@ -144,11 +144,22 @@ describe('view state URL', () => {
       layers: { roads: true, water: false, green: true },
       data: 'traffic',
       traffic: 'bikes',
+      spread: 450,
       camera: { azimuth: 33.3, tilt: 41.2, distance: 3456, targetE: -120, targetN: 80 },
       pin: { lat: 48.77702, lon: 9.17654 },
     };
     const back = decodeState(`#${encodeState(s)}`);
     expect(back).toEqual(s);
+  });
+
+  it('keeps the traffic spread in steps of 50 m between 100 and 500, and leaves it out at 300', () => {
+    const base = { ...DEFAULT_STATE, center: { lat: 53.55, lon: 9.99 }, data: 'traffic' as const };
+    expect(encodeState(base)).not.toContain('sp=');
+    expect(encodeState({ ...base, spread: 150 })).toContain('sp=150');
+    expect(encodeState({ ...base, data: 'steep', spread: 150 })).not.toContain('sp=');
+    expect(decodeState('#lat=53.55&lon=9.99&dl=traffic&sp=470').spread).toBe(450);
+    expect(decodeState('#lat=53.55&lon=9.99&dl=traffic&sp=9000').spread).toBe(500);
+    expect(decodeState('#lat=53.55&lon=9.99&dl=traffic&sp=x').spread).toBe(300);
   });
 
   it('carries the building colour, and falls back to white for an unknown one', () => {

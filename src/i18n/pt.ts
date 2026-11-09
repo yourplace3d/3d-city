@@ -173,6 +173,7 @@ export const pt: Messages = {
   raiseRoads: 'Ruas 0,4 mm mais altas',
   raiseGreen: 'Parques e matas 0,6 mm mais altos',
   raiseRoute: 'Percurso 0,8 mm mais alto',
+  raiseTraffic: 'Ruas com trânsito 0,5–2 mm mais altas, conforme o trânsito',
   stlButton: 'Baixar arquivo para impressão 3D (STL)',
   stlTilesButton: 'Baixar peças para impressão 3D (ZIP de STLs)',
   stillLoading: 'Os prédios ainda estão carregando — tente de novo daqui a pouco.',
@@ -187,6 +188,7 @@ export const pt: Messages = {
   greenRaised: (mm) => ` Parques e matas ${mm} mm mais altos.`,
   roadsRaised: (mm) => ` Ruas ${mm} mm mais altas.`,
   routeRaised: (mm) => ` Percurso ${mm} mm mais alto.`,
+  trafficRaised: (from, to) => ` Ruas com trânsito ${from}–${to} mm mais altas.`,
   brokenLeftOut: (n, count) => (count === 1 ? ' 1 prédio com contorno quebrado nos dados do mapa ficou de fora.' : ` ${n} prédios com contorno quebrado nos dados do mapa ficaram de fora.`),
   brokenInTile: ' Um prédio com contorno quebrado nos dados do mapa ficou de fora.',
   fontMissing: (chars, count) => (count === 1 ? ` A fonte não tem ${chars}, então ficou fora do título.` : ` A fonte não tem ${chars}, então ficaram fora do título.`),
@@ -201,6 +203,7 @@ export const pt: Messages = {
   readmeGreen: (mm) => `Parques, jardins e matas ficam ${mm} mm acima da terra.`,
   readmeRoads: (mm) => `Ruas, caminhos e ferrovias ficam ${mm} mm acima do chão, com bordas nítidas.`,
   readmeRoute: (mm) => `O percurso fica ${mm} mm acima do chão, mais alto que as ruas, e atravessa as pontes em nível.`,
+  readmeTraffic: (from, to) => `As ruas com trânsito ficam de ${from} a ${to} mm acima do chão: quanto mais trânsito na hora mostrada, mais altas. Onde o percurso as encontra, fica 0,4 mm acima delas.`,
   readmeCredit: 'Dados do mapa © colaboradores do OpenStreetMap (ODbL). Relevo: Mapzen terrain tiles no AWS Open Data.',
 
   // um percurso de um arquivo GPX ou TCX
@@ -253,7 +256,7 @@ export const pt: Messages = {
   dataLayer: 'Camada de dados',
   dataLayers: { steep: 'Inclinação', traffic: 'Trânsito', route: 'Seu percurso' },
   cardSteep: 'Ruas e caminhos coloridos pela inclinação, em qualquer lugar. Busque um lugar acima ou experimente um:',
-  cardTraffic: 'Carros e bicicletas contados a cada hora em centenas de pontos, como colunas no modelo. Por enquanto só em Hamburgo. Experimente:',
+  cardTraffic: 'Carros e bicicletas contados a cada hora em centenas de pontos, como ruas vermelhas que sobem com o trânsito. Por enquanto só em Hamburgo. Experimente:',
   routeOverLayers: 'Ele aparece sobre a camada que você escolher.',
 
   // contagens de trânsito (Hamburgo)
@@ -270,7 +273,10 @@ export const pt: Messages = {
   trafficOutside: 'Por enquanto, as contagens de trânsito só existem para Hamburgo.',
   trafficShowHamburg: 'Ver Hamburgo',
   trafficNone: 'Não há pontos de contagem neste quadrado. Tente uma área maior ou outra parte de Hamburgo.',
-  trafficNote: 'Cada coluna é um ponto de contagem; a altura mostra quantos passaram na hora escolhida. Toque numa coluna para ver o dia dela. As últimas 24 horas, no horário de Hamburgo; os dois sentidos de uma rua são somados.',
+  trafficNote: 'As ruas perto de um ponto de contagem (os pontos brancos) sobem e ficam vermelhas com o trânsito da hora escolhida. Cada contagem se espalha ao longo da sua rua e some na distância que você escolher; onde as contagens se encontram, como num cruzamento, elas se somam. Só se conta nos pontos: entre eles é uma estimativa. Toque num ponto para ver o dia dele. As últimas 24 horas, no horário de Hamburgo.',
+  trafficLess: 'Menos trânsito',
+  trafficMore: 'Mais',
+  trafficSpread: 'Espalhar pelas ruas',
   trafficTable: 'Ver como tabela',
   trafficTableHour: 'Hora',
   trafficSummary: (count: string, points: number, when: string) => `Trânsito: ${count} em ${points} pontos de contagem na hora mais movimentada, ${when} (horário de Hamburgo).`,

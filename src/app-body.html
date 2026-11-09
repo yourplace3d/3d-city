@@ -68,7 +68,7 @@
           </section>
           <section class="layer-card" aria-labelledby="card-traffic-title">
             <h2 id="card-traffic-title"><i class="swatch swatch-traffic" aria-hidden="true"></i><span data-t="dataLayers.traffic">Traffic</span></h2>
-            <p data-t="cardTraffic">Cars and bikes counted every hour at hundreds of points, as columns on the model. Only in Hamburg so far. Try:</p>
+            <p data-t="cardTraffic">Cars and bikes counted every hour at hundreds of points, as red streets that rise with the traffic. Only in Hamburg so far. Try:</p>
             <div class="card-presets" id="traffic-presets"></div>
           </section>
         </div>
@@ -139,6 +139,14 @@
                 <button type="button" role="radio" data-value="bikes" aria-checked="false" tabindex="-1"><span data-t="trafficModes.bikes">Bikes</span></button>
               </div>
               <p class="traffic-status" id="traffic-status" role="status"></p>
+              <div class="traffic-key" id="traffic-key" hidden>
+                <div class="traffic-legend">
+                  <span class="traffic-ramp" aria-hidden="true"></span>
+                  <span class="traffic-legend-labels"><span data-t="trafficLess">Less traffic</span><span data-t="trafficMore">More</span></span>
+                </div>
+                <div class="control-label"><label for="traffic-spread" data-t="trafficSpread">Spread along the streets</label><output id="traffic-spread-out" for="traffic-spread">300 m</output></div>
+                <input type="range" id="traffic-spread" min="100" max="500" step="50" value="300" />
+              </div>
               <div class="traffic-actions">
                 <button type="button" class="btn" id="traffic-retry" hidden data-t="trafficRetry">Try again</button>
                 <button type="button" class="btn" id="traffic-hamburg" hidden data-t="trafficShowHamburg">Show Hamburg</button>
@@ -162,7 +170,7 @@
                   <table id="traffic-table"></table>
                 </details>
               </figure>
-              <p class="route-note" data-t="trafficNote">Each column is a counting point; its height is how many passed in the hour you pick. Tap a column to see its day. The last 24 hours, Hamburg time; both directions of a road are added up.</p>
+              <p class="route-note" data-t="trafficNote">Streets near a counting point (the white dots) rise and turn red with the traffic in the hour you pick. Each count spreads along its street and fades out over the distance you set; where counts meet, as at a crossing, they add up. Only the dots are counted: in between it’s an estimate. Tap a dot to see its day. The last 24 hours, Hamburg time.</p>
               <p class="route-note traffic-credit" data-t="trafficCredit">Traffic counts: Freie und Hansestadt Hamburg, Behörde für Verkehr und Mobilitätswende (dl-de/by-2-0), live from iot.hamburg.de.</p>
             </div>
           </div>
@@ -328,6 +336,7 @@
               <label class="check"><input type="checkbox" id="print-green" /> <span data-t="raiseGreen">Raise parks and woods 0.6 mm</span></label>
               <!-- only:data -->
               <label class="check" id="print-route-row" hidden><input type="checkbox" id="print-route" checked /> <span data-t="raiseRoute">Raise the route 0.8 mm</span></label>
+              <label class="check" id="print-traffic-row" hidden><input type="checkbox" id="print-traffic" checked /> <span data-t="raiseTraffic">Raise traffic streets 0.5–2 mm, by traffic</span></label>
               <!-- /only:data -->
             </fieldset>
             <button type="button" class="btn btn-wide" id="stl-btn" data-t="stlButton">Download 3D print file (STL)</button>

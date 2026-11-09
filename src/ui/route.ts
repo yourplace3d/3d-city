@@ -13,7 +13,7 @@ import { distance, num, t } from '../i18n';
 import type { LngLat } from '../geo/projection';
 import type { CityModel } from '../scene/cityModel';
 import type { Viewer } from '../scene/viewer';
-import { declutter, RouteDisplay, type RouteMark } from '../data/display/route';
+import { declutter, RouteDisplay, type Lift, type RouteMark } from '../data/display/route';
 import {
   endOf,
   fitStretch,
@@ -51,6 +51,8 @@ export interface RouteHost {
   model(): CityModel | null;
   /** whether the route shows its steepness colours and climbs */
   steep(): boolean;
+  /** what the route rides on where a data layer stands up from the model (traffic streets), if any */
+  lift(): Lift | null;
   /** a route was loaded from a file: make it the data layer shown */
   showRoute(): void;
   /** build the model around a stretch */
@@ -181,8 +183,17 @@ export class RouteController {
     }
     const overlay = new RouteDisplay(this.view(model, center), this.host.accent, model.sizeM);
     model.addOverlay(overlay);
+    overlay.setLift(this.host.lift());
     this.display = { model, center, overlay };
     this.renderProfile();
+  }
+
+  /** What's under the route changed (traffic streets rose or fell, came or went): ride on it again. */
+  liftChanged(): void {
+    const d = this.display;
+    if (!d || d.model !== this.host.model()) return;
+    d.overlay.setLift(this.host.lift());
+    this.host.viewer.requestRender();
   }
 
   /** Draw the route again: its model's roads arrived (bridges), its terrain changed, or steepness was switched. */
@@ -269,6 +280,7 @@ export class RouteController {
       position: this.playback.position,
       runner: d?.overlay.runnerVisible ?? false,
       steep: !!d?.overlay.view.steep,
+      lifted: d?.overlay.lifted ?? false,
       climbs: this.profile?.climbs ?? [],
       profile: this.profileSummary(),
     };

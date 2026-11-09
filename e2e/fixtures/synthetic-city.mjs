@@ -119,11 +119,14 @@ export function synthesize(query) {
 
   // ---- features
   const H = half + 50;
-  for (let k = -Math.ceil(half / block); k <= Math.ceil(half / block); k++) {
+  const K = Math.ceil(half / block);
+  // streets share a point where they cross, as in OpenStreetMap
+  const across = [-H, ...Array.from({ length: 2 * K + 1 }, (_, i) => (i - K) * block).filter((c) => Math.abs(c) < H), H];
+  for (let k = -K; k <= K; k++) {
     const c = k * block;
     const cls = k % 6 === 0 ? 'primary' : k % 3 === 0 ? 'secondary' : k % 2 === 0 ? 'tertiary' : 'residential';
-    elements.push({ type: 'way', id: id++, tags: { highway: cls }, geometry: line([[c, -H], [c, H]]) });
-    elements.push({ type: 'way', id: id++, tags: { highway: cls }, geometry: line([[-H, c], [H, c]]) });
+    elements.push({ type: 'way', id: id++, tags: { highway: cls }, geometry: line(across.map((d) => [c, d])) });
+    elements.push({ type: 'way', id: id++, tags: { highway: cls }, geometry: line(across.map((d) => [d, c])) });
   }
   elements.push({ type: 'way', id: id++, tags: { highway: 'motorway' }, geometry: line([[-H, -H * 0.7], [H, H * 0.2]]) });
   elements.push({ type: 'way', id: id++, tags: { highway: 'primary', tunnel: 'yes' }, geometry: line([[-H, 0], [H, 30]]) });
@@ -169,6 +172,7 @@ export const WORLD_CENTERS = [
   { lat: 48.7765, lon: 9.1772, sizeM: 5000 }, // Stuttgart
   { lat: 49.4106, lon: 8.7065, sizeM: 3000 }, // Heidelberg
   { lat: 38.7139, lon: -9.1365, sizeM: 2000, coast: true }, // Lisbon: coastline 860 m south, inside the 2 km test square
+  { lat: 53.5511, lon: 9.9937, sizeM: 3000 }, // Hamburg's centre: streets for the traffic counts (fixtures/traffic.mjs)
 ];
 
 function bboxQuery(c, sizeM, kind) {

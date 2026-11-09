@@ -60,6 +60,8 @@ export interface ViewState {
   data: DataLayerId | null;
   /** the traffic layer: cars or bikes */
   traffic: TrafficKind;
+  /** the traffic layer: how far each count spreads along the streets (m) */
+  spread: number;
 }
 
 export const DEFAULT_STATE: ViewState = {
@@ -74,7 +76,11 @@ export const DEFAULT_STATE: ViewState = {
   route: null,
   data: null,
   traffic: 'cars',
+  spread: 300,
 };
+
+/** The traffic layer's spread (m): its range and steps. */
+export const SPREAD_RANGE = { min: 100, max: 500, step: 50 } as const;
 
 export const EXAGGERATION_MIN = 1;
 export const EXAGGERATION_MAX = 5;
@@ -97,6 +103,7 @@ export function encodeState(s: ViewState): string {
   if (s.pin) p.set('pin', `${round(s.pin.lat, 5).toFixed(5)},${round(s.pin.lon, 5).toFixed(5)}`);
   if (s.data) p.set('dl', s.data);
   if (s.data === 'traffic' && s.traffic !== 'cars') p.set('tk', s.traffic);
+  if (s.data === 'traffic' && s.spread !== DEFAULT_STATE.spread) p.set('sp', String(s.spread));
   if (s.route) p.set('rt', s.route);
   // commas are fine in a fragment and keep links readable
   return p.toString().replace(/%2C/g, ',');
@@ -131,6 +138,8 @@ export function decodeState(raw: string, base: ViewState = DEFAULT_STATE): ViewS
   if (rt && /^[A-Za-z0-9_-]{6,12000}$/.test(rt)) s.route = rt;
   s.data = DATA_LAYERS.find((d) => d === p.get('dl')) ?? null;
   s.traffic = TRAFFIC_KINDS.find((k) => k === p.get('tk')) ?? 'cars';
+  const sp = Number(p.get('sp'));
+  s.spread = p.has('sp') && Number.isFinite(sp) ? Math.max(SPREAD_RANGE.min, Math.min(SPREAD_RANGE.max, Math.round(sp / SPREAD_RANGE.step) * SPREAD_RANGE.step)) : DEFAULT_STATE.spread;
   return s;
 }
 

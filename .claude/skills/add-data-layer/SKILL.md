@@ -29,9 +29,19 @@ The contracts are in `src/data/types.ts`. Three worked examples:
   line from the terrain), `display/steepness.ts` (ground paint) and `display/profile.ts` (SVG profile),
   wired up by `src/ui/steepness.ts`.
 - **Traffic** (a live open API): `sources/hamburgTraffic.ts` (SensorThings request and parser, coverage,
-  attribution), `match/traffic.ts` (the last 24 hours on fixed steps, nearby points merged), `display/traffic.ts`
-  (columns as one `InstancedMesh`, heights changed per frame while replaying) and `display/trafficChart.ts`
-  (the bar chart's scale), wired up by `src/ui/traffic.ts`; the e2e fixture is `e2e/fixtures/traffic.mjs`.
+  attribution), `match/traffic.ts` (the last 24 hours on fixed steps, nearby points merged),
+  `match/trafficStreets.ts` (each count spread along the street network around its point, fading out over a
+  distance the user sets; shares precomputed, so a moment's values are one pass), `display/traffic.ts` (the
+  streets as one raised mesh whose heights and colours change per frame while replaying; counting points as
+  discs) and `display/trafficChart.ts` (the bar chart's scale), wired up by `src/ui/traffic.ts`; in the print
+  `export/traffic.ts`. The e2e fixture is `e2e/fixtures/traffic.mjs`.
+
+**Point data on streets: spread it, don't spike it.** A count at a point is shown along the streets around
+it, fading out, not as a column: columns look like spikes, hide what's behind them and can't be printed.
+Walk the street network (not as the crow flies), say plainly that it's an estimate between the points, and
+let the user set how far it spreads. Anything that stands up from the model must be printable: keep heights
+to a few millimetres at 15 cm and walls at least 0.8 mm thick, and lift a route over it (`setLift` in
+`display/route.ts`, `routeOverTraffic` in `export/traffic.ts`) so it's never buried.
 
 ## 1. Check the source first
 
@@ -75,12 +85,12 @@ Implement `ModelOverlay`:
 - `paint(ctx, sizeM)`: draws into the ground texture in local metres, north up, after roads/water/green. Glued to the
   terrain at any exaggeration, costs no triangles. **Static only:** repainting the 4096 px texture every frame is too
   slow on phones. Call `model.repaint()` when what it draws changes.
-- `object`: 3D things (labels, columns, a moving marker), added to the model's group.
+- `object`: 3D things (labels, raised streets, a moving marker), added to the model's group.
 - `place(surface)`: stand the 3D objects on the terrain; called when added and whenever the exaggeration changes.
 - `order`: painting order among data layers (steepness 0 under the route's 10).
 - `dispose()`: free geometries, materials and textures.
 
-For animation, change 3D objects or shader uniforms per frame (e.g. column heights, a texture of all time steps
+For animation, change 3D objects or shader uniforms per frame (e.g. street heights, a texture of all time steps
 sampled by a `time` uniform), not the ground canvas. Labels: sprites with `sizeAttenuation: false` keep their
 size on screen; see `makeLabel` and `declutter` in `display/route.ts`. Must stay smooth on phones.
 

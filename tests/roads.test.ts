@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { addRoads, ROAD_MIN_MM, ROAD_RAISE_MM, surfaceMm, type PrintRoad } from '../src/export/roads';
 import { buildPrint, Triangles } from '../src/export/stl';
 import { buildTiledPrint } from '../src/export/tiles';
+import { routeOverTraffic, ROUTE_OVER_TRAFFIC_MM, trafficForPrint, trafficTop } from '../src/export/traffic';
+import { printRaiseMm, TRAFFIC_PRINT_MM } from '../src/data/display/traffic';
+import type { TrafficStreets } from '../src/data/match/trafficStreets';
 import type { HeightGrid } from '../src/geo/terrain';
 
 /** Every directed edge once, and its reverse once: closed shells, none sharing an edge with another. */
@@ -207,5 +210,66 @@ describe('a route in prints', () => {
     expect(parts[0].pts[parts[0].pts.length - 1]).toEqual(parts[1].pts[0]);
     const t = buildPrint(g, [], opts, parts);
     expect(closedShells(t)).toBe(true);
+  });
+});
+
+describe('traffic streets in prints', () => {
+  /** one stretch of street east–west through the middle, its traffic rising from west to east */
+  const streets = (): TrafficStreets => {
+    const xs = Array.from({ length: 41 }, (_, i) => -200 + i * 10);
+    return {
+      spreadM: 300,
+      at: Float32Array.from(xs.flatMap((x) => [x, 0])),
+      width: new Float32Array(xs.length).fill(2),
+      runs: [{ start: 0, count: xs.length, bridge: false }],
+      streetSamples: xs.length,
+      offset: new Uint32Array(xs.length + 1),
+      col: new Uint16Array(0),
+      weight: new Float32Array(0),
+      onStreet: [],
+      max: 1,
+    };
+  };
+  const shares = Float32Array.from({ length: 41 }, (_, i) => i / 40);
+
+  it('stands higher where there’s more traffic, from 0.5 to 2 mm, with no step', () => {
+    expect(printRaiseMm(0)).toBe(TRAFFIC_PRINT_MM.low);
+    expect(printRaiseMm(1)).toBe(TRAFFIC_PRINT_MM.high);
+    expect(printRaiseMm(7)).toBe(TRAFFIC_PRINT_MM.high);
+    const [piece] = trafficForPrint(streets(), shares, s);
+    // an evenly rising straight street needs only its ends
+    expect(piece.pts).toEqual([
+      [-200, 0],
+      [200, 0],
+    ]);
+    expect(piece.raises).toEqual([0.5, 2]);
+    // at least 0.8 mm wide, though the street is narrower at this scale
+    expect(piece.widthM * s).toBeCloseTo(TRAFFIC_PRINT_MM.width);
+    const t = new Triangles();
+    const g = hill();
+    addRoads(t, g, [piece], { s, exaggeration: 1.5 });
+    expect(closedShells(t)).toBe(true);
+    for (const x of [-150, 0, 150]) {
+      const want = surfaceMm(g, x, 0, 1.5, s) + printRaiseMm((x + 200) / 400);
+      expect(topAt(t, x * s, 0)).toBeCloseTo(want, 1);
+    }
+  });
+
+  it('lifts a route over a traffic street it crosses, and leaves it on the ground elsewhere', () => {
+    const traffic = trafficForPrint(streets(), shares, s);
+    const top = trafficTop(traffic);
+    expect(top([100, 0], 0)).toBeCloseTo(printRaiseMm(0.75), 2);
+    expect(top([100, 30], 0)).toBe(0);
+    const route: PrintRoad = { pts: [[100, -100], [100, 100]], widthM: 6, bridge: false, raiseMm: 0.8 };
+    const [lifted] = routeOverTraffic([route], traffic);
+    expect(lifted.raises).toBeDefined();
+    const at = (y: number) => lifted.raises![lifted.pts.findIndex((p) => p[1] === y)];
+    expect(at(0)).toBeCloseTo(printRaiseMm(0.75) + ROUTE_OVER_TRAFFIC_MM, 2);
+    expect(at(-100)).toBe(0.8);
+    expect(at(100)).toBe(0.8);
+    // a route that never meets one is left as it was, and so is a bridge
+    const away: PrintRoad = { pts: [[-100, 50], [100, 60]], widthM: 6, bridge: false, raiseMm: 0.8 };
+    const bridge: PrintRoad = { ...route, bridge: true };
+    expect(routeOverTraffic([away, bridge], traffic)).toEqual([away, bridge]);
   });
 });

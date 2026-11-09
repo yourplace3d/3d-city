@@ -178,6 +178,7 @@ export const en = {
   raiseRoads: 'Raise roads 0.4 mm',
   raiseGreen: 'Raise parks and woods 0.6 mm',
   raiseRoute: 'Raise the route 0.8 mm',
+  raiseTraffic: 'Raise traffic streets 0.5–2 mm, by traffic',
   stlButton: 'Download 3D print file (STL)',
   stlTilesButton: 'Download 3D print tiles (ZIP of STL files)',
   stillLoading: 'Still loading the buildings — try again in a moment.',
@@ -192,6 +193,7 @@ export const en = {
   greenRaised: (mm: string) => ` Parks and woods raised ${mm} mm.`,
   roadsRaised: (mm: string) => ` Roads raised ${mm} mm.`,
   routeRaised: (mm: string) => ` Route raised ${mm} mm.`,
+  trafficRaised: (from: string, to: string) => ` Traffic streets raised ${from}–${to} mm.`,
   brokenLeftOut: (n: string, count: number) => ` ${n} building${count === 1 ? '' : 's'} with a broken outline in the map data left out.`,
   brokenInTile: ' A building with a broken outline in the map data was left out.',
   fontMissing: (chars: string, count: number) => ` The font has no ${chars}, so ${count === 1 ? 'it was' : 'they were'} left off the title.`,
@@ -206,6 +208,7 @@ export const en = {
   readmeGreen: (mm: string) => `Parks, gardens and woods stand ${mm} mm above the land.`,
   readmeRoads: (mm: string) => `Roads, paths and railways stand ${mm} mm above the ground, with sharp edges.`,
   readmeRoute: (mm: string) => `The route stands ${mm} mm above the ground, higher than the roads, and runs level across bridges.`,
+  readmeTraffic: (from: string, to: string) => `The traffic streets stand ${from} to ${to} mm above the ground: the more traffic in the hour shown, the higher. Where the route meets them, it stands 0.4 mm above them.`,
   readmeCredit: 'Map data © OpenStreetMap contributors (ODbL). Terrain: Mapzen terrain tiles on AWS Open Data.',
 
   // a route from a GPX or TCX file
@@ -258,7 +261,7 @@ export const en = {
   dataLayer: 'Data layer',
   dataLayers: { steep: 'Steepness', traffic: 'Traffic', route: 'Your route' },
   cardSteep: 'Roads and paths coloured by how steep they are, anywhere. Search a place above, or try one:',
-  cardTraffic: 'Cars and bikes counted every hour at hundreds of points, as columns on the model. Only in Hamburg so far. Try:',
+  cardTraffic: 'Cars and bikes counted every hour at hundreds of points, as red streets that rise with the traffic. Only in Hamburg so far. Try:',
   routeOverLayers: 'It shows over the layer you pick.',
 
   // traffic counts (Hamburg)
@@ -275,7 +278,10 @@ export const en = {
   trafficOutside: 'Traffic counts are only available for Hamburg so far.',
   trafficShowHamburg: 'Show Hamburg',
   trafficNone: 'There are no counting points in this square. Try a bigger area or another part of Hamburg.',
-  trafficNote: 'Each column is a counting point; its height is how many passed in the hour you pick. Tap a column to see its day. The last 24 hours, Hamburg time; both directions of a road are added up.',
+  trafficNote: 'Streets near a counting point (the white dots) rise and turn red with the traffic in the hour you pick. Each count spreads along its street and fades out over the distance you set; where counts meet, as at a crossing, they add up. Only the dots are counted: in between it’s an estimate. Tap a dot to see its day. The last 24 hours, Hamburg time.',
+  trafficLess: 'Less traffic',
+  trafficMore: 'More',
+  trafficSpread: 'Spread along the streets',
   trafficTable: 'Show as a table',
   trafficTableHour: 'Hour',
   trafficSummary: (count: string, points: number, when: string) => `Traffic: ${count} at ${points} counting points in the busiest hour, ${when} (Hamburg time).`,

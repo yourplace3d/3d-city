@@ -41,10 +41,15 @@ shows over whichever layer you pick.
   stroll? This is where it climbs. No green: on this map green is parks and woods, and red–green is what
   colour-blind people can't tell apart; each step is darker than the last, so the order reads without colour.
 - **Traffic (Hamburg):** how many cars or bikes the City of Hamburg's counting points counted in each of the
-  last 24 hours, live from its open SensorThings API: a violet column on the model per counting point (both
-  directions of a road added up), and a bar chart of the day in the panel. Pick an hour in the chart, or
-  replay the day, and the columns grow and shrink; tap a column for that point's day. The chart is also a
-  table. Only Hamburg so far; elsewhere the panel says so and offers Hamburg.
+  last 24 hours, live from its open SensorThings API, as red streets that rise with the traffic, and a bar
+  chart of the day in the panel. Each count spreads along the streets around its counting point and fades
+  out over a distance you set (100–500 m, 300 m to start); it follows the street network, and into smaller
+  streets it fades four times as fast, so a quiet street next to a busy one stays quiet. Where counts meet,
+  as at a crossing counted on every side, they add up, so the whole crossing rises. Only the white dots are
+  counted; in between it's an estimate, and the panel says so. Pick an hour in the chart, or replay the day,
+  and the streets rise and fall; tap a dot for that point's day. The chart is also a table. In the 3D print
+  the traffic streets stand 0.5 to 2 mm high by traffic, at least 0.8 mm wide: a gentle relief, no spikes.
+  Only Hamburg so far; elsewhere the panel says so and offers Hamburg.
 - **Your route:** load a GPX or TCX file (Strava, Garmin, a race website) and pick the stretch to show; the
   model follows it, over any layer. On Steepness the line takes the steepness colours (and only the route is
   coloured), with start, finish, km markers and the
@@ -235,8 +240,8 @@ viewport, and dark mode with reduced motion. Routes: a GPX from the start page, 
 replay, the height profile, steepness on roads and on the route, hiding the ends, the opt-in route link and
 opening it, a dropped TCX file, a FIT file, a phone, and that the file never leaves the browser. Traffic
 (Hamburg's API answered from `e2e/fixtures/traffic.mjs`): outside Hamburg, a failed answer and retry, the
-columns, the chart by pointer and keyboard, a column of its own, the table, replay, bikes, and a route over
-it. It fails on any console error.
+traffic streets, the spread slider and its link, the chart by pointer and keyboard, a counting point of its
+own, the table, replay, bikes, the traffic streets in the 3D print, and a route riding on them. It fails on any console error.
 
 ## Licence
 

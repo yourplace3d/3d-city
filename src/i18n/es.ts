@@ -173,6 +173,7 @@ export const es: Messages = {
   raiseRoads: 'Calles 0.4 mm más altas',
   raiseGreen: 'Parques y bosques 0.6 mm más altos',
   raiseRoute: 'Ruta 0.8 mm más alta',
+  raiseTraffic: 'Calles con tráfico 0.5–2 mm más altas, según el tráfico',
   stlButton: 'Descargar archivo para impresión 3D (STL)',
   stlTilesButton: 'Descargar piezas para impresión 3D (ZIP de STL)',
   stillLoading: 'Los edificios todavía están cargando — inténtalo de nuevo en un momento.',
@@ -187,6 +188,7 @@ export const es: Messages = {
   greenRaised: (mm) => ` Parques y bosques ${mm} mm más altos.`,
   roadsRaised: (mm) => ` Calles ${mm} mm más altas.`,
   routeRaised: (mm) => ` Ruta ${mm} mm más alta.`,
+  trafficRaised: (from, to) => ` Calles con tráfico ${from}–${to} mm más altas.`,
   brokenLeftOut: (n, count) => (count === 1 ? ' Se omitió 1 edificio con un contorno defectuoso en los datos del mapa.' : ` Se omitieron ${n} edificios con un contorno defectuoso en los datos del mapa.`),
   brokenInTile: ' Se omitió un edificio con un contorno defectuoso en los datos del mapa.',
   fontMissing: (chars, count) => (count === 1 ? ` La fuente no tiene ${chars}, así que se quedó fuera del título.` : ` La fuente no tiene ${chars}, así que se quedaron fuera del título.`),
@@ -201,6 +203,7 @@ export const es: Messages = {
   readmeGreen: (mm) => `Parques, jardines y bosques quedan ${mm} mm por encima de la tierra.`,
   readmeRoads: (mm) => `Calles, caminos y vías de tren quedan ${mm} mm por encima del suelo, con bordes nítidos.`,
   readmeRoute: (mm) => `La ruta queda ${mm} mm por encima del suelo, más alta que las calles, y cruza los puentes a nivel.`,
+  readmeTraffic: (from, to) => `Las calles con tráfico sobresalen de ${from} a ${to} mm del suelo: cuanto más tráfico en la hora mostrada, más altas. Donde la ruta las cruza, queda 0.4 mm por encima.`,
   readmeCredit: 'Datos del mapa © colaboradores de OpenStreetMap (ODbL). Relieve: Mapzen terrain tiles en AWS Open Data.',
 
   // una ruta de un archivo GPX o TCX
@@ -253,7 +256,7 @@ export const es: Messages = {
   dataLayer: 'Capa de datos',
   dataLayers: { steep: 'Pendiente', traffic: 'Tráfico', route: 'Tu ruta' },
   cardSteep: 'Calles y caminos coloreados según su pendiente, en cualquier lugar. Busca un lugar arriba o prueba uno:',
-  cardTraffic: 'Coches y bicis contados cada hora en cientos de puntos, como columnas sobre el modelo. Por ahora solo en Hamburgo. Prueba:',
+  cardTraffic: 'Coches y bicis contados cada hora en cientos de puntos, como calles rojas que suben con el tráfico. Por ahora solo en Hamburgo. Prueba:',
   routeOverLayers: 'Se ve sobre la capa que elijas.',
 
   // conteos de tráfico (Hamburgo)
@@ -270,7 +273,10 @@ export const es: Messages = {
   trafficOutside: 'Por ahora solo hay conteos de tráfico para Hamburgo.',
   trafficShowHamburg: 'Ver Hamburgo',
   trafficNone: 'No hay puntos de conteo en este cuadrado. Prueba un área más grande u otra parte de Hamburgo.',
-  trafficNote: 'Cada columna es un punto de conteo; su altura indica cuántos pasaron en la hora elegida. Toca una columna para ver su día. Las últimas 24 horas, hora de Hamburgo; los dos sentidos de una calle se suman.',
+  trafficNote: 'Las calles cerca de un punto de conteo (los puntos blancos) se elevan y se vuelven rojas con el tráfico de la hora elegida. Cada conteo se reparte a lo largo de su calle y se desvanece en la distancia que elijas; donde se juntan, como en un cruce, se suman. Solo se cuenta en los puntos: entre ellos es una estimación. Toca un punto para ver su día. Las últimas 24 horas, hora de Hamburgo.',
+  trafficLess: 'Menos tráfico',
+  trafficMore: 'Más',
+  trafficSpread: 'Repartir por las calles',
   trafficTable: 'Ver como tabla',
   trafficTableHour: 'Hora',
   trafficSummary: (count: string, points: number, when: string) => `Tráfico: ${count} en ${points} puntos de conteo en la hora con más tráfico, ${when} (hora de Hamburgo).`,

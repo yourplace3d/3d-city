@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { parseTrafficCounts, trafficCovers, TrafficProblem, trafficUrl, TRAFFIC_API, type CountingPoint } from '../src/data/sources/hamburgTraffic';
-import { busiestHour, HOURS, lastDay, MERGE_M, topColumns, valueAt } from '../src/data/match/traffic';
+import { busiestHour, HOURS, lastDay, MERGE_M, topColumns, valueAt, type TrafficDay } from '../src/data/match/traffic';
+import { columnValues, fade, spreadStreets, streetValues, StreetNetwork, type StreetLine, type TrafficStreets } from '../src/data/match/trafficStreets';
+import type { Pt } from '../src/data/types';
+import { trafficColour, TRAFFIC_RAMP } from '../src/data/display/traffic';
+import { Color } from 'three';
 import { barShares, chartTicks } from '../src/data/display/trafficChart';
 import { makeProjector, squareBBox } from '../src/geo/projection';
 
@@ -160,5 +164,125 @@ describe('Hamburg traffic counts: the bar chart', () => {
 
   it('sizes bars against the top, with nothing for an hour without counts', () => {
     expect(barShares([0, 50, NaN, 100], 200)).toEqual([0, 0.25, 0, 0.5]);
+  });
+});
+
+describe('Hamburg traffic counts: spread along the streets', () => {
+  /** one column at (e, n) with `v` counted in every hour */
+  const dayOf = (cols: Array<[number, number, number]>): TrafficDay => {
+    const columns = cols.map(([e, n, v], i) => ({ ids: [String(i)], at: [e, n] as Pt, values: new Float32Array(HOURS).fill(v) }));
+    return { hours: Array.from({ length: HOURS }, (_, i) => T0 + i * HOUR), columns, totals: [], counted: [], max: Math.max(...cols.map((c) => c[2])) };
+  };
+  const line = (kind: string, ...pts: Pt[]): StreetLine => ({ kind, pts, widthM: 10, bridge: false });
+  /** the value at the sample nearest to a point */
+  const valueNear = (s: TrafficStreets, values: Float32Array, p: Pt) => {
+    let best = -1;
+    let bd = Infinity;
+    for (let k = 0; k < s.streetSamples; k++) {
+      const d = Math.hypot(s.at[2 * k] - p[0], s.at[2 * k + 1] - p[1]);
+      if (d < bd) {
+        bd = d;
+        best = k;
+      }
+    }
+    return values[best];
+  };
+
+  it('fades a count out over the spread distance', () => {
+    expect(fade(0, 200)).toBe(1);
+    expect(fade(100, 200)).toBeCloseTo(0.5625);
+    expect(fade(200, 200)).toBe(0);
+    expect(fade(250, 200)).toBe(0);
+  });
+
+  it('spreads a count along its street both ways, and not to a street nearby that isn’t joined to it', () => {
+    const net = new StreetNetwork([line('primary', [-500, 0], [500, 0]), line('primary', [-500, 40], [500, 40])], 'cars');
+    const day = dayOf([[0, 2, 1000]]);
+    const s = spreadStreets(net, day, 200);
+    const v = streetValues(s, columnValues(day, 0));
+    expect(valueNear(s, v, [0, 0])).toBeCloseTo(1000, -1);
+    expect(valueNear(s, v, [100, 0])).toBeCloseTo(562.5, -1);
+    expect(valueNear(s, v, [-100, 0])).toBeCloseTo(562.5, -1);
+    // the parallel street 40 m away gets nothing: it isn't joined, so it has no samples at all
+    for (let k = 0; k < s.streetSamples; k++) expect(s.at[2 * k + 1]).toBe(0);
+    // where the column sits: its own count
+    expect(v[s.streetSamples]).toBeCloseTo(1000);
+    expect(s.onStreet).toEqual([true]);
+    expect(s.max).toBeCloseTo(1000);
+    // the runs reach to where the count has faded out, a sample past it
+    const xs = Array.from({ length: s.streetSamples }, (_, k) => s.at[2 * k]);
+    expect(Math.min(...xs)).toBeCloseTo(-200, 0);
+    expect(Math.max(...xs)).toBeCloseTo(200, 0);
+  });
+
+  it('fades four times as fast into a smaller street, and adds counts up where they meet', () => {
+    // a main road east–west, a side street north from its middle
+    const net = new StreetNetwork([line('primary', [-500, 0], [0, 0], [500, 0]), line('minor', [0, 0], [0, 300])], 'cars');
+    const day = dayOf([
+      [-50, 0, 800],
+      [50, 0, 800],
+    ]);
+    const s = spreadStreets(net, day, 400);
+    const v = streetValues(s, columnValues(day, 0));
+    // the crossing between the two gets both
+    const crossing = 2 * 800 * fade(50, 400);
+    expect(valueNear(s, v, [0, 0])).toBeCloseTo(crossing, 0);
+    expect(valueNear(s, v, [0, 0])).toBeGreaterThan(800);
+    // 40 m up the side street: (50 + 4 × 40) m of fade for each
+    expect(valueNear(s, v, [0, 40])).toBeCloseTo(2 * 800 * fade(50 + 4 * 40, 400), 0);
+    // a side street's count spreads along the main road as fast as along its own
+    const side = spreadStreets(net, dayOf([[0, 100, 500]]), 400);
+    const sv = streetValues(side, new Float32Array([500]));
+    expect(valueNear(side, sv, [100, 0])).toBeCloseTo(500 * fade(200, 400), 0);
+  });
+
+  it('joins lines that meet (or are cut at a tile’s edge) and leaves out what isn’t a street for the mode', () => {
+    const net = new StreetNetwork(
+      [line('secondary', [0, 0], [100, 0]), line('secondary', [100.1, 0.1], [200, 0]), line('path', [0, 0], [0, 100]), line('rail', [0, 0], [-100, 0]), line('river', [0, 0], [0, -100])],
+      'cars',
+    );
+    expect(net.size).toBe(2);
+    expect(net.chains).toHaveLength(1);
+    expect(net.chains[0].nodes).toHaveLength(3);
+    const bikes = new StreetNetwork([line('motorway', [0, 0], [100, 0]), line('path', [0, 0], [0, 100]), line('minor', [0, 100], [50, 100])], 'bikes');
+    expect(bikes.size).toBe(2);
+  });
+
+  it('leaves a counting point that isn’t on a street as a point', () => {
+    const net = new StreetNetwork([line('primary', [-500, 0], [500, 0])], 'cars');
+    const day = dayOf([
+      [0, 300, 700],
+      [0, 0, 100],
+    ]);
+    const s = spreadStreets(net, day, 200);
+    expect(s.onStreet).toEqual([false, true]);
+    const v = streetValues(s, columnValues(day, 0));
+    expect(v[s.streetSamples]).toBe(700);
+    expect(s.at[2 * s.streetSamples + 1]).toBe(300);
+    expect(s.max).toBe(700);
+  });
+
+  it('follows the hour: none counted is nothing', () => {
+    const net = new StreetNetwork([line('primary', [-500, 0], [500, 0])], 'cars');
+    const day = dayOf([[0, 0, 0]]);
+    day.columns[0].values[3] = 400;
+    day.columns[0].values[4] = NaN;
+    const s = spreadStreets(net, day, 200);
+    expect(s.max).toBe(400);
+    expect(columnValues(day, 3.5)[0]).toBe(200);
+    expect(Math.max(...streetValues(s, columnValues(day, 4)))).toBe(0);
+  });
+});
+
+describe('Hamburg traffic counts: the reds', () => {
+  it('runs from the roads’ white, through the lightest red, to the darkest, getting darker all the way', () => {
+    expect(trafficColour(0).getHexString()).toBe('fbf9f5');
+    expect(`#${trafficColour(0.06).getHexString()}`).toBe(TRAFFIC_RAMP[0]);
+    expect(`#${trafficColour(1).getHexString()}`).toBe(TRAFFIC_RAMP[TRAFFIC_RAMP.length - 1]);
+    const lum = (q: number) => {
+      const c = trafficColour(q, new Color());
+      return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+    };
+    for (let q = 0; q < 1; q += 0.05) expect(lum(q + 0.05)).toBeLessThan(lum(q));
   });
 });

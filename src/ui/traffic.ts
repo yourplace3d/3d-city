@@ -1,9 +1,10 @@
 /**
  * The Traffic layer of Your Place · Data: how many cars or bikes the City of Hamburg's counting
- * points counted in each of the last 24 hours, as columns on the model and as a bar chart of
- * the day in the panel. Pick an hour in the chart (or replay the day) and the columns follow;
- * tap a column to see that point's day. Only Hamburg has counts so far; elsewhere the panel
- * says so and offers Hamburg.
+ * points counted in each of the last 24 hours, as red streets that rise with the traffic on the
+ * model and as a bar chart of the day in the panel. Each count spreads along the streets around
+ * its point (the slider sets how far); pick an hour in the chart (or replay the day) and the
+ * streets follow; tap a counting point to see its day. Only Hamburg has counts so far; elsewhere
+ * the panel says so and offers Hamburg.
  */
 
 import { compact, locale, num, t } from '../i18n';
@@ -13,7 +14,11 @@ import type { Viewer } from '../scene/viewer';
 import type { TrafficKind } from '../state';
 import { fetchTrafficCounts, trafficCovers, TRAFFIC_TIME_ZONE, type CountingPoint } from '../data/sources/hamburgTraffic';
 import { busiestHour, HOURS, lastDay, topColumns, type TrafficDay } from '../data/match/traffic';
+import { SPREAD, spreadStreets, StreetNetwork } from '../data/match/trafficStreets';
 import { TrafficDisplay } from '../data/display/traffic';
+import { trafficForPrint } from '../export/traffic';
+import type { PrintRoad } from '../export/roads';
+import type { FeatureSet } from '../geo/osm';
 import { barShares, chartTicks } from '../data/display/trafficChart';
 import { Playback } from '../data/time/playback';
 
@@ -24,6 +29,8 @@ export interface TrafficHost {
   open(center: LngLat, size: number, label: string): void;
   /** the share link and the description should follow */
   changed(): void;
+  /** the streets rose or fell, came or went (a route rides on them) */
+  moved(): void;
 }
 
 /** Places with many counting points, for the start page and "Show Hamburg". */
@@ -38,7 +45,7 @@ const PLAY_MS = 12_000;
 /** Counts fetched less than this long ago are used again (a new hour comes in every hour). */
 const CACHE_MS = 10 * 60_000;
 const HOUR_MS = 3_600_000;
-/** A tap this close to a column (px) picks it. */
+/** A tap this close to a counting point (px) picks it. */
 const TAP_PX = 18;
 
 type Status = 'idle' | 'loading' | 'error' | 'outside' | 'none' | 'ready';
@@ -48,11 +55,16 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 export class TrafficController {
   on = false;
   kind: TrafficKind = 'cars';
+  /** how far each count spreads along the streets (m) */
+  spreadM: number = SPREAD.initial;
   private status: Status = 'idle';
   private last: { model: CityModel; center: LngLat } | null = null;
   private day: TrafficDay | null = null;
   private dayKey = '';
   private display: { model: CityModel; overlay: TrafficDisplay } | null = null;
+  /** the street network of the model's roads, for the mode it was built for */
+  private network: { features: FeatureSet; kind: TrafficKind; net: StreetNetwork } | null = null;
+  private spreadFrame = 0;
   /** the hour picked (index into the day) */
   private hour = HOURS - 1;
   /** the column picked, or null for all of them */
@@ -113,40 +125,78 @@ export class TrafficController {
     if (this.on) this.refresh();
   }
 
-  /** The model's terrain changed (buildings took roofs out of it): stand the columns on it again. */
-  placeAgain(): void {
-    const d = this.shownDisplay();
-    if (!d) return;
-    d.overlay.place(d.model);
-    this.host.viewer.requestRender();
+  /** How far each count spreads along the streets (m). */
+  setSpread(m: number): void {
+    const spread = Math.max(SPREAD.min, Math.min(SPREAD.max, Math.round(m / SPREAD.step) * SPREAD.step || SPREAD.initial));
+    const range = $<HTMLInputElement>('traffic-spread');
+    range.value = String(spread);
+    $('traffic-spread-out').textContent = `${num(spread)} m`;
+    if (spread === this.spreadM) return;
+    this.spreadM = spread;
+    // while the slider moves, once a frame at most
+    if (!this.spreadFrame) {
+      this.spreadFrame = requestAnimationFrame(() => {
+        this.spreadFrame = 0;
+        const d = this.shownDisplay();
+        if (d) this.show(d.model);
+      });
+    }
+    this.host.changed();
   }
 
-  /** A tap on the model: true if it picked a column. */
+  /**
+   * The model's roads arrived (the streets can be drawn), or its terrain changed (buildings took
+   * roofs out of it): stand the streets on it again.
+   */
+  placeAgain(): void {
+    const d = this.shownDisplay();
+    if (d) {
+      d.overlay.place(d.model);
+      this.host.moved();
+      this.host.viewer.requestRender();
+      return;
+    }
+    const model = this.host.model();
+    if (this.on && this.status === 'ready' && this.day && model?.featureSet && this.last?.model === model) this.show(model);
+  }
+
+  /** How high the traffic streets stand at a point now (m above the ground), or null when they're not shown. */
+  lift(): ((e: number, n: number) => number) | null {
+    const d = this.shownDisplay();
+    return d ? (e, n) => d.overlay.liftAt(e, n) : null;
+  }
+
+  /** Whether the traffic streets are on the model now (for the print). */
+  get shown(): boolean {
+    return !!this.shownDisplay();
+  }
+
+  /** The traffic streets as shown (the hour picked) for the 3D print at `mmPerM`, highest where the most traffic is. */
+  printPieces(mmPerM: number): PrintRoad[] {
+    const d = this.shownDisplay();
+    return d ? trafficForPrint(d.overlay.data, d.overlay.shares(), mmPerM) : [];
+  }
+
+  /** A tap on the model: true if it picked a counting point. */
   tap(clientX: number, clientY: number): boolean {
     const d = this.shownDisplay();
     if (!d) return false;
-    // the column under the finger, or one close to it on screen (columns are thin on a phone)
+    // the point under the finger, or one close to it on screen (they're small on a phone)
     const i = d.overlay.hit(this.host.viewer.rayAt(clientX, clientY)) ?? this.nearOnScreen(d.overlay, clientX, clientY, TAP_PX);
     if (i == null) return false;
     this.pickColumn(i === this.column ? null : i);
     return true;
   }
 
-  /** The column whose line on screen (foot to top) passes closest to a point, within `px`. */
+  /** The counting point closest to a point on screen, within `px`. */
   private nearOnScreen(overlay: TrafficDisplay, x: number, y: number, px: number): number | null {
     const v = this.host.viewer;
     let best: number | null = null;
     let bestD = px;
     overlay.day.columns.forEach((_, i) => {
-      const [fx, fy, fz] = overlay.footOf(i);
-      const [, ty] = overlay.topOf(i);
-      if (ty - fy <= 0) return;
+      const [fx, fy, fz] = overlay.topOf(i);
       const a = v.screenPoint(fx, -fz, fy);
-      const b = v.screenPoint(fx, -fz, ty);
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const k = Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / (dx * dx + dy * dy || 1)));
-      const d = Math.hypot(x - (a.x + k * dx), y - (a.y + k * dy));
+      const d = Math.hypot(x - a.x, y - a.y);
       if (d < bestD) {
         bestD = d;
         best = i;
@@ -179,13 +229,18 @@ export class TrafficController {
       totals: day?.totals ?? [],
       labels: d?.overlay.labelCount ?? 0,
       playing: this.playback.playing,
-      // where to tap a column, for the end-to-end test
+      spread: this.spreadM,
+      streets: d ? d.overlay.stats() : null,
+      onStreet: d ? d.overlay.data.onStreet.filter(Boolean).length : 0,
+      // where to tap a counting point, for the end-to-end test
       columnPoint: (i: number) => {
         if (!d) return null;
         const [x, y, z] = d.overlay.midOf(i);
         return this.host.viewer.screenPoint(x, -z, y);
       },
       busiest: day ? topColumns(day, this.hour, 1)[0] ?? null : null,
+      // where a counting point sits (m E, N), for tests
+      columnAt: (i: number) => (d ? [d.overlay.data.at[2 * (d.overlay.data.streetSamples + i)], d.overlay.data.at[2 * (d.overlay.data.streetSamples + i) + 1]] : null),
     };
   }
 
@@ -259,17 +314,33 @@ export class TrafficController {
 
   private show(model: CityModel): void {
     const day = this.day;
-    this.detach(false);
+    this.detach();
     if (!day) return;
-    const overlay = new TrafficDisplay(day, model.sizeM);
-    model.addOverlay(overlay);
-    overlay.setTime(this.hour);
-    this.display = { model, overlay };
+    // the chart can show before the roads are in; the streets come with them (placeAgain)
+    const features = model.featureSet;
+    if (features) {
+      const streets = spreadStreets(this.networkFor(features), day, this.spreadM);
+      const overlay = new TrafficDisplay(day, streets, model.sizeM);
+      model.addOverlay(overlay);
+      overlay.pick(this.column);
+      overlay.setTime(this.playback.playing ? this.playback.position * (HOURS - 1) : this.hour);
+      this.display = { model, overlay };
+      this.host.moved();
+    }
     this.renderChart(true);
     this.updateLabels();
     this.syncPanel();
     this.host.changed();
     this.host.viewer.requestRender();
+  }
+
+  /** The street network for the roads and the mode, built once. */
+  private networkFor(features: FeatureSet): StreetNetwork {
+    const n = this.network;
+    if (n && n.features === features && n.kind === this.kind) return n.net;
+    const net = new StreetNetwork(features.lines, this.kind);
+    this.network = { features, kind: this.kind, net };
+    return net;
   }
 
   private detach(repaint = true): void {
@@ -278,6 +349,7 @@ export class TrafficController {
     // on a model that has been replaced, the overlay went with that model
     if (d.model === this.host.model()) d.model.removeOverlay(d.overlay, repaint);
     this.display = null;
+    this.host.moved();
   }
 
   private shownDisplay(): { model: CityModel; overlay: TrafficDisplay } | null {
@@ -300,6 +372,7 @@ export class TrafficController {
     if (hour === this.hour) return;
     this.hour = hour;
     this.shownDisplay()?.overlay.setTime(hour);
+    this.host.moved();
     this.updateLabels();
     this.renderChart();
     this.host.viewer.requestRender();
@@ -346,6 +419,7 @@ export class TrafficController {
     if (playing) {
       const at = pos * (HOURS - 1);
       d.overlay.setTime(at);
+      this.host.moved();
       const hour = Math.round(at);
       if (hour !== this.hour) {
         this.hour = hour;
@@ -354,6 +428,7 @@ export class TrafficController {
       d.overlay.setLabels([]);
     } else {
       d.overlay.setTime(this.hour);
+      this.host.moved();
       this.updateLabels();
       this.renderChart();
     }
@@ -466,6 +541,7 @@ export class TrafficController {
     $('traffic-retry').hidden = !(this.on && s === 'error');
     $('traffic-hamburg').hidden = !(this.on && s === 'outside');
     $('traffic-figure').hidden = !ready;
+    $('traffic-key').hidden = !ready;
   }
 
   private bind(): void {
@@ -478,6 +554,7 @@ export class TrafficController {
       this.host.open(p.center, p.size, p.name());
     });
     $('traffic-all').addEventListener('click', () => this.pickColumn(null));
+    $('traffic-spread').addEventListener('input', (e) => this.setSpread(Number((e.target as HTMLInputElement).value)));
     $('traffic-play').addEventListener('click', () => {
       // replay from the hour picked (from the start once it's at the end)
       if (!this.playback.playing) this.playback.seek(this.hour >= HOURS - 1 ? 0 : this.hour / (HOURS - 1));

@@ -173,6 +173,7 @@ export const de: Messages = {
   raiseRoads: 'Straßen 0,4 mm höher',
   raiseGreen: 'Parks und Wälder 0,6 mm höher',
   raiseRoute: 'Strecke 0,8 mm höher',
+  raiseTraffic: 'Verkehrsstraßen 0,5–2 mm höher, je nach Verkehr',
   stlButton: '3D-Druckdatei herunterladen (STL)',
   stlTilesButton: '3D-Druckkacheln herunterladen (ZIP mit STL-Dateien)',
   stillLoading: 'Die Gebäude laden noch — versuch es gleich noch einmal.',
@@ -187,6 +188,7 @@ export const de: Messages = {
   greenRaised: (mm) => ` Parks und Wälder ${mm} mm höher.`,
   roadsRaised: (mm) => ` Straßen ${mm} mm höher.`,
   routeRaised: (mm) => ` Strecke ${mm} mm höher.`,
+  trafficRaised: (from, to) => ` Verkehrsstraßen ${from}–${to} mm höher.`,
   brokenLeftOut: (n, count) => (count === 1 ? ' 1 Gebäude mit fehlerhaftem Umriss in den Kartendaten wurde weggelassen.' : ` ${n} Gebäude mit fehlerhaftem Umriss in den Kartendaten wurden weggelassen.`),
   brokenInTile: ' Ein Gebäude mit fehlerhaftem Umriss in den Kartendaten wurde weggelassen.',
   fontMissing: (chars, count) => (count === 1 ? ` Die Schrift hat kein ${chars}, deshalb fehlt es im Titel.` : ` Die Schrift hat kein ${chars}, deshalb fehlen sie im Titel.`),
@@ -201,6 +203,7 @@ export const de: Messages = {
   readmeGreen: (mm) => `Parks, Gärten und Wälder stehen ${mm} mm über dem Land.`,
   readmeRoads: (mm) => `Straßen, Wege und Bahnlinien stehen ${mm} mm über dem Boden, mit scharfen Kanten.`,
   readmeRoute: (mm) => `Die Strecke steht ${mm} mm über dem Boden, höher als die Straßen, und führt eben über Brücken.`,
+  readmeTraffic: (from, to) => `Die Verkehrsstraßen stehen ${from} bis ${to} mm über dem Boden: je mehr Verkehr in der gezeigten Stunde, desto höher. Wo die Strecke sie trifft, liegt sie 0,4 mm darüber.`,
   readmeCredit: 'Kartendaten © OpenStreetMap-Mitwirkende (ODbL). Gelände: Mapzen terrain tiles auf AWS Open Data.',
 
   // eine Strecke aus einer GPX- oder TCX-Datei
@@ -253,7 +256,7 @@ export const de: Messages = {
   dataLayer: 'Datenebene',
   dataLayers: { steep: 'Steigung', traffic: 'Verkehr', route: 'Deine Strecke' },
   cardSteep: 'Straßen und Wege nach Steigung eingefärbt, überall. Suche oben einen Ort oder probier einen aus:',
-  cardTraffic: 'Autos und Fahrräder, jede Stunde an Hunderten Stellen gezählt, als Säulen auf dem Modell. Bisher nur in Hamburg. Probier:',
+  cardTraffic: 'Autos und Fahrräder, jede Stunde an Hunderten Stellen gezählt, als rote Straßen, die mit dem Verkehr wachsen. Bisher nur in Hamburg. Probier:',
   routeOverLayers: 'Sie liegt über der Ebene, die du wählst.',
 
   // Verkehrszählungen (Hamburg)
@@ -270,7 +273,10 @@ export const de: Messages = {
   trafficOutside: 'Verkehrszählungen gibt es bisher nur für Hamburg.',
   trafficShowHamburg: 'Hamburg zeigen',
   trafficNone: 'In diesem Ausschnitt gibt es keine Zählstellen. Wähle einen größeren Bereich oder einen anderen Teil Hamburgs.',
-  trafficNote: 'Jede Säule ist eine Zählstelle; ihre Höhe zeigt, wie viele in der gewählten Stunde vorbeikamen. Tippe auf eine Säule, um ihren Tag zu sehen. Die letzten 24 Stunden, Hamburger Zeit; beide Richtungen einer Straße sind zusammengezählt.',
+  trafficNote: 'Straßen nahe einer Zählstelle (die weißen Punkte) heben sich und werden rot mit dem Verkehr der gewählten Stunde. Jede Zählung verteilt sich entlang ihrer Straße und läuft über die eingestellte Strecke aus; wo Zählungen zusammenkommen, etwa an einer Kreuzung, addieren sie sich. Gezählt wird nur an den Punkten, dazwischen ist es geschätzt. Tippe auf einen Punkt, um seinen Tag zu sehen. Die letzten 24 Stunden, Hamburger Zeit.',
+  trafficLess: 'Weniger Verkehr',
+  trafficMore: 'Mehr',
+  trafficSpread: 'Verteilen entlang der Straßen',
   trafficTable: 'Als Tabelle zeigen',
   trafficTableHour: 'Stunde',
   trafficSummary: (count: string, points: number, when: string) => `Verkehr: ${count} an ${points} Zählstellen in der vollsten Stunde, ${when} (Hamburger Zeit).`,

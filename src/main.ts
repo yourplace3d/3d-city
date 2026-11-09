@@ -14,6 +14,8 @@ import { makeZip, type ZipEntry } from './export/zip';
 import { depthInMetres, GREEN_RAISE_MM, shiftMasked, sinkWater, WATER_DEPTH_MM } from './export/water';
 import { ROAD_RAISE_MM, type PrintRoad } from './export/roads';
 import { ROUTE_RAISE_MM } from './export/route';
+import { routeOverTraffic } from './export/traffic';
+import { TRAFFIC_PRINT_MM } from './data/display/traffic';
 import { addLabel, loadGlyphs } from './export/label';
 import { exportFileName, makePoster, posterFileName } from './ui/poster';
 import { setupSearch } from './ui/search';
@@ -123,6 +125,8 @@ const route: RouteController | null = APP === 'data' ? new RouteController({
   model: () => model,
   // the route takes the steepness colours on the steepness layer
   steep: () => state.data === 'steep',
+  // over traffic streets, the route rides on top of them
+  lift: () => (state.data === 'traffic' ? (traffic?.lift() ?? null) : null),
   // a route of your own shows over any layer; steepness then colours only the route
   showRoute: () => syncSteep(),
   open: (center, size, label, detail) => {
@@ -153,8 +157,10 @@ const traffic: TrafficController | null = APP === 'data' ? new TrafficController
     $<HTMLInputElement>('search-input').value = label;
     void openPlace({ label, detail: t.dataLayers.traffic, center }, { size });
   },
+  moved: () => route?.liftChanged(),
   changed: () => {
     state.traffic = traffic?.kind ?? 'cars';
+    state.spread = traffic?.spreadM ?? state.spread;
     writeHash();
     describe();
   },
@@ -197,6 +203,7 @@ if (route && traffic) {
   if (state.route && !route.openLink(state.route)) state.route = null;
   routeSquare = !!state.route;
   traffic.setKind(state.traffic);
+  traffic.setSpread(state.spread);
   setDataLayer(state.data ?? 'steep');
 }
 if (state.center) {
@@ -215,7 +222,10 @@ window.addEventListener('hashchange', () => {
   // a pasted link with a route: show that one (the link without one keeps what's loaded)
   const newRoute = !!route && !!next.route && next.route !== state.route && route.openLink(next.route);
   if (newRoute) routeSquare = true;
-  if (traffic) traffic.setKind(next.traffic);
+  if (traffic) {
+    traffic.setKind(next.traffic);
+    traffic.setSpread(next.spread);
+  }
   if (route) setDataLayer(next.data ?? state.data ?? 'steep');
   if (!samePlace(next.center, state.center) || next.size !== state.size) {
     state = next;
@@ -994,7 +1004,7 @@ function bindShare(): void {
     const m = model!;
     const metres = (mm: number) => depthInMetres(mm, totalMm, state.size, state.exaggeration);
     let grid = m.grid;
-    const done = { water: false, green: false, roads: false, route: false };
+    const done = { water: false, green: false, roads: false, route: false, traffic: false };
     const water = $<HTMLInputElement>('print-water').checked ? m.printWater() : null;
     if (water) {
       grid = sinkWater(grid, water, metres(WATER_DEPTH_MM));
@@ -1007,17 +1017,24 @@ function bindShare(): void {
     }
     const roads: PrintRoad[] = $<HTMLInputElement>('print-roads').checked ? m.printRoads() : [];
     done.roads = roads.length > 0;
-    // Your Place · Data: the route as a raised line, higher than the roads
-    const routeParts = route && $<HTMLInputElement>('print-route').checked ? route.printPieces(totalMm / state.size) : [];
-    roads.push(...routeParts);
+    // Your Place · Data: the traffic streets, as high as the traffic, and the route as a raised
+    // line, higher than the roads and over the traffic streets
+    const mmPerM = totalMm / state.size;
+    const trafficParts = traffic?.shown && $<HTMLInputElement>('print-traffic').checked ? traffic.printPieces(mmPerM) : [];
+    const routeParts = route && $<HTMLInputElement>('print-route').checked ? routeOverTraffic(route.printPieces(mmPerM), trafficParts) : [];
+    roads.push(...trafficParts, ...routeParts);
+    done.traffic = trafficParts.length > 0;
     done.route = routeParts.length > 0;
+    const mm = (x: number) => num(x, Number.isInteger(x) ? 0 : 1);
+    const trafficMm = [mm(TRAFFIC_PRINT_MM.low), mm(TRAFFIC_PRINT_MM.high)] as const;
     const note = [
       done.water ? t.waterSunk(num(WATER_DEPTH_MM)) : '',
       done.green ? t.greenRaised(num(GREEN_RAISE_MM, 1)) : '',
       done.roads ? t.roadsRaised(num(ROAD_RAISE_MM, 1)) : '',
+      done.traffic ? t.trafficRaised(...trafficMm) : '',
       done.route ? t.routeRaised(num(ROUTE_RAISE_MM, 1)) : '',
     ].join('');
-    return { grid, roads, done, note };
+    return { grid, roads, done, note, trafficMm };
   };
   const tilesRange = $<HTMLInputElement>('tiles-range');
   tilesRange.max = String(MAX_TILES);
@@ -1041,6 +1058,7 @@ function bindShare(): void {
     updatePrintNote();
     // Your Place · Data: the route can stand up in the print, when one is shown
     if (route) $('print-route-row').hidden = !route.visible;
+    if (traffic) $('print-traffic-row').hidden = !traffic.shown;
     const place = placeLabel || (state.center ? formatLatLon(state.center) : '');
     if (!titleInput.value.trim() || titleInput.value === autoTitle) titleInput.value = place;
     autoTitle = place;
@@ -1158,6 +1176,7 @@ function bindShare(): void {
       terrain.done.water ? t.readmeWater(num(WATER_DEPTH_MM)) : '',
       terrain.done.green ? t.readmeGreen(num(GREEN_RAISE_MM, 1)) : '',
       terrain.done.roads ? t.readmeRoads(num(ROAD_RAISE_MM, 1)) : '',
+      terrain.done.traffic ? t.readmeTraffic(...terrain.trafficMm) : '',
       terrain.done.route ? t.readmeRoute(num(ROUTE_RAISE_MM, 1)) : '',
       '',
       t.readmeCredit,
