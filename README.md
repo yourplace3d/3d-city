@@ -41,8 +41,9 @@ has one back, both keeping the place you're looking at.
   colour-blind people can't tell apart; each step is darker than the last, so the order reads without colour.
 - **Your route:** load a GPX or TCX file (Strava, Garmin, a race website) and pick the stretch to show; the
   model follows it, with the line on the terrain in the steepness colours, start, finish, km markers and the
-  steepest climbs labelled, a replay at the recorded pace, and a height profile. The file is read in your
-  browser and never uploaded.
+  steepest climbs labelled, a replay at the recorded pace, and a height profile. In the 3D print the route
+  stands as a raised line, 1.2 mm wide and 0.8 mm high (twice the roads), level across bridges, ready to paint
+  next to the medal. The file is read in your browser and never uploaded.
 - More layers are planned: traffic, water, energy.
 
 ## Controls

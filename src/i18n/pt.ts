@@ -172,6 +172,7 @@ export const pt: Messages = {
   sinkWater: 'Água 1 mm mais baixa',
   raiseRoads: 'Ruas 0,4 mm mais altas',
   raiseGreen: 'Parques e matas 0,6 mm mais altos',
+  raiseRoute: 'Percurso 0,8 mm mais alto',
   stlButton: 'Baixar arquivo para impressão 3D (STL)',
   stlTilesButton: 'Baixar peças para impressão 3D (ZIP de STLs)',
   stillLoading: 'Os prédios ainda estão carregando — tente de novo daqui a pouco.',
@@ -185,6 +186,7 @@ export const pt: Messages = {
   waterSunk: (mm) => ` Água ${mm} mm mais baixa.`,
   greenRaised: (mm) => ` Parques e matas ${mm} mm mais altos.`,
   roadsRaised: (mm) => ` Ruas ${mm} mm mais altas.`,
+  routeRaised: (mm) => ` Percurso ${mm} mm mais alto.`,
   brokenLeftOut: (n, count) => (count === 1 ? ' 1 prédio com contorno quebrado nos dados do mapa ficou de fora.' : ` ${n} prédios com contorno quebrado nos dados do mapa ficaram de fora.`),
   brokenInTile: ' Um prédio com contorno quebrado nos dados do mapa ficou de fora.',
   fontMissing: (chars, count) => (count === 1 ? ` A fonte não tem ${chars}, então ficou fora do título.` : ` A fonte não tem ${chars}, então ficaram fora do título.`),
@@ -198,6 +200,7 @@ export const pt: Messages = {
   readmeWater: (mm) => `A água (lagos, rios mapeados como áreas, o mar) fica ${mm} mm abaixo da terra, com uma borda para pintar.`,
   readmeGreen: (mm) => `Parques, jardins e matas ficam ${mm} mm acima da terra.`,
   readmeRoads: (mm) => `Ruas, caminhos e ferrovias ficam ${mm} mm acima do chão, com bordas nítidas.`,
+  readmeRoute: (mm) => `O percurso fica ${mm} mm acima do chão, mais alto que as ruas, e atravessa as pontes em nível.`,
   readmeCredit: 'Dados do mapa © colaboradores do OpenStreetMap (ODbL). Relevo: Mapzen terrain tiles no AWS Open Data.',
 
   // um percurso de um arquivo GPX ou TCX
@@ -243,7 +246,6 @@ export const pt: Messages = {
   profileLabel: (summary) => `Perfil de altimetria do trecho: ${summary}.`,
 
   // Your Place · Data: o app de dados
-  posterTitleField: 'Título do pôster',
   dataHomeTitle: 'Your Place · Data · onde fica íngreme, percursos em 3D',
   dataDocTitle: (place) => `${place} · Your Place Data`,
   dataWelcomeTitle: 'O seu lugar, através dos dados',

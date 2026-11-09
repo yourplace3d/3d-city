@@ -13,6 +13,7 @@ import { buildTiledPrint, MAX_TILES, tileName } from './export/tiles';
 import { makeZip, type ZipEntry } from './export/zip';
 import { depthInMetres, GREEN_RAISE_MM, shiftMasked, sinkWater, WATER_DEPTH_MM } from './export/water';
 import { ROAD_RAISE_MM, type PrintRoad } from './export/roads';
+import { ROUTE_RAISE_MM } from './export/route';
 import { addLabel, loadGlyphs } from './export/label';
 import { exportFileName, makePoster, posterFileName } from './ui/poster';
 import { setupSearch } from './ui/search';
@@ -933,21 +934,17 @@ function bindShare(): void {
 
   let printMm = 150;
   let printTiles = 1;
-  // Your Place · Data has the link and the poster, not the 3D print
-  const print = APP === 'place';
   const updatePrintNote = () => {
-    if (!print) return;
     const note = `${localScale(state.size, printMm * printTiles)} · ${t.terrainTimes(num(state.exaggeration, 1))}`;
     const total = num((printMm * printTiles) / 10);
     $('print-label').textContent = printTiles > 1 ? t.tileSize : t.printSize;
     $('print-note').textContent = printTiles > 1 ? t.tilesNote(num(printTiles * printTiles), total, note) : note;
     $('stl-btn').textContent = printTiles > 1 ? t.stlTilesButton : t.stlButton;
   };
-  if (print)
-    radioGroup('print-size-group', (v) => {
-      printMm = Number(v);
-      updatePrintNote();
-    });
+  radioGroup('print-size-group', (v) => {
+    printMm = Number(v);
+    updatePrintNote();
+  });
   /**
    * The print's terrain and roads, as ticked: water sunk, parks and woods raised (where the square
    * has them), raised roads. `done` lists what was changed, for the message and the tiles' note.
@@ -956,7 +953,7 @@ function bindShare(): void {
     const m = model!;
     const metres = (mm: number) => depthInMetres(mm, totalMm, state.size, state.exaggeration);
     let grid = m.grid;
-    const done = { water: false, green: false, roads: false };
+    const done = { water: false, green: false, roads: false, route: false };
     const water = $<HTMLInputElement>('print-water').checked ? m.printWater() : null;
     if (water) {
       grid = sinkWater(grid, water, metres(WATER_DEPTH_MM));
@@ -969,16 +966,21 @@ function bindShare(): void {
     }
     const roads: PrintRoad[] = $<HTMLInputElement>('print-roads').checked ? m.printRoads() : [];
     done.roads = roads.length > 0;
+    // Your Place · Data: the route as a raised line, higher than the roads
+    const routeParts = route && $<HTMLInputElement>('print-route').checked ? route.printPieces(totalMm / state.size) : [];
+    roads.push(...routeParts);
+    done.route = routeParts.length > 0;
     const note = [
       done.water ? t.waterSunk(num(WATER_DEPTH_MM)) : '',
       done.green ? t.greenRaised(num(GREEN_RAISE_MM, 1)) : '',
       done.roads ? t.roadsRaised(num(ROAD_RAISE_MM, 1)) : '',
+      done.route ? t.routeRaised(num(ROUTE_RAISE_MM, 1)) : '',
     ].join('');
     return { grid, roads, done, note };
   };
   const tilesRange = $<HTMLInputElement>('tiles-range');
-  if (tilesRange) tilesRange.max = String(MAX_TILES);
-  tilesRange?.addEventListener('input', () => {
+  tilesRange.max = String(MAX_TILES);
+  tilesRange.addEventListener('input', () => {
     printTiles = Number(tilesRange.value);
     $('tiles-out').textContent = printTiles > 1 ? t.tilesOut(printTiles) : t.onePiece;
     updatePrintNote();
@@ -996,6 +998,8 @@ function bindShare(): void {
     url.value = location.href;
     msg.textContent = '';
     updatePrintNote();
+    // Your Place · Data: the route can stand up in the print, when one is shown
+    if (route) $('print-route-row').hidden = !route.visible;
     const place = placeLabel || (state.center ? formatLatLon(state.center) : '');
     if (!titleInput.value.trim() || titleInput.value === autoTitle) titleInput.value = place;
     autoTitle = place;
@@ -1042,7 +1046,7 @@ function bindShare(): void {
 
   // 3D print: terrain block + buildings as one watertight STL, in millimetres
   const stlBtn = $<HTMLButtonElement>('stl-btn');
-  stlBtn?.addEventListener('click', async () => {
+  stlBtn.addEventListener('click', async () => {
     if (!model || !state.center) return;
     if (debug.stage === 'loading' || debug.stage === 'terrain') {
       msg.textContent = t.stillLoading;
@@ -1111,6 +1115,7 @@ function bindShare(): void {
       terrain.done.water ? t.readmeWater(num(WATER_DEPTH_MM)) : '',
       terrain.done.green ? t.readmeGreen(num(GREEN_RAISE_MM, 1)) : '',
       terrain.done.roads ? t.readmeRoads(num(ROAD_RAISE_MM, 1)) : '',
+      terrain.done.route ? t.readmeRoute(num(ROUTE_RAISE_MM, 1)) : '',
       '',
       t.readmeCredit,
     ].filter((l, i, a) => l || a[i - 1]).join('\n');

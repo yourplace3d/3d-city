@@ -172,6 +172,7 @@ export const es: Messages = {
   sinkWater: 'Agua 1 mm más baja',
   raiseRoads: 'Calles 0.4 mm más altas',
   raiseGreen: 'Parques y bosques 0.6 mm más altos',
+  raiseRoute: 'Ruta 0.8 mm más alta',
   stlButton: 'Descargar archivo para impresión 3D (STL)',
   stlTilesButton: 'Descargar piezas para impresión 3D (ZIP de STL)',
   stillLoading: 'Los edificios todavía están cargando — inténtalo de nuevo en un momento.',
@@ -185,6 +186,7 @@ export const es: Messages = {
   waterSunk: (mm) => ` Agua ${mm} mm más baja.`,
   greenRaised: (mm) => ` Parques y bosques ${mm} mm más altos.`,
   roadsRaised: (mm) => ` Calles ${mm} mm más altas.`,
+  routeRaised: (mm) => ` Ruta ${mm} mm más alta.`,
   brokenLeftOut: (n, count) => (count === 1 ? ' Se omitió 1 edificio con un contorno defectuoso en los datos del mapa.' : ` Se omitieron ${n} edificios con un contorno defectuoso en los datos del mapa.`),
   brokenInTile: ' Se omitió un edificio con un contorno defectuoso en los datos del mapa.',
   fontMissing: (chars, count) => (count === 1 ? ` La fuente no tiene ${chars}, así que se quedó fuera del título.` : ` La fuente no tiene ${chars}, así que se quedaron fuera del título.`),
@@ -198,6 +200,7 @@ export const es: Messages = {
   readmeWater: (mm) => `El agua (lagos, ríos mapeados como áreas, el mar) queda ${mm} mm por debajo de la tierra, con un borde para pintar.`,
   readmeGreen: (mm) => `Parques, jardines y bosques quedan ${mm} mm por encima de la tierra.`,
   readmeRoads: (mm) => `Calles, caminos y vías de tren quedan ${mm} mm por encima del suelo, con bordes nítidos.`,
+  readmeRoute: (mm) => `La ruta queda ${mm} mm por encima del suelo, más alta que las calles, y cruza los puentes a nivel.`,
   readmeCredit: 'Datos del mapa © colaboradores de OpenStreetMap (ODbL). Relieve: Mapzen terrain tiles en AWS Open Data.',
 
   // una ruta de un archivo GPX o TCX
@@ -243,7 +246,6 @@ export const es: Messages = {
   profileLabel: (summary) => `Perfil de altura del tramo: ${summary}.`,
 
   // Your Place · Data: la app de datos
-  posterTitleField: 'Título del póster',
   dataHomeTitle: 'Your Place · Data · dónde se empina, rutas en 3D',
   dataDocTitle: (place) => `${place} · Your Place Data`,
   dataWelcomeTitle: 'Tu lugar, a través de los datos',

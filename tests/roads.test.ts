@@ -170,3 +170,42 @@ describe('raised roads in prints', () => {
     expect(topAt(ne.tris, u, v)! - topAt(nePlain.tris, u, v)!).toBeCloseTo(ROAD_RAISE_MM, 1);
   });
 });
+
+describe('a route in prints', () => {
+  it('stands 0.8 mm up, 1.2 mm wide, as closed pieces over a hill, above a road beside it', async () => {
+    const { routeForPrint, ROUTE_RAISE_MM, ROUTE_WIDTH_MM } = await import('../src/export/route');
+    const g = hill();
+    // a wobbly GPS line: wobble under 0.15 mm on the print (here 0.75 m) is smoothed away
+    const pts: Array<[number, number]> = [];
+    for (let x = -450; x <= 450; x += 5) pts.push([x, 10 + Math.sin(x / 7) * 0.3]);
+    const parts = routeForPrint(pts, s);
+    expect(parts.length).toBe(1);
+    expect(parts[0].pts.length).toBeLessThan(6);
+    expect(parts[0]).toMatchObject({ bridge: false, raiseMm: ROUTE_RAISE_MM });
+    expect(parts[0].widthM * s).toBeCloseTo(ROUTE_WIDTH_MM, 9);
+    const road: PrintRoad = { pts: [[-450, 10], [450, 10]], widthM: 8, bridge: false };
+    const t = buildPrint(g, [], opts, [road, ...parts]);
+    expect(closedShells(t)).toBe(true);
+    for (const e of [-300, 0, 200]) {
+      const over = topAt(t, e * s, 10 * s)! - surfaceMm(g, e, 10, 1.5, s);
+      expect(over).toBeGreaterThan(ROUTE_RAISE_MM - 0.05);
+      expect(over).toBeLessThan(ROUTE_RAISE_MM + 0.05);
+    }
+    // 1.2 mm wide: 3 m either side at this scale, wider than nothing, narrower than 4 m
+    expect(topAt(t, 0, 10 * s + 0.55)! - surfaceMm(g, 0, 10 + 0.55 / s, 1.5, s)).toBeGreaterThan(ROUTE_RAISE_MM - 0.05);
+  });
+
+  it('runs level across a bridge instead of dipping into the valley under it', async () => {
+    const { routeForPrint } = await import('../src/export/route');
+    const { bridgeTester } = await import('../src/data/match/slope');
+    const g = hill();
+    // the route crosses the hill's top on a "bridge" from x = −150 to 150 (a valley would dip; a hill must not lift the deck either)
+    const pts: Array<[number, number]> = [[-450, 0], [450, 0]];
+    const parts = routeForPrint(pts, s, bridgeTester([[[-150, 0], [150, 0]]]));
+    expect(parts.map((p) => p.bridge)).toEqual([false, true, false]);
+    expect(parts[1].pts).toHaveLength(2);
+    expect(parts[0].pts[parts[0].pts.length - 1]).toEqual(parts[1].pts[0]);
+    const t = buildPrint(g, [], opts, parts);
+    expect(closedShells(t)).toBe(true);
+  });
+});

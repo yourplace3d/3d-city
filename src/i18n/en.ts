@@ -177,6 +177,7 @@ export const en = {
   sinkWater: 'Sink water 1 mm',
   raiseRoads: 'Raise roads 0.4 mm',
   raiseGreen: 'Raise parks and woods 0.6 mm',
+  raiseRoute: 'Raise the route 0.8 mm',
   stlButton: 'Download 3D print file (STL)',
   stlTilesButton: 'Download 3D print tiles (ZIP of STL files)',
   stillLoading: 'Still loading the buildings — try again in a moment.',
@@ -190,6 +191,7 @@ export const en = {
   waterSunk: (mm: string) => ` Water sunk ${mm} mm.`,
   greenRaised: (mm: string) => ` Parks and woods raised ${mm} mm.`,
   roadsRaised: (mm: string) => ` Roads raised ${mm} mm.`,
+  routeRaised: (mm: string) => ` Route raised ${mm} mm.`,
   brokenLeftOut: (n: string, count: number) => ` ${n} building${count === 1 ? '' : 's'} with a broken outline in the map data left out.`,
   brokenInTile: ' A building with a broken outline in the map data was left out.',
   fontMissing: (chars: string, count: number) => ` The font has no ${chars}, so ${count === 1 ? 'it was' : 'they were'} left off the title.`,
@@ -203,6 +205,7 @@ export const en = {
   readmeWater: (mm: string) => `Water (lakes, rivers mapped as areas, the sea) sits ${mm} mm below the land, with an edge to paint along.`,
   readmeGreen: (mm: string) => `Parks, gardens and woods stand ${mm} mm above the land.`,
   readmeRoads: (mm: string) => `Roads, paths and railways stand ${mm} mm above the ground, with sharp edges.`,
+  readmeRoute: (mm: string) => `The route stands ${mm} mm above the ground, higher than the roads, and runs level across bridges.`,
   readmeCredit: 'Map data © OpenStreetMap contributors (ODbL). Terrain: Mapzen terrain tiles on AWS Open Data.',
 
   // a route from a GPX or TCX file
@@ -248,7 +251,6 @@ export const en = {
   profileLabel: (summary: string) => `Height profile of the stretch: ${summary}.`,
 
   // Your Place · Data: the data app
-  posterTitleField: 'Title on the poster',
   dataHomeTitle: 'Your Place · Data · where it gets steep, routes in 3D',
   dataDocTitle: (place: string) => `${place} · Your Place Data`,
   dataWelcomeTitle: 'Your place, through data',

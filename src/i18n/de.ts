@@ -172,6 +172,7 @@ export const de: Messages = {
   sinkWater: 'Wasser 1 mm tiefer',
   raiseRoads: 'Straßen 0,4 mm höher',
   raiseGreen: 'Parks und Wälder 0,6 mm höher',
+  raiseRoute: 'Strecke 0,8 mm höher',
   stlButton: '3D-Druckdatei herunterladen (STL)',
   stlTilesButton: '3D-Druckkacheln herunterladen (ZIP mit STL-Dateien)',
   stillLoading: 'Die Gebäude laden noch — versuch es gleich noch einmal.',
@@ -185,6 +186,7 @@ export const de: Messages = {
   waterSunk: (mm) => ` Wasser ${mm} mm tiefer.`,
   greenRaised: (mm) => ` Parks und Wälder ${mm} mm höher.`,
   roadsRaised: (mm) => ` Straßen ${mm} mm höher.`,
+  routeRaised: (mm) => ` Strecke ${mm} mm höher.`,
   brokenLeftOut: (n, count) => (count === 1 ? ' 1 Gebäude mit fehlerhaftem Umriss in den Kartendaten wurde weggelassen.' : ` ${n} Gebäude mit fehlerhaftem Umriss in den Kartendaten wurden weggelassen.`),
   brokenInTile: ' Ein Gebäude mit fehlerhaftem Umriss in den Kartendaten wurde weggelassen.',
   fontMissing: (chars, count) => (count === 1 ? ` Die Schrift hat kein ${chars}, deshalb fehlt es im Titel.` : ` Die Schrift hat kein ${chars}, deshalb fehlen sie im Titel.`),
@@ -198,6 +200,7 @@ export const de: Messages = {
   readmeWater: (mm) => `Wasser (Seen, als Fläche kartierte Flüsse, das Meer) liegt ${mm} mm unter dem Land, mit einer Kante zum Bemalen.`,
   readmeGreen: (mm) => `Parks, Gärten und Wälder stehen ${mm} mm über dem Land.`,
   readmeRoads: (mm) => `Straßen, Wege und Bahnlinien stehen ${mm} mm über dem Boden, mit scharfen Kanten.`,
+  readmeRoute: (mm) => `Die Strecke steht ${mm} mm über dem Boden, höher als die Straßen, und führt eben über Brücken.`,
   readmeCredit: 'Kartendaten © OpenStreetMap-Mitwirkende (ODbL). Gelände: Mapzen terrain tiles auf AWS Open Data.',
 
   // eine Strecke aus einer GPX- oder TCX-Datei
@@ -243,7 +246,6 @@ export const de: Messages = {
   profileLabel: (summary) => `Höhenprofil des Abschnitts: ${summary}.`,
 
   // Your Place · Data: die Daten-App
-  posterTitleField: 'Titel auf dem Poster',
   dataHomeTitle: 'Your Place · Data · wo es steil wird, Strecken in 3D',
   dataDocTitle: (place) => `${place} · Your Place Data`,
   dataWelcomeTitle: 'Dein Ort, durch Daten gesehen',

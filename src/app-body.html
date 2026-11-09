@@ -261,12 +261,7 @@
           <button type="button" class="btn btn-wide" id="native-share-btn" data-t="shareNative" hidden>Share…</button>
           <div class="title-fields">
             <div class="field">
-              <!-- only:place -->
               <label for="print-title" data-t="titleField">Title on the poster and print</label>
-              <!-- /only:place -->
-              <!-- only:data -->
-              <label for="print-title" data-t="posterTitleField">Title on the poster</label>
-              <!-- /only:data -->
               <input id="print-title" type="text" maxlength="48" autocomplete="off" enterkeyhint="done" />
             </div>
             <div class="field">
@@ -275,7 +270,6 @@
             </div>
           </div>
           <button type="button" class="btn btn-wide btn-primary" id="poster-btn" data-t="posterButton">Download poster (PNG)</button>
-          <!-- only:place -->
           <div class="print-block">
             <div class="control-label">
               <span id="print-label" data-t="printSize">3D print size</span>
@@ -297,10 +291,12 @@
               <label class="check"><input type="checkbox" id="print-water" checked /> <span data-t="sinkWater">Sink water 1 mm</span></label>
               <label class="check"><input type="checkbox" id="print-roads" /> <span data-t="raiseRoads">Raise roads 0.4 mm</span></label>
               <label class="check"><input type="checkbox" id="print-green" /> <span data-t="raiseGreen">Raise parks and woods 0.6 mm</span></label>
+              <!-- only:data -->
+              <label class="check" id="print-route-row" hidden><input type="checkbox" id="print-route" checked /> <span data-t="raiseRoute">Raise the route 0.8 mm</span></label>
+              <!-- /only:data -->
             </fieldset>
             <button type="button" class="btn btn-wide" id="stl-btn" data-t="stlButton">Download 3D print file (STL)</button>
           </div>
-          <!-- /only:place -->
           <p class="dialog-note" id="share-msg" role="status" aria-live="polite"></p>
         </form>
       </dialog>

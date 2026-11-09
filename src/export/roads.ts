@@ -26,6 +26,8 @@ export interface PrintRoad {
   pts: Pt[];
   widthM: number;
   bridge: boolean;
+  /** how far this one stands up (mm), when not the roads' height: a route stands higher */
+  raiseMm?: number;
 }
 
 type V = [number, number, number];
@@ -133,7 +135,6 @@ export interface RoadOptions {
  */
 export function addRoads(t: Triangles, grid: HeightGrid, roads: PrintRoad[], opts: RoadOptions): number {
   const { s, exaggeration: ex } = opts;
-  const raise = opts.raiseMm ?? ROAD_RAISE_MM;
   const half = grid.sizeM / 2;
   // keep a hair inside the block's sides, so a road's end never lies in the side wall's plane
   const edge = half - 0.01 / s;
@@ -151,6 +152,7 @@ export function addRoads(t: Triangles, grid: HeightGrid, roads: PrintRoad[], opt
     for (const [x, y] of pts) {
       bx0 = Math.min(bx0, x); by0 = Math.min(by0, y); bx1 = Math.max(bx1, x); by1 = Math.max(by1, y);
     }
+    const raise = road.raiseMm ?? opts.raiseMm ?? ROAD_RAISE_MM;
     const hw = Math.max(road.widthM, ROAD_MIN_MM / s) / 2;
     if (bx1 < -half - hw || bx0 > half + hw || by1 < -half - hw || by0 > half + hw) return;
     // vary the inset and depth a little per road, so duplicate roads don't make identical shells

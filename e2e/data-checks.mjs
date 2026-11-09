@@ -11,7 +11,7 @@ import { routeGpx, routeTcx } from './fixtures/route.mjs';
 
 export async function dataAppChecks({ browser, base, routeAll, expect, watchConsole, waitStage, settle, shot }) {
   const dataBase = `${base}data/`;
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 }, deviceScaleFactor: 1 });
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 }, deviceScaleFactor: 1, acceptDownloads: true });
   await routeAll(ctx);
   const page = await ctx.newPage();
   watchConsole(page, 'data');
@@ -40,7 +40,7 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   }));
   expect(head.app === 'data' && /^Your Place · Data/.test(head.title) && head.title.length <= 60 && /\/data\/$/.test(head.canonical), `the data app has its own page (“${head.title}”, ${head.canonical})`);
   expect(head.manifest.name === 'Your Place · Data' && head.icon, 'it installs as its own app, with its own icon');
-  expect(head.cards === 2 && head.presets === 3 && !head.print && head.home === '../', 'its start page shows the layers as cards, no 3D print, and the way back to Your Place');
+  expect(head.cards === 2 && head.presets === 3 && head.print && head.home === '../', 'its start page shows the layers as cards, and the way back to Your Place');
   await shot(page, 'd0-data-landing');
 
   // ---- steepness, from a preset
@@ -138,6 +138,21 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   const code = /[#&]rt=([A-Za-z0-9_-]+)/.exec(link)?.[1] ?? '';
   expect(code.length > 20 && code.length < 6000, `ticking it puts the stretch in the link (${code.length} characters)`);
   await shot(page, 'r4-share-route');
+
+  // the route in the 3D print: a raised line, higher than the roads
+  expect((await page.isVisible('#print-route-row')) && (await page.isChecked('#print-route')), 'the 3D print offers the route raised, ticked');
+  await page.click('#print-size-group [data-value="150"]');
+  const stl = async () => {
+    const [download] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.click('#stl-btn')]);
+    await page.waitForFunction(() => /^Saved/.test(document.getElementById('share-msg').textContent), null, { timeout: 120000 });
+    return { name: download.suggestedFilename(), msg: await page.textContent('#share-msg') };
+  };
+  const withRoute = await stl();
+  await page.uncheck('#print-route');
+  const without = await stl();
+  const tris = (m) => Number(/([\d,]+) triangles/.exec(m)[1].replace(/,/g, ''));
+  expect(/\.stl$/.test(withRoute.name) && / Route raised 0\.8 mm\./.test(withRoute.msg) && tris(withRoute.msg) > tris(without.msg) && !/Route raised/.test(without.msg), `the STL has the route raised 0.8 mm (${tris(withRoute.msg) - tris(without.msg)} triangles for it)`);
+  await page.check('#print-route');
   await page.keyboard.press('Escape');
 
   // the link opens the same stretch elsewhere, without the file

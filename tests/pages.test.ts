@@ -8,18 +8,20 @@ describe('the two apps’ pages', () => {
   const place = appBody('place', template);
   const data = appBody('data', template);
 
-  it('give Your Place its own parts only: the 3D print, no data layers', () => {
+  it('give Your Place its own parts only: no data layers', () => {
     expect(place).toContain('id="stl-btn"');
     expect(place).toContain('id="presets"');
-    expect(place).not.toMatch(/data-layer-group|route-control|route-file|steep-legend|layer-cards/);
+    expect(place).not.toMatch(/data-layer-group|route-control|route-file|steep-legend|layer-cards|print-route/);
     expect(place).toContain('href="./data/"');
     expect(place).toContain('href="./about/"');
   });
 
-  it('give Your Place · Data its own parts only: the layers, no 3D print', () => {
+  it('give Your Place · Data its own parts only: the layers, and the route in the 3D print', () => {
     expect(data).toMatch(/data-layer-group[\s\S]*route-control/);
     expect(data).toContain('id="route-file"');
-    expect(data).not.toMatch(/id="stl-btn"|id="presets"|print-block/);
+    expect(data).toMatch(/id="stl-btn"[\s\S]*|print-route/);
+    expect(data).toContain('id="print-route"');
+    expect(data).not.toMatch(/id="presets"/);
     expect(data).toContain('href="../about/"');
     expect(data).toContain('id="other-app" href="../"');
   });
