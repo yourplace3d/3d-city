@@ -9,7 +9,8 @@ Data layers live in **Your Place · Data** (`data/`), a second app built from th
 `index.html` and `data/index.html` share their body (`src/app-body.html`, parts marked `only:place` /
 `only:data`), and `src/main.ts` knows which app it runs in (`APP`). Your Place itself stays simple and only
 links across. The data app shows **one layer at a time**, so each new layer adds one choice, not a panel full
-of buttons.
+of buttons. A route of the user's own is not a layer: it shows over whichever layer is picked, so a new layer
+must look right with a route on top (the route paints at order 10).
 
 The engine lives in `src/data/`. Every overlay goes through the same four parts:
 
@@ -20,13 +21,17 @@ The engine lives in `src/data/`. Every overlay goes through the same four parts:
 | Time | `src/data/time/` | A position or value per moment, and `Playback` (0 → 1 over a set time). |
 | Display | `src/data/display/` | Draw it: a `ModelOverlay` (ground paint and/or 3D objects). |
 
-The contracts are in `src/data/types.ts`. Two worked examples:
+The contracts are in `src/data/types.ts`. Three worked examples:
 
 - **Route** (data the user brings): `sources/trackFile.ts` (GPX/TCX), `sources/routeLink.ts` (opt-in share
   link), `match/route.ts`, `time/playback.ts`, `display/route.ts`, wired up by `src/ui/route.ts`.
 - **Steepness** (derived from what the model already has, no source): `match/slope.ts` (grades along a
   line from the terrain), `display/steepness.ts` (ground paint) and `display/profile.ts` (SVG profile),
   wired up by `src/ui/steepness.ts`.
+- **Traffic** (a live open API): `sources/hamburgTraffic.ts` (SensorThings request and parser, coverage,
+  attribution), `match/traffic.ts` (the last 24 hours on fixed steps, nearby points merged), `display/traffic.ts`
+  (columns as one `InstancedMesh`, heights changed per frame while replaying) and `display/trafficChart.ts`
+  (the bar chart's scale), wired up by `src/ui/traffic.ts`; the e2e fixture is `e2e/fixtures/traffic.mjs`.
 
 ## 1. Check the source first
 
@@ -93,7 +98,10 @@ size on screen; see `makeLabel` and `declutter` in `display/route.ts`. Must stay
   `CityModel.featureSet`.
 - Panel markup in `index.html` with `data-t` keys; every text in **all four** dictionaries (`src/i18n/en.ts`,
   `es.ts`, `pt.ts`, `de.ts`). `tests/i18n.test.ts` fails if one is missing or still in English.
-- Credit third-party data in the app's attribution line and on the poster (`ATTRIBUTION_TEXT` in `src/ui/poster.ts`).
+- Credit third-party data in the layer's panel and on the poster (`credit` in `makePoster`, `src/ui/poster.ts`),
+  on the About page and in the README.
+- Charts in the panel: follow the dataviz rules (one hue for one series, bars ≤ 24 px with 2 px gaps, a
+  readout on hover, keyboard steps, a table view). The traffic chart (`#traffic-chart`) is a pattern to copy.
 - Share links (`src/state.ts`): only add a parameter when it's safe for anyone to see it.
 - Add a sentence to the accessible description (`describe()` in `src/main.ts`).
 
@@ -101,6 +109,8 @@ size on screen; see `makeLabel` and `declutter` in `display/route.ts`. Must stay
 
 - The user's own files are read in the browser only: no upload, no storage. Reloading forgets them.
 - Don't send positions derived from the user's data to third parties (e.g. no reverse geocoding of a route).
+- A live API learns which square is looked at: ask only while the layer is on and only where it has data,
+  and say so on the About page (as for Hamburg's traffic counts).
 - Nothing personal in share links unless the user turns it on, and then the minimum (the route link has no times
   or name).
 

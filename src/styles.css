@@ -1524,7 +1524,11 @@ a.fab {
 }
 
 .swatch-route {
-  background: linear-gradient(90deg, #3d3832 0 40%, #cc6700 40% 70%, #b52d1b 70%);
+  background: var(--accent);
+}
+
+.swatch-traffic {
+  background: linear-gradient(90deg, #a79ee6 0 30%, #6250d6 30%);
 }
 
 .layers-more {
@@ -1553,4 +1557,187 @@ a.fab {
 .part-of a {
   color: var(--muted);
   text-underline-offset: 3px;
+}
+
+/* ------------------------------------------------------------------ your route, over any layer */
+
+.route-card {
+  margin-top: 10px;
+  text-align: left;
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.route-card .btn {
+  align-self: flex-start;
+}
+
+#route-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#route-label .swatch {
+  width: 14px;
+  height: 8px;
+  border-radius: 4px;
+}
+
+/* ------------------------------------------------------------------ traffic: columns on the model, a bar chart of the day */
+
+.traffic-control {
+  margin-top: 10px;
+}
+
+.segmented-small button {
+  min-height: 30px;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+.traffic-status {
+  margin: 10px 0 0;
+  font-size: 13.5px;
+  color: var(--text);
+}
+
+.traffic-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.traffic-actions .btn:not([hidden]) {
+  margin-top: 8px;
+}
+
+.tchart {
+  margin: 12px 0 0;
+}
+
+.tchart .profile-head .link-btn {
+  margin-left: auto;
+  padding: 0;
+  font-size: 12.5px;
+}
+
+/* the chart sits on the model's paper, like the height profile, so its violet reads the same as the columns */
+.tchart-plot {
+  position: relative;
+  height: 96px;
+  padding: 8px 6px 0 30px;
+  border-radius: 8px;
+  background: #f1ede5;
+  box-shadow: inset 0 0 0 1px rgba(40, 33, 24, 0.08);
+  touch-action: pan-y;
+  cursor: pointer;
+}
+
+.tchart-plot:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.tchart-grid,
+.tchart-bars {
+  position: absolute;
+  inset: 8px 6px 0 30px;
+}
+
+.tgrid {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(40, 33, 24, 0.12);
+}
+
+.tgrid::before {
+  content: attr(data-label);
+  position: absolute;
+  right: calc(100% + 5px);
+  bottom: -6px;
+  color: #645e55;
+  font-size: 10.5px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tchart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.tbar {
+  flex: 1;
+  max-width: 24px;
+  border-radius: 4px 4px 0 0;
+  background: #a79ee6;
+}
+
+.tbar.hover {
+  background: #8f84e0;
+}
+
+.tbar.on {
+  background: #3a2d9c;
+}
+
+.tchart-x {
+  position: relative;
+  height: 16px;
+  margin: 3px 6px 0 30px;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tchart-x span {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.tchart .route-play-row {
+  margin-top: 6px;
+}
+
+.ttable {
+  margin-top: 8px;
+  font-size: 12.5px;
+}
+
+.ttable summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.ttable table {
+  width: 100%;
+  margin-top: 6px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.ttable th,
+.ttable td {
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-weight: 450;
+}
+
+.ttable td {
+  text-align: right;
+}
+
+.ttable tr:first-child th {
+  font-weight: 600;
+}
+
+.traffic-credit {
+  font-size: 11.5px;
 }

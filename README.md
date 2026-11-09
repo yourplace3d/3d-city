@@ -33,18 +33,25 @@ works on your phone.**
 
 A second app, at [`data/`](https://yourplace3d.github.io/3d-city/data/), puts open data on the same 3D model,
 one layer at a time, so neither app gets crowded. Your Place has one button to it (the layers icon), and it
-has one back, both keeping the place you're looking at.
+has one back, both keeping the place you're looking at. A route of your own isn't one of the layers: it
+shows over whichever layer you pick.
 
 - **Steepness:** roads and paths coloured by how steep they are, from golden yellow (3–6 %) to dark red
   (over 15 %), anywhere, from the terrain the model already has. Planning a run, a ride, a hike or a
   stroll? This is where it climbs. No green: on this map green is parks and woods, and red–green is what
   colour-blind people can't tell apart; each step is darker than the last, so the order reads without colour.
+- **Traffic (Hamburg):** how many cars or bikes the City of Hamburg's counting points counted in each of the
+  last 24 hours, live from its open SensorThings API: a violet column on the model per counting point (both
+  directions of a road added up), and a bar chart of the day in the panel. Pick an hour in the chart, or
+  replay the day, and the columns grow and shrink; tap a column for that point's day. The chart is also a
+  table. Only Hamburg so far; elsewhere the panel says so and offers Hamburg.
 - **Your route:** load a GPX or TCX file (Strava, Garmin, a race website) and pick the stretch to show; the
-  model follows it, with the line on the terrain in the steepness colours, start, finish, km markers and the
+  model follows it, over any layer. On Steepness the line takes the steepness colours (and only the route is
+  coloured), with start, finish, km markers and the
   steepest climbs labelled, a replay at the recorded pace, and a height profile. In the 3D print the route
   stands as a raised line, 1.2 mm wide and 0.8 mm high (twice the roads), level across bridges, ready to paint
   next to the medal. The file is read in your browser and never uploaded.
-- More layers are planned: traffic, water, energy.
+- More layers are planned: water, energy.
 
 ## Controls
 
@@ -174,6 +181,9 @@ Design notes:
 - Address search: [Photon](https://photon.komoot.io) by komoot (suggestions, place names for shared
   links) and [Nominatim](https://nominatim.org) (only when you press Enter before suggestions arrive,
   per its usage policy).
+- Traffic counts (Your Place · Data): Freie und Hansestadt Hamburg, Behörde für Verkehr und
+  Mobilitätswende, [Datenlizenz Deutschland – Namensnennung 2.0](https://www.govdata.de/dl-de/by-2-0),
+  from the city's open [SensorThings API](https://iot.hamburg.de/). Credited in the panel and on posters.
 - Photon, Nominatim and Overpass are shared community services with fair-use limits. If the app gets
   very popular, the address search should move to an own or paid geocoder.
 
@@ -183,7 +193,8 @@ No account, no cookies, no analytics, no server of its own. What you type in the
 your browser to Photon or Nominatim; share links hold only coordinates and the view; map data you
 loaded is cached on your device. A route file is read in your browser and never uploaded or stored, and
 no search service is asked where it runs; a share link includes the route only if you tick that, and then
-only the stretch shown, without times or a name.
+only the stretch shown, without times or a name. With the traffic layer on in Hamburg, the corners of the
+square shown go to the City of Hamburg's traffic server to fetch its counts.
 
 ## Known limitations
 
@@ -211,8 +222,9 @@ only the stretch shown, without times or a name.
 OSM parsing (multipolygons, courtyards, building parts, clipping), the height rule, the sea fill,
 building-mesh winding and exaggeration, URL state, the STL export (every shell closed and
 outward-facing, volumes, binary format), routes (GPX and TCX parsing, distances, the stretch that fits
-the model, hiding the ends, the replay clock, the share-link code), and steepness (grades over a window,
-classes, bridges, climbs, height totals, the profile).
+the model, hiding the ends, the replay clock, the share-link code), steepness (grades over a window,
+classes, bridges, climbs, height totals, the profile), and traffic counts (the request, parsing, the last
+24 hours, adding up both directions of a road, the chart's scale).
 
 `npm run e2e` serves the build, answers Overpass and geocoding from a deterministic synthetic city
 (`e2e/fixtures/synthetic-city.mjs`), uses real terrain tiles, and drives search, every control,
@@ -221,7 +233,10 @@ Shift-arrow and two-finger sliding, share link round-trip, poster download, STL 
 base checked), an Overpass outage with retry, a phone
 viewport, and dark mode with reduced motion. Routes: a GPX from the start page, the stretch picker,
 replay, the height profile, steepness on roads and on the route, hiding the ends, the opt-in route link and
-opening it, a dropped TCX file, a FIT file, a phone, and that the file never leaves the browser. It fails on any console error.
+opening it, a dropped TCX file, a FIT file, a phone, and that the file never leaves the browser. Traffic
+(Hamburg's API answered from `e2e/fixtures/traffic.mjs`): outside Hamburg, a failed answer and retry, the
+columns, the chart by pointer and keyboard, a column of its own, the table, replay, bikes, and a route over
+it. It fails on any console error.
 
 ## Licence
 

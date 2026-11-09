@@ -15,6 +15,8 @@ export interface PosterInfo {
   center: LngLat;
   sizeM: number;
   exaggeration: number;
+  /** credit for third-party data shown on the model (a data layer), after the map's */
+  credit?: string;
 }
 
 export const ATTRIBUTION_TEXT = `© OpenStreetMap ${t.footerContributors} (ODbL) · © OpenMapTiles · OpenFreeMap · ${t.footerTerrain} Mapzen, AWS Terrain Tiles`;
@@ -77,6 +79,8 @@ export async function makePoster(viewer: Viewer, info: PosterInfo, width = 2400)
   ctx.font = `400 ${Math.round(W * 0.0125)}px ${sans}`;
   ctx.textBaseline = 'bottom';
   ctx.fillText(ATTRIBUTION_TEXT, pad, H - footer * 0.12);
+  // a data layer's credit on its own line above
+  if (info.credit) ctx.fillText(info.credit, pad, H - footer * 0.12 - Math.round(W * 0.0125) * 1.45);
 
   return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('PNG encoding failed'))), 'image/png'));
 }

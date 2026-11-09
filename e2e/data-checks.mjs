@@ -1,13 +1,15 @@
 /**
  * End-to-end checks for Your Place · Data (data/), run by smoke.mjs: its own page and start
- * page, the steepness layer from a preset, one data layer at a time, routes (GPX, TCX) with the
+ * page, the steepness layer from a preset, a route of your own over it (GPX, TCX) with the
  * stretch picker, replay, height profile, hiding the ends, the opt-in share link and opening it,
- * removing the route, a TCX file dropped on the page, a FIT file, and a phone. Also checks
- * privacy: the file never goes out in a request, no place-name lookup is made for it, and links
- * carry no route unless the user turns that on.
+ * removing the route, a TCX file dropped on the page, a FIT file; the traffic layer (Hamburg's
+ * counts from a fixture) with its bar chart, columns, replay, cars and bikes, and a route over
+ * it; and a phone. Also checks privacy: the file never goes out in a request, no place-name
+ * lookup is made for it, and links carry no route unless the user turns that on.
  */
 
 import { routeGpx, routeTcx } from './fixtures/route.mjs';
+import { hamburgGpx } from './fixtures/traffic.mjs';
 
 export async function dataAppChecks({ browser, base, routeAll, expect, watchConsole, waitStage, settle, shot }) {
   const dataBase = `${base}data/`;
@@ -19,6 +21,10 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   page.on('request', (r) => requests.push({ url: r.url(), body: r.postData() ?? '' }));
   const route = () => page.evaluate(() => window.__yourPlace.route());
   const steep = () => page.evaluate(() => window.__yourPlace.steep());
+  const traffic = () => page.evaluate(() => {
+    const t = window.__yourPlace.traffic();
+    return t && { ...t, columnPoint: undefined };
+  });
   const reload = async (before) => {
     await page.waitForFunction((c) => JSON.stringify(window.__yourPlace.state().center) !== c, JSON.stringify(before), { timeout: 10000 }).catch(() => undefined);
     await waitStage(page, ['ready', 'error']);
@@ -35,12 +41,13 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
     icon: await fetch(document.querySelector('link[rel="icon"]').href).then((r) => r.ok),
     cards: document.querySelectorAll('.layer-card').length,
     presets: document.querySelectorAll('#steep-presets button').length,
+    trafficPresets: document.querySelectorAll('#traffic-presets button').length,
     print: !!document.getElementById('stl-btn'),
     home: document.getElementById('other-app').getAttribute('href'),
   }));
   expect(head.app === 'data' && /^Your Place · Data/.test(head.title) && head.title.length <= 60 && /\/data\/$/.test(head.canonical), `the data app has its own page (“${head.title}”, ${head.canonical})`);
   expect(head.manifest.name === 'Your Place · Data' && head.icon, 'it installs as its own app, with its own icon');
-  expect(head.cards === 2 && head.presets === 3 && head.print && head.home === '../', 'its start page shows the layers as cards, and the way back to Your Place');
+  expect(head.cards === 3 && head.presets === 3 && head.trafficPresets === 3 && head.print && head.home === '../', 'its start page shows the layers as cards, your route on its own, and the way back to Your Place');
   await shot(page, 'd0-data-landing');
 
   // ---- steepness, from a preset
@@ -49,7 +56,8 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   await page.waitForFunction(() => window.__yourPlace.steep().shown, null, { timeout: 15000 }).catch(() => undefined);
   let s = await steep();
   expect(s.on && s.shown && s.pieces > 20 && s.lengths[2] + s.lengths[3] + s.lengths[4] > 0, `steepness colours the roads and paths (${s.pieces} pieces; m per class ${s.lengths.join(', ')})`);
-  expect((await page.isVisible('#steep-legend')) && (await page.locator('#steep-scale li').count()) === 4 && (await page.isHidden('#route-control')), 'a legend shows the four classes; the route panel stays out of the way');
+  expect((await page.isVisible('#steep-legend')) && (await page.locator('#steep-scale li').count()) === 4 && (await page.isHidden('#traffic-control')), 'a legend shows the four classes');
+  expect((await page.isVisible('#route-load-btn')) && (await page.locator('#data-layer-group [role="radio"]').count()) === 2, 'your route has its own place under the layer switch, not one of the layers');
   expect(/dl=steep/.test(await page.evaluate(() => location.hash)) && /^Stuttgart · Your Place Data$/.test(await page.title()), 'the link and the tab name the layer and the place');
   expect(/steeper than 6%: [\d.]+ km/.test(await page.textContent('#describe')), 'the description says how much is steep');
   const toPlace = await page.getAttribute('#other-app', 'href');
@@ -57,10 +65,8 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   await settle(page, 1500);
   await shot(page, 'd1-steepness');
 
-  // ---- one layer at a time: the route layer takes over
-  await page.click('#data-layer-group [data-value="route"]');
-  s = await steep();
-  expect(!s.on && !s.shown && (await page.isVisible('#route-load-btn')) && /dl=route/.test(await page.evaluate(() => location.hash)), 'picking the route layer hides steepness on the roads and shows the route panel');
+  // ---- your route, over steepness
+  expect(!requests.some((q) => /iot\.hamburg\.de/.test(q.url)), 'no traffic counts are asked for while the traffic layer is off');
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#route-load-btn')]);
   await chooser.setFiles({ name: 'test-city-half.gpx', mimeType: 'application/gpx+xml', buffer: Buffer.from(routeGpx()) });
   await page.waitForFunction(() => window.__yourPlace.route()?.shown && window.__yourPlace.route()?.name === 'Test City Half', null, { timeout: 60000 });
@@ -104,7 +110,7 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   expect((await page.textContent('#profile-readout')) === '', 'the readout clears when the pointer leaves');
   s = await steep();
   r = await route();
-  expect(!s.shown && r.steep && r.climbs.length > 0, `the route shows where it gets steep; the other roads stay as they are (climbs: ${r.climbs.join(', ')})`);
+  expect(!s.shown && r.steep && r.climbs.length > 0 && /dl=steep/.test(await page.evaluate(() => location.hash)), `with a route on steepness, only the route shows where it gets steep (climbs: ${r.climbs.join(', ')})`);
   await settle(page, 600);
   await shot(page, 'r2b-route-steepness');
 
@@ -165,26 +171,30 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   expect(shared.shared && Math.abs(shared.fromM - r.fromM) < 2 && Math.abs(shared.toM - r.toM) < 40 && !shared.hasTime, `a shared link shows the stretch with its km numbers, no times (km ${(shared.fromM / 1000).toFixed(1)}–${(shared.toM / 1000).toFixed(1)})`);
   expect(!shared.marks.includes('Start') && (await other.isHidden('#route-stretch')) && (await other.textContent('#route-name')) === 'Shared route', 'the hidden start stays hidden, and the shared route can’t be stretched');
   expect(!(await other.evaluate(() => window.__yourPlace.pin().visible)), 'the pin stays hidden on a shared route');
-  expect(shared.steep && (await other.isVisible('#route-profile')) && /dl=route/.test(link), 'the link opens on the route layer, with the profile');
+  expect(shared.steep && (await other.isVisible('#route-profile')) && /dl=steep/.test(link), 'the link opens the route over steepness, with the profile');
   await settle(other, 1500);
   await shot(other, 'r5-shared-route');
   await other.close();
 
-  // switch layers: the route steps aside and comes back
+  // switch layers: the route stays, and wears steepness colours only on steepness
+  await page.click('#data-layer-group [data-value="traffic"]');
+  await page.waitForFunction(() => window.__yourPlace.traffic().status === 'outside', null, { timeout: 15000 }).catch(() => undefined);
+  r = await route();
+  let tr = await traffic();
+  expect(r.shown && !r.steep && r.name === 'Test City Half' && (await page.isVisible('#route-load-btn')) === false && (await page.isVisible('#route-remove')), 'on another layer the route stays, in its own colour');
+  expect(tr.on && tr.status === 'outside' && (await page.isVisible('#traffic-hamburg')) && /only available for Hamburg/.test(await page.textContent('#traffic-status')), 'outside Hamburg the traffic layer says so and offers Hamburg');
+  expect(!requests.some((q) => /iot\.hamburg\.de/.test(q.url)), 'and asks for no counts there');
   await page.click('#data-layer-group [data-value="steep"]');
-  await page.waitForFunction(() => window.__yourPlace.steep().shown, null, { timeout: 15000 }).catch(() => undefined);
   r = await route();
   s = await steep();
-  expect(s.shown && !r.shown && !r.layerShown && (await page.isHidden('#route-control')) && !/rt=/.test(await page.evaluate(() => location.hash)), 'switching to steepness hides the route (and keeps it out of the link)');
-  await page.click('#data-layer-group [data-value="route"]');
-  r = await route();
-  s = await steep();
-  expect(r.shown && !s.shown && r.name === 'Test City Half', 'switching back shows the same route again');
+  expect(r.shown && r.steep && !s.shown, 'back on steepness the route takes its colours again');
 
   // remove the route
   await page.click('#route-remove');
   expect((await route()) === null && (await page.isVisible('#route-load-btn')) && !(await page.isVisible('#route-profile')), 'the route can be removed');
   expect(!/rt=/.test(await page.evaluate(() => location.hash)) && (await page.evaluate(() => window.__yourPlace.pin().visible)), 'removing it clears the link and shows the pin again');
+  await page.waitForFunction(() => window.__yourPlace.steep().shown, null, { timeout: 15000 }).catch(() => undefined);
+  expect((await steep()).shown, 'without a route, steepness colours the roads again');
 
   // a TCX file dropped on the page, named after the file
   const drop = (name, text) =>
@@ -207,6 +217,91 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   await drop('activity.fit', '\x0e\x10\x00\x00\x00\x00\x00\x00.FIT\x00\x00');
   await page.waitForFunction(() => /FIT files/.test(document.getElementById('toast').textContent), null, { timeout: 5000 }).catch(() => undefined);
   expect(/^FIT files can’t be read yet/.test(await page.textContent('#toast')) && (await route())?.name === 'Lunch Run', 'a FIT file gets a clear message and changes nothing');
+  await page.click('#route-remove');
+
+  // ---- traffic: Hamburg's hourly counts as columns and a bar chart of the day
+  await page.click('#data-layer-group [data-value="traffic"]');
+  await page.waitForSelector('#traffic-hamburg', { state: 'visible' });
+  // the first answer is unusable: a clear message and a way to try again (a failed request
+  // would also log a console error, which fails this test)
+  const failOnce = (rt) => rt.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '{"error":"down"}' });
+  await ctx.route(/iot\.hamburg\.de/, failOnce);
+  const leaving = await page.evaluate(() => window.__yourPlace.state().center);
+  await page.click('#traffic-hamburg');
+  await reload(leaving);
+  await page.waitForFunction(() => window.__yourPlace.traffic().status === 'error', null, { timeout: 20000 }).catch(() => undefined);
+  expect((await traffic()).status === 'error' && (await page.isVisible('#traffic-retry')) && /couldn’t be loaded/.test(await page.textContent('#traffic-status')), 'when the counts can’t be loaded the panel says so and offers to try again');
+  await ctx.unroute(/iot\.hamburg\.de/, failOnce);
+  await page.click('#traffic-retry');
+  await page.waitForFunction(() => window.__yourPlace.traffic().status === 'ready', null, { timeout: 20000 }).catch(() => undefined);
+  tr = await traffic();
+  const hh = await page.evaluate(() => ({ title: document.title, hash: location.hash }));
+  expect(tr.status === 'ready' && tr.shown && tr.points === 15 && tr.columns === 14, `the counting points in the square stand as columns, the two directions of a road as one (${tr.points} points, ${tr.columns} columns)`);
+  expect(/Hamburg city centre/.test(hh.title) && /dl=traffic/.test(hh.hash) && !/tk=/.test(hh.hash), 'Show Hamburg opens Hamburg’s centre on the traffic layer, counting cars');
+  const busiest = tr.totals.indexOf(Math.max(...tr.totals));
+  expect(tr.hour === busiest && tr.labels >= 1, `it opens on the busiest hour, with counts on the busiest columns (hour ${tr.hour}, ${tr.labels} labels)`);
+  expect((await page.locator('#traffic-bars .tbar').count()) === 24 && (await page.locator('#traffic-bars .tbar.on').count()) === 1, 'the bar chart has a bar per hour, the hour shown marked');
+  const tread = await page.textContent('#traffic-readout');
+  expect(/^\w{3} \d\d:00–\d\d:00: [\d,]+ cars$/.test(tread) && /at 14 counting points, added up/.test(await page.textContent('#traffic-sub')), `the readout says when and how many (“${tread}”)`);
+  expect(/Traffic: [\d,]+ cars at \d+ counting points in the busiest hour/.test(await page.textContent('#describe')) && /Freie und Hansestadt Hamburg/.test(await page.textContent('.traffic-credit')), 'the description sums it up, and the city is credited');
+  await settle(page, 1500);
+  await shot(page, 't1-traffic');
+
+  // pick an hour in the chart, by pointer and by keyboard
+  await page.locator('#traffic-chart').scrollIntoViewIfNeeded();
+  const tc = await page.locator('#traffic-chart').boundingBox();
+  await page.mouse.click(tc.x + 32, tc.y + tc.height / 2);
+  tr = await traffic();
+  expect(tr.hour === 0, `clicking the chart picks that hour (${tr.hour})`);
+  await page.keyboard.press('ArrowRight');
+  tr = await traffic();
+  expect(tr.hour === 1 && (await page.getAttribute('#traffic-chart', 'aria-valuenow')) === '1', 'arrow keys step through the hours');
+  await page.keyboard.press('End');
+
+  // a column of its own
+  const cp = await page.evaluate(() => {
+    const t = window.__yourPlace.traffic();
+    return t.columnPoint(t.busiest);
+  });
+  await page.mouse.click(cp.x, cp.y);
+  tr = await traffic();
+  expect(tr.column === tr.busiest && (await page.isVisible('#traffic-all')) && /the counting point you picked/.test(await page.textContent('#traffic-sub')), 'tapping a column shows that counting point’s day');
+  expect(!(await page.evaluate(() => window.__yourPlace.pin().marked)), 'and doesn’t move the pin');
+  await settle(page, 600);
+  await shot(page, 't2-traffic-column');
+  await page.click('#traffic-all');
+  expect((await traffic()).column === null, 'All points goes back to the whole square');
+
+  // the table view
+  await page.click('.ttable summary');
+  expect((await page.locator('#traffic-table tr').count()) === 25, 'the day is also there as a table');
+
+  // replay the day
+  await page.click('#traffic-play');
+  await page.waitForFunction(() => window.__yourPlace.traffic().playing, null, { timeout: 5000 }).catch(() => undefined);
+  tr = await traffic();
+  expect(tr.playing && tr.labels === 0 && (await page.textContent('#traffic-play')) === 'Pause', 'replay runs through the day, without labels');
+  await page.click('#traffic-play');
+  expect(!(await traffic()).playing && (await traffic()).labels > 0, 'pausing brings the labels back');
+
+  // bikes
+  await page.click('#traffic-kind-group [data-value="bikes"]');
+  await page.waitForFunction(() => window.__yourPlace.traffic().kind === 'bikes' && window.__yourPlace.traffic().status === 'ready', null, { timeout: 20000 }).catch(() => undefined);
+  tr = await traffic();
+  expect(tr.kind === 'bikes' && tr.columns === 8 && /tk=bikes/.test(await page.evaluate(() => location.hash)) && /bikes$/.test(await page.textContent('#traffic-readout')), `bikes have their own counting points (${tr.columns}) and go into the link`);
+  await page.click('#traffic-kind-group [data-value="cars"]');
+
+  // your route over the traffic layer
+  const [hc] = await Promise.all([page.waitForEvent('filechooser'), page.click('#route-load-btn')]);
+  await hc.setFiles({ name: 'alster.gpx', mimeType: 'application/gpx+xml', buffer: Buffer.from(hamburgGpx()) });
+  await page.waitForFunction(() => window.__yourPlace.route()?.shown && window.__yourPlace.route()?.name === 'Alster Loop', null, { timeout: 60000 });
+  await waitStage(page, ['ready', 'error']);
+  await page.waitForFunction(() => window.__yourPlace.traffic().status === 'ready', null, { timeout: 20000 }).catch(() => undefined);
+  r = await route();
+  tr = await traffic();
+  expect(r.shown && !r.steep && tr.shown && tr.columns > 0 && /dl=traffic/.test(await page.evaluate(() => location.hash)), `a route shows over the traffic columns (${tr.columns} columns)`);
+  await settle(page, 1500);
+  await shot(page, 't3-traffic-route');
   await ctx.close();
 
   // a phone

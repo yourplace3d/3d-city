@@ -25,9 +25,12 @@ export interface Layers {
   green: boolean;
 }
 
-/** The data layers of Your Place · Data; one is shown at a time. */
-export const DATA_LAYERS = ['steep', 'route'] as const;
+/** The data layers of Your Place · Data; one is shown at a time (a route of your own shows over any). */
+export const DATA_LAYERS = ['steep', 'traffic'] as const;
 export type DataLayerId = (typeof DATA_LAYERS)[number];
+/** What the traffic layer counts. */
+export const TRAFFIC_KINDS = ['cars', 'bikes'] as const;
+export type TrafficKind = (typeof TRAFFIC_KINDS)[number];
 
 /** Orbit camera: angles in degrees, distance in metres, target offset in metres (E, N). */
 export interface CameraState {
@@ -55,6 +58,8 @@ export interface ViewState {
   route: string | null;
   /** Your Place · Data: the data layer shown (null in Your Place) */
   data: DataLayerId | null;
+  /** the traffic layer: cars or bikes */
+  traffic: TrafficKind;
 }
 
 export const DEFAULT_STATE: ViewState = {
@@ -68,6 +73,7 @@ export const DEFAULT_STATE: ViewState = {
   pin: null,
   route: null,
   data: null,
+  traffic: 'cars',
 };
 
 export const EXAGGERATION_MIN = 1;
@@ -90,6 +96,7 @@ export function encodeState(s: ViewState): string {
   }
   if (s.pin) p.set('pin', `${round(s.pin.lat, 5).toFixed(5)},${round(s.pin.lon, 5).toFixed(5)}`);
   if (s.data) p.set('dl', s.data);
+  if (s.data === 'traffic' && s.traffic !== 'cars') p.set('tk', s.traffic);
   if (s.route) p.set('rt', s.route);
   // commas are fine in a fragment and keep links readable
   return p.toString().replace(/%2C/g, ',');
@@ -123,6 +130,7 @@ export function decodeState(raw: string, base: ViewState = DEFAULT_STATE): ViewS
   const rt = p.get('rt');
   if (rt && /^[A-Za-z0-9_-]{6,12000}$/.test(rt)) s.route = rt;
   s.data = DATA_LAYERS.find((d) => d === p.get('dl')) ?? null;
+  s.traffic = TRAFFIC_KINDS.find((k) => k === p.get('tk')) ?? 'cars';
   return s;
 }
 

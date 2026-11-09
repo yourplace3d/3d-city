@@ -165,6 +165,14 @@ export class Viewer {
     return this.model.pick(this.raycaster);
   }
 
+  /** A ray from the camera through a point of the canvas (client coordinates), for data layers to test their objects. */
+  rayAt(clientX: number, clientY: number): Raycaster {
+    const r = this.canvas.getBoundingClientRect();
+    const ndc = new Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+    this.raycaster.setFromCamera(ndc, this.camera);
+    return this.raycaster;
+  }
+
   /** Client coordinates of a model point (metres E/N from the centre, scene height y), for tests. */
   screenPoint(e: number, n: number, y: number): { x: number; y: number } {
     const v = new Vector3(e, y, -n).project(this.camera);

@@ -74,7 +74,8 @@
           <li><strong><a href="../data/">Your Place · Data</a></strong>, a second app for open data on the model, one layer at a time:
             <strong>steepness</strong> of roads and paths, from golden yellow (3–6 %) to dark red (over 15 %), measured on the terrain over 60 m at a time
             (the terrain data has points 10–30 m apart, so it’s an estimate: short ramps and stairs can be missed, and bridges are left out);
-            and <strong>your route</strong> from a GPX or TCX file (a run, a ride, a race), with its steepest climbs, a height profile and a replay.</li>
+            <strong>traffic</strong> in Hamburg, the cars or bikes the city counted in each of the last 24 hours, as columns with a bar chart of the day;
+            and, over either, <strong>your route</strong> from a GPX or TCX file (a run, a ride, a race), with its steepest climbs, a height profile and a replay.</li>
         </ul>
       </section>
 
@@ -124,6 +125,7 @@
           <li>Map data you have loaded is cached on your device so it opens faster next time.</li>
           <li>A route file (GPX, TCX) is read in your browser and never uploaded or stored; reloading the page forgets it.
             Share links include the route only if you tick that, and then only the stretch shown, without times or a name.</li>
+          <li>With the traffic layer on in Hamburg, the corners of the square you’re looking at go to the City of Hamburg’s traffic server, which returns its counts.</li>
         </ul>
       </section>
 
@@ -152,6 +154,7 @@
           <li>Terrain: <a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md">Mapzen terrain tiles</a> on AWS Open Data</li>
           <li>Address search: <a href="https://photon.komoot.io/">Photon</a> by komoot, <a href="https://nominatim.org/">Nominatim</a></li>
           <li>Fallback map data: <a href="https://overpass-api.de/">Overpass API</a></li>
+          <li>Traffic counts: Freie und Hansestadt Hamburg, Behörde für Verkehr und Mobilitätswende, <a href="https://www.govdata.de/dl-de/by-2-0">dl-de/by-2-0</a>, via the city’s <a href="https://iot.hamburg.de/">SensorThings API</a></li>
         </ul>
         <p>
           Your Place is open source under the MIT licence:

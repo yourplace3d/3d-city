@@ -71,6 +71,13 @@ export function num(x: number, digits = 0): string {
   return f.format(x);
 }
 
+let compactFormat: Intl.NumberFormat | null = null;
+/** "950", "20K", "1.2K", "20 mil": for chart axes */
+export function compact(x: number): string {
+  compactFormat ??= new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 });
+  return compactFormat.format(x);
+}
+
 /** "500 × 500 m", "2 × 2 km", "1,5 × 1,5 km" */
 export function area(m: number): string {
   if (m < 1000) return `${num(m)} × ${num(m)} m`;

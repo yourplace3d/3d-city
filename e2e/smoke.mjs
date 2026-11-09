@@ -15,6 +15,7 @@ import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildWorld, VILLAGE, RURAL, synthesize } from './fixtures/synthetic-city.mjs';
 import { dataAppChecks } from './data-checks.mjs';
+import { trafficAnswer } from './fixtures/traffic.mjs';
 
 const require = createRequire(import.meta.url);
 let chromium;
@@ -124,6 +125,9 @@ async function routeAll(context) {
   await context.route(/nominatim\.openstreetmap\.org/, (route) =>
     (counters.nominatim = (counters.nominatim ?? 0) + 1) &&
     route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify([{ lat: String(PLACE.lat), lon: String(PLACE.lon), name: 'Stuttgart', display_name: 'Stuttgart, Baden-Württemberg, Germany' }]) }),
+  );
+  await context.route(/iot\.hamburg\.de\/v1\.1\/Datastreams/, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(trafficAnswer(route.request().url())) }),
   );
   await context.route(/elevation-tiles-prod\/terrarium\/(\d+)\/(\d+)\/(\d+)\.png/, async (route) => {
     counters.tiles++;
