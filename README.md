@@ -61,7 +61,8 @@ shows over whichever layer you pick.
   whole country's is too big. If the square shown has none of its lines, the app goes to where it is
   busiest. "Try Freiburg's timetable" loads Freiburg's, which we host. Lines are painted in their mode's
   colour (trains green, U-Bahn blue and dashed, trams red, buses grey, ferries dark yellow), vehicles are
-  blocks longer for trains than for buses; it's the plan, not live, so delays don't show. In the 3D print
+  blocks longer for trains than for buses; replays at 10 minutes or an hour a second leave fading trails
+  behind them. It's the plan, not live, so delays don't show. In the 3D print
   the lines that run that day stand 0.4 to 1.2 mm high by the trips on them, adding up where lines share a
   street.
 - **Your route:** load a GPX or TCX file (Strava, Garmin, a race website) and pick the stretch to show; the

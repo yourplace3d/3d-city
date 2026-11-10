@@ -112,9 +112,12 @@ export async function transitChecks({ browser, base, routeAll, expect, watchCons
   x = await transit();
   // (frames drawn in software are slow, and each moves the replay at most 100 ms on, so it runs slower here)
   expect(x.playing && x.speed === 600 && x.time > t0 + 150 && x.labels === 0, `replay runs the timetable faster at 10 minutes a second (${Math.round((x.time - t0) / 60)} min in 1.2 s), without labels`);
+  expect(x.trails, 'at that speed the vehicles leave fading trails behind them');
+  await settle(page, 300);
+  await shot(page, 'p7-transit-trails');
   await page.click('#transit-play');
   x = await transit();
-  expect(!x.playing && x.labels > 0, 'pausing stops it and the lines’ names come back');
+  expect(!x.playing && x.labels > 0 && !x.trails, 'pausing stops it, the trails go and the lines’ names come back');
 
   // table, description, a weekend day
   await page.click('#transit-figure .ttable summary');

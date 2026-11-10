@@ -456,6 +456,39 @@ export function runAt(runs: TransitRuns, r: number, t: number, out: VehicleAt): 
   return Math.abs(out.e) <= h && Math.abs(out.n) <= h;
 }
 
+/** How far along its path run `r` is at `t` (m), held at its first and last stop before and after. */
+export function distanceAt(runs: TransitRuns, r: number, t: number): number {
+  const a = runs.runFirst[r];
+  const b = runs.runFirst[r + 1] - 1;
+  if (t <= runs.dep[a]) return runs.at[a];
+  if (t >= runs.arr[b]) return runs.at[b];
+  let lo = a;
+  let hi = b;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (runs.arr[mid] <= t) lo = mid;
+    else hi = mid - 1;
+  }
+  if (t <= runs.dep[lo] || lo === b) return runs.at[lo];
+  const span = runs.arr[lo + 1] - runs.dep[lo];
+  const u = span > 0 ? (t - runs.dep[lo]) / span : 1;
+  return runs.at[lo] + u * (runs.at[lo + 1] - runs.at[lo]);
+}
+
+/** The stretch of a path from `m0` to `m1` (m along it) as E, N pairs into `out`: its ends and the bends between. */
+export function stretchOn(p: TransitPath, m0: number, m1: number, out: number[]): number[] {
+  out.length = 0;
+  if (!(m1 > m0)) return out;
+  const v: VehicleAt = { e: 0, n: 0, dx: 0, dy: 0 };
+  pointOn(p, m0, v);
+  out.push(v.e, v.n);
+  const { pts, cum } = p;
+  for (let i = 0; i < cum.length; i++) if (cum[i] > m0 && cum[i] < m1) out.push(pts[i * 2], pts[i * 2 + 1]);
+  pointOn(p, m1, v);
+  out.push(v.e, v.n);
+  return out;
+}
+
 /** The point at `m` along a path, and its heading. */
 export function pointOn(p: TransitPath, m: number, out: VehicleAt): VehicleAt {
   const { pts, cum } = p;

@@ -12,10 +12,10 @@
  * only cue.
  */
 
-import { BoxGeometry, Color, Group, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3, type Sprite } from 'three';
+import { BoxGeometry, BufferAttribute, BufferGeometry, Color, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, MeshStandardMaterial, Quaternion, Vector3, type Sprite } from 'three';
 import type { ModelOverlay, ModelSurface } from '../types';
 import type { TransitMode } from '../sources/gtfs';
-import { DAY_S, MODE_ORDER, runAt, type TransitDay, type VehicleAt } from '../match/transit';
+import { DAY_S, distanceAt, MODE_ORDER, runAt, stretchOn, type TransitDay, type VehicleAt } from '../match/transit';
 import { CASING, INK, makeLabel } from './label';
 
 export const MODE_COLOURS: Record<TransitMode, string> = {
@@ -37,6 +37,9 @@ const GROUND = '#ebe6dc';
 const LINE_TINT = 0.3;
 /** Vehicles are this much darker than their mode's colour. */
 const VEHICLE_SHADE = 0.18;
+/** A trail's width, as a share of a vehicle's, and how strong it is at the vehicle. */
+const TRAIL_WIDTH = 0.6;
+const TRAIL_ALPHA = 0.9;
 /** How far lines that aren't picked fade towards the ground. */
 const FADE = 0.72;
 
@@ -65,6 +68,11 @@ export class TransitDisplay implements ModelOverlay {
   /** the paths that run on the day, and their mode, drawn in this order */
   private readonly drawn: Array<{ path: number; route: number; mode: TransitMode }>;
   private shown: ShownVehicle[] = [];
+  /** how far back the trails reach (s of timetable), 0 for none */
+  private trailS = 0;
+  private trail: Mesh<BufferGeometry, MeshBasicMaterial> | null = null;
+  private trailVerts = 0;
+  private trailIndex = 0;
   private labels: Array<{ sprite: Sprite; run: number }> = [];
 
   constructor(
@@ -152,6 +160,17 @@ export class TransitDisplay implements ModelOverlay {
     this.update();
   }
 
+  /**
+   * Trails behind the vehicles, `seconds` of timetable long, fading out: what a replay at speed
+   * looks like, a long-exposure photo of the lines. 0 for none.
+   */
+  setTrail(seconds: number): void {
+    const s = Math.max(0, seconds);
+    if (s === this.trailS) return;
+    this.trailS = s;
+    this.update();
+  }
+
   /** Show some lines' routes over the rest (the caller repaints the ground), or all of them. */
   pick(routes: ReadonlySet<number> | null): void {
     this.picked = routes && routes.size ? routes : null;
@@ -161,6 +180,11 @@ export class TransitDisplay implements ModelOverlay {
   /** The vehicles on the model now. */
   get vehicles(): readonly ShownVehicle[] {
     return this.shown;
+  }
+
+  /** Whether trails are drawn now. */
+  get trailing(): boolean {
+    return this.trailS > 0 && !!this.trail?.visible;
   }
 
   get labelCount(): number {
@@ -184,6 +208,10 @@ export class TransitDisplay implements ModelOverlay {
 
   dispose(): void {
     this.clearLabels();
+    if (this.trail) {
+      this.trail.geometry.dispose();
+      this.trail.material.dispose();
+    }
     this.surfaceMesh.geometry.dispose();
     this.surfaceMesh.material.dispose();
     this.underMesh.material.dispose();
@@ -241,7 +269,98 @@ export class TransitDisplay implements ModelOverlay {
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
       mesh.computeBoundingSphere();
     }
+    this.updateTrails(surface);
     this.placeLabels();
+  }
+
+  /** The trails: a ribbon along each line from where its vehicle was `trailS` ago to where it is. */
+  private updateTrails(surface: ModelSurface): void {
+    if (!this.trailS) {
+      if (this.trail) this.trail.visible = false;
+      return;
+    }
+    const day = this.day;
+    const runs = day.runs;
+    const h = this.sizeM / 2;
+    const half = (this.width * TRAIL_WIDTH) / 2;
+    const lift = Math.max(0.5, this.height * 0.08);
+    const pos: number[] = [];
+    const col: number[] = [];
+    const idx: number[] = [];
+    const line: number[] = [];
+    const lens: number[] = [];
+    const c = new Color();
+    const ground = new Color(GROUND);
+    const clamp = (v: number) => Math.max(-h, Math.min(h, v));
+    for (let i = 0; i < day.run.length; i++) {
+      const r = day.run[i];
+      const t = this.time - day.shift[i];
+      if (t < runs.tIn[r] - 60 || t - this.trailS > runs.tOut[r] + 60) continue;
+      const m1 = distanceAt(runs, r, t);
+      const m0 = distanceAt(runs, r, t - this.trailS);
+      if (!(m1 - m0 > 1)) continue;
+      stretchOn(runs.paths[runs.runPath[r]], m0, m1, line);
+      const n = line.length / 2;
+      if (n < 2) continue;
+      lens.length = 0;
+      lens.push(0);
+      for (let k = 1; k < n; k++) lens.push(lens[k - 1] + Math.hypot(line[k * 2] - line[k * 2 - 2], line[k * 2 + 1] - line[k * 2 - 1]));
+      const total = lens[n - 1] || 1;
+      const route = runs.runRoute[r];
+      c.set(MODE_COLOURS[runs.routes[route].mode]);
+      if (this.picked && !this.picked.has(route)) c.lerp(ground, FADE);
+      const base = pos.length / 3;
+      for (let k = 0; k < n; k++) {
+        const a = Math.max(0, k - 1);
+        const b = Math.min(n - 1, k + 1);
+        const dx = line[b * 2] - line[a * 2];
+        const dy = line[b * 2 + 1] - line[a * 2 + 1];
+        const l = Math.hypot(dx, dy) || 1;
+        const nx = (-dy / l) * half;
+        const ny = (dx / l) * half;
+        const e = line[k * 2];
+        const nn = line[k * 2 + 1];
+        const y = surface.groundY(clamp(e), clamp(nn)) + lift;
+        pos.push(e + nx, y, -(nn + ny), e - nx, y, -(nn - ny));
+        // outside the square it fades away; towards the vehicle it gets stronger
+        const alpha = Math.abs(e) <= h && Math.abs(nn) <= h ? TRAIL_ALPHA * (lens[k] / total) ** 1.4 : 0;
+        col.push(c.r, c.g, c.b, alpha, c.r, c.g, c.b, alpha);
+        if (k > 0) {
+          const v = base + k * 2;
+          idx.push(v - 2, v - 1, v, v - 1, v + 1, v);
+        }
+      }
+    }
+    const verts = pos.length / 3;
+    if (!this.trail || verts > this.trailVerts || idx.length > this.trailIndex) {
+      // room for more, with some to spare
+      if (this.trail) {
+        this.object.remove(this.trail);
+        this.trail.geometry.dispose();
+        this.trail.material.dispose();
+      }
+      this.trailVerts = Math.max(1024, Math.ceil(verts * 1.5));
+      this.trailIndex = Math.max(1536, Math.ceil(idx.length * 1.5));
+      const geo = new BufferGeometry();
+      geo.setAttribute('position', new BufferAttribute(new Float32Array(this.trailVerts * 3), 3));
+      geo.setAttribute('color', new BufferAttribute(new Float32Array(this.trailVerts * 4), 4));
+      geo.setIndex(new BufferAttribute(new Uint32Array(this.trailIndex), 1));
+      const mat = new MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      this.trail = new Mesh(geo, mat);
+      this.trail.name = 'transit-trails';
+      this.trail.frustumCulled = false;
+      this.trail.renderOrder = 3;
+      this.object.add(this.trail);
+    }
+    const geo = this.trail.geometry;
+    (geo.getAttribute('position').array as Float32Array).set(pos);
+    (geo.getAttribute('color').array as Float32Array).set(col);
+    (geo.index!.array as Uint32Array).set(idx);
+    geo.getAttribute('position').needsUpdate = true;
+    geo.getAttribute('color').needsUpdate = true;
+    geo.index!.needsUpdate = true;
+    geo.setDrawRange(0, idx.length);
+    this.trail.visible = idx.length > 0;
   }
 
   private placeLabels(): void {

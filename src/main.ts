@@ -104,8 +104,8 @@ const debug = {
   steep: () => steep?.debugInfo() ?? null,
   traffic: () => traffic?.debugInfo() ?? null,
   transit: () => transit?.debugInfo() ?? null,
-  /** show the timetable at a moment (s after midnight), for tools/video */
-  transitAt: (s: number) => transit?.frameAt(s),
+  /** show the timetable at a moment (s after midnight), with trails that long (s), for tools/video */
+  transitAt: (s: number, trail = 0) => transit?.frameAt(s, trail),
 };
 (window as unknown as { __yourPlace: typeof debug }).__yourPlace = debug;
 

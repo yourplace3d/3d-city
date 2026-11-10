@@ -46,6 +46,12 @@ const OPEN_SIZE = 2000;
 const SPEEDS = [60, 600, 3600] as const;
 /** A tap this close to a vehicle (px) picks its line. */
 const TAP_PX = 22;
+/** Replays this fast (timetable seconds a second) or faster leave trails behind the vehicles… */
+const TRAIL_FROM_SPEED = 600;
+/** …as long as this many seconds of the replay, up to… */
+const TRAIL_REPLAY_S = 0.5;
+/** …this long (s of timetable). */
+const TRAIL_MAX_S = 20 * 60;
 /** At most this many labels when paused. */
 const MAX_LABELS = 10;
 
@@ -386,13 +392,14 @@ export class TransitController {
     return true;
   }
 
-  /** One moment, without labels, for rendering a video frame by frame (tools/video). */
-  frameAt(s: number): void {
+  /** One moment, without labels and with trails `trailS` long, for rendering a video frame by frame. */
+  frameAt(s: number, trailS = 0): void {
     this.playback.pause();
     this.time = Math.max(0, Math.min(DAY_S - 1, s));
     const d = this.shownDisplay();
     if (d) {
       d.overlay.setLabels([]);
+      d.overlay.setTrail(trailS);
       d.overlay.setTime(this.time);
     }
     this.renderChart();
@@ -429,6 +436,7 @@ export class TransitController {
       perHour: day ? runsPerHour(day, this.pickedRoutes()) : [],
       vehicles: d?.overlay.vehicles.length ?? 0,
       labels: d?.overlay.labelCount ?? 0,
+      trails: d?.overlay.trailing ?? false,
       picked: this.picked,
       playing: this.playback.playing,
       speed: this.speed,
@@ -665,9 +673,11 @@ export class TransitController {
     const btn = $('transit-play');
     btn.textContent = playing ? t.routePause : t.routePlay;
     btn.setAttribute('aria-pressed', String(playing));
+    const d = this.shownDisplay();
+    // fast replays leave trails, so the vehicles read as flowing rather than jumping
+    d?.overlay.setTrail(playing && this.speed >= TRAIL_FROM_SPEED ? Math.min(TRAIL_MAX_S, this.speed * TRAIL_REPLAY_S) : 0);
     if (playing) {
       this.setTime(pos * DAY_S, true);
-      const d = this.shownDisplay();
       if (d && d.overlay.labelCount) d.overlay.setLabels([]);
     } else {
       this.updateLabels();

@@ -3,7 +3,7 @@ import { catalogCsv, gtfsFiles, gtfsZip, zipFiles } from '../e2e/fixtures/transi
 import { feedAreaKm2, feedsFor, licenceName, parseCatalog } from '../src/data/sources/feedCatalog';
 import { findItem, listZip, openItem, ZipProblem } from '../src/data/sources/zipFile';
 import { crossesBox, cutGtfs, GtfsProblem, modeOf, parseDay, parseTime, runsOn, splitCsv, weekday, type GtfsCut } from '../src/data/sources/gtfs';
-import { cumulative, DAY_S, dayRuns, dayWithin, makeRuns, mergeRuns, projectStops, runAt, runsPerHour, spanInside, stretch, type TransitRuns, type VehicleAt } from '../src/data/match/transit';
+import { cumulative, DAY_S, dayRuns, dayWithin, distanceAt, makeRuns, mergeRuns, stretchOn, projectStops, runAt, runsPerHour, spanInside, stretch, type TransitRuns, type VehicleAt } from '../src/data/match/transit';
 import { resample, transitForPrint, TRANSIT_PRINT_MM } from '../src/export/transit';
 
 const CENTRE = { lat: 53.5511, lon: 9.9937 };
@@ -191,6 +191,28 @@ describe('runs through the square', () => {
     expect(runAt(r, bus, r.tIn[bus] + 60, v)).toBe(true);
     expect(v.e).toBeCloseTo(200, 1);
     expect(v.dy).toBeCloseTo(1, 3);
+  });
+
+  it('says how far along a vehicle is, and the stretch of line it covered (for trails)', async () => {
+    const r = await runs();
+    const tram = Array.from(r.runRoute).findIndex((x, i) => x === routeIndex(r, 'T1') && r.runHeadsign[i] === 'East');
+    const first = r.runFirst[tram];
+    // before its first stop and after its last it stays there
+    expect(distanceAt(r, tram, r.dep[first] - 600)).toBe(r.at[first]);
+    expect(distanceAt(r, tram, 99 * 3600)).toBe(r.at[r.runFirst[tram + 1] - 1]);
+    const t = r.tIn[tram] + 90;
+    const m1 = distanceAt(r, tram, t);
+    const m0 = distanceAt(r, tram, t - 120);
+    expect(m1).toBeGreaterThan(m0);
+    const line = stretchOn(r.paths[r.runPath[tram]], m0, m1, []);
+    // its ends are where the vehicle was and is
+    const v: VehicleAt = { e: 0, n: 0, dx: 0, dy: 0 };
+    runAt(r, tram, t, v);
+    expect(line[line.length - 2]).toBeCloseTo(v.e, 3);
+    let len = 0;
+    for (let k = 2; k < line.length; k += 2) len += Math.hypot(line[k] - line[k - 2], line[k + 1] - line[k - 1]);
+    expect(len).toBeCloseTo(m1 - m0, 1);
+    expect(stretchOn(r.paths[r.runPath[tram]], m1, m1, [1, 2])).toEqual([]);
   });
 
   it('times a train running through without stopping by where it is on its line', async () => {
