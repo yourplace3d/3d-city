@@ -73,7 +73,7 @@
           </section>
           <section class="layer-card" aria-labelledby="card-transit-title">
             <h2 id="card-transit-title"><i class="swatch swatch-transit" aria-hidden="true"></i><span data-t="dataLayers.transit">Public transport</span></h2>
-            <p data-t="cardTransit">Trams, buses, trains and ferries moving through the square as your city’s timetable has them. Load its timetable file (GTFS); it stays on your device. Or try:</p>
+            <p data-t="cardTransit">Trams, buses, trains and ferries moving through the square as your city’s timetable has them. Search your city, then find its timetable in the panel, or load a timetable file (GTFS); it stays on your device. Or try:</p>
             <div class="card-presets" id="transit-presets"></div>
             <button type="button" class="btn" id="transit-landing-btn" data-t="transitLoad">Load a timetable (GTFS)</button>
           </section>
@@ -181,10 +181,16 @@
               <p class="route-note traffic-credit" data-t="trafficCredit">Traffic counts: Freie und Hansestadt Hamburg, Behörde für Verkehr und Mobilitätswende (dl-de/by-2-0), live from iot.hamburg.de.</p>
             </div>
             <div class="transit-control" id="transit-control" hidden>
+              <div class="transit-find" id="transit-find" hidden>
+                <button type="button" class="btn btn-wide btn-primary" id="transit-find-btn" data-t="transitFind">Find timetables for this place</button>
+                <p class="traffic-status" id="transit-find-status" role="status" hidden></p>
+                <ul class="feed-list" id="transit-feeds" hidden></ul>
+                <p class="route-note" id="transit-find-note"><span data-t="transitFindNote">From the Mobility Database, an open list of public transport timetables worldwide.</span></p>
+              </div>
               <div id="transit-empty">
                 <button type="button" class="btn btn-wide" id="transit-load-btn" data-t="transitLoad">Load a timetable (GTFS)</button>
                 <button type="button" class="btn btn-wide" id="transit-demo" data-t="transitTryFreiburg">Try Freiburg’s timetable</button>
-                <p class="route-note"><span data-t="transitWhere">Transit operators publish their timetables as GTFS files (ZIP). Look for your city’s on its operator’s or open data website, or at transit.land or mobilitydatabase.org.</span> <span data-t="routeLocal">The file stays on this device. It’s never uploaded.</span></p>
+                <p class="route-note"><span data-t="transitWhere">Not listed? Transit operators publish their timetables as GTFS files (ZIP), often on their website or an open data portal.</span> <span data-t="routeLocal">The file stays on this device. It’s never uploaded.</span></p>
               </div>
               <p class="traffic-status" id="transit-status" role="status" hidden></p>
               <progress class="transit-progress" id="transit-progress" max="1" value="0" hidden></progress>
@@ -192,7 +198,7 @@
                 <button type="button" class="btn" id="transit-go" hidden></button>
               </div>
               <div class="transit-loaded" id="transit-loaded" hidden>
-                <p class="route-name" id="transit-name"></p>
+                <ul class="feed-list transit-sources" id="transit-sources" aria-label="Timetables shown" data-t-attr="aria-label:transitShown"></ul>
                 <div class="transit-day" id="transit-day-row">
                   <div class="control-label"><label for="transit-date" data-t="transitDay">Day</label></div>
                   <input type="date" id="transit-date" />
@@ -225,7 +231,7 @@
                 <p class="route-note" id="transit-shapes" hidden data-t="transitNoShapes">This file has no line shapes, so lines run straight from stop to stop.</p>
                 <p class="route-note traffic-credit" id="transit-credit"></p>
                 <div class="traffic-actions">
-                  <button type="button" class="btn" id="transit-another" data-t="transitAnother">Load another</button>
+                  <button type="button" class="btn" id="transit-another" data-t="transitAddFile">Add a timetable file</button>
                   <button type="button" class="btn" id="transit-remove" data-t="transitRemove">Remove timetable</button>
                 </div>
               </div>

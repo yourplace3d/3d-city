@@ -1913,3 +1913,76 @@ a.fab {
 .transit-lines:not(.picking) .chip .swatch {
   opacity: 1;
 }
+
+/* the timetables for a place (Mobility Database), and those shown */
+.transit-control:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+}
+
+.transit-control.has-timetable .transit-find {
+  order: 2;
+  margin-top: 14px;
+}
+
+.transit-find {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.feed-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feed-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.feed-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 1px;
+}
+
+.feed-text strong {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.feed-text small {
+  font-size: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.btn-small {
+  flex: none;
+  min-height: 32px;
+  padding: 4px 12px;
+  font-size: 13px;
+}
+
+.feed-remove {
+  width: 32px;
+  height: 32px;
+}
+
+.transit-sources {
+  margin-bottom: 4px;
+}

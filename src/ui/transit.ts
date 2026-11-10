@@ -14,6 +14,8 @@ import type { LngLat } from '../geo/projection';
 import type { CityModel } from '../scene/cityModel';
 import type { Viewer } from '../scene/viewer';
 import { readTimetable, TimetableProblem, type Timetable } from '../data/sources/timetable';
+import { downloadFeed, feedSize, feedsFor, licenceName, loadCatalog, CATALOG_SITE, type CatalogFeed } from '../data/sources/feedCatalog';
+import { MAX_GTFS_BYTES } from '../data/sources/gtfs';
 import type { TransitMode } from '../data/sources/gtfs';
 import { DAY_S, dayRuns, dayWithin, runsPerHour, type TransitDay, type TransitLine } from '../data/match/transit';
 import { MODE_COLOURS, modesOn, TransitDisplay } from '../data/display/transit';
@@ -49,6 +51,20 @@ const MAX_LABELS = 10;
 
 type Status = 'empty' | 'reading' | 'ready' | 'outside' | 'error';
 
+/** A timetable shown: a file the user picked, one from the Mobility Database, or Freiburg's demo. */
+interface Source {
+  blob: Blob;
+  demo: boolean;
+  feed: CatalogFeed | null;
+  /** the file's name, for a file the user picked */
+  name: string;
+}
+
+/** Freiburg's timetable, as we host it */
+const DEMO_FEED = { provider: 'Freiburger Verkehrs AG (VAG)', licence: 'https://www.govdata.de/dl-de/by-2-0' };
+
+
+
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const pad = (v: number) => String(v).padStart(2, '0');
 const clock = (s: number) => `${pad(Math.floor(s / 3600) % 24)}:${pad(Math.floor(s / 60) % 60)}`;
@@ -82,9 +98,14 @@ export class TransitController {
   on = false;
   private status: Status = 'empty';
   private problem = '';
-  private file: Blob | null = null;
-  private demo = false;
-  private fileId = 0;
+  private sources: Source[] = [];
+  /** goes up whenever the timetables shown change */
+  private version = 0;
+  /** what the panel says while a timetable downloads, instead of the reading progress */
+  private downloading = '';
+  /** the Mobility Database's timetables for the square, once looked for */
+  private found: { center: LngLat; feeds: CatalogFeed[]; sizes: Map<string, number | null> } | null = null;
+  private finding: 'idle' | 'busy' | 'failed' = 'idle';
   /** a file was just loaded: if the square has none of its lines, go where it runs */
   private fresh = false;
   /** a place was asked for (where the timetable runs): wait for it rather than look again */
@@ -134,6 +155,11 @@ export class TransitController {
   attach(model: CityModel, center: LngLat): void {
     this.last = { model, center };
     this.opening = false;
+    // the timetables found were for the square before
+    if (this.found && (this.found.center.lat !== center.lat || this.found.center.lon !== center.lon)) this.found = null;
+    else if (this.found) this.found.center = center;
+    this.finding = 'idle';
+    this.renderFeeds();
     this.playback.pause();
     if (this.on) this.refresh();
   }
@@ -164,24 +190,43 @@ export class TransitController {
 
   /** Who to credit on the poster, or null when no lines are shown. */
   credit(): string | null {
-    const tt = this.timetable;
-    if (!this.shown || !tt) return null;
-    return this.demo ? 'Timetable: Freiburger Verkehrs AG (VAG), dl-de/by-2-0' : tt.agencies.length ? `Timetable: ${tt.agencies.join(', ')}` : null;
+    if (!this.shown || !this.timetable) return null;
+    const list = this.sources.map((src, k) => {
+      const { name, licence } = this.creditOf(src, k);
+      const short = licence ? licenceName(licence) : null;
+      return short ? `${name} (${short})` : name;
+    });
+    return list.length ? `Timetable: ${list.join('; ')}` : null;
   }
 
-  /** A timetable file the user picked (or the demo): read it for the square shown, or find where it runs. */
-  loadFile(file: Blob, demo = false, go = true): void {
-    this.file = file;
-    this.demo = demo;
-    this.fileId++;
-    this.fresh = !demo;
+  /** Who made a timetable shown, and the link to its licence ('' when not known). */
+  private creditOf(src: Source, k: number): { name: string; licence: string } {
+    if (src.demo) return { name: DEMO_FEED.provider, licence: DEMO_FEED.licence };
+    if (src.feed) return { name: src.feed.provider, licence: src.feed.licence };
+    const agencies = this.timetable?.parts[k]?.agencies ?? [];
+    return { name: agencies.join(', ') || src.name, licence: '' };
+  }
+
+  /**
+   * A timetable file the user picked, one from the Mobility Database or the demo: read it for the
+   * square shown (with the others when `add`), or find where it runs.
+   */
+  loadFile(file: Blob, opts: { demo?: boolean; feed?: CatalogFeed | null; name?: string; add?: boolean; go?: boolean } = {}): void {
+    const src: Source = { blob: file, demo: !!opts.demo, feed: opts.feed ?? null, name: opts.name ?? (file instanceof File ? file.name : '') };
+    const add = !!opts.add && this.sources.length > 0;
+    this.sources = add ? [...this.sources, src] : [src];
+    this.version++;
+    // a file of one's own, with nothing else shown, may be for somewhere else: go where it runs
+    this.fresh = !add && !src.demo && !src.feed;
     this.timetable = null;
     this.key = '';
     this.picked = null;
-    this.dayNo = NaN;
+    if (!add) this.dayNo = NaN;
+    this.downloading = '';
     this.playback.pause();
     this.detach();
-    if (!go) return;
+    this.renderFeeds();
+    if (opts.go === false) return;
     // turning the layer on reads it; if it's on already, read it now
     if (!this.on) this.host.select();
     else this.refresh();
@@ -203,7 +248,7 @@ export class TransitController {
       const c = this.last?.center;
       const model = this.host.model();
       const there = !!c && !!model && this.last?.model === model && Math.abs(c.lat - TRANSIT_DEMO.center.lat) < 0.03 && Math.abs(c.lon - TRANSIT_DEMO.center.lon) < 0.05;
-      this.loadFile(blob, true, there);
+      this.loadFile(blob, { demo: true, go: there });
       if (!there) this.go(TRANSIT_DEMO.center, TRANSIT_DEMO.size, t.transitFreiburg);
     } catch (err) {
       console.warn('Demo timetable could not be loaded', err);
@@ -217,11 +262,97 @@ export class TransitController {
     this.host.open(center, size, label);
   }
 
-  /** Take the timetable away. */
+  /** Look up the Mobility Database's timetables for the square shown. */
+  async find(): Promise<void> {
+    const center = this.last?.center;
+    if (!center || this.finding === 'busy') return;
+    this.finding = 'busy';
+    this.renderFeeds();
+    let feeds: CatalogFeed[];
+    try {
+      feeds = feedsFor(await loadCatalog(), center);
+    } catch (err) {
+      console.warn('The timetable list could not be loaded', err);
+      if (this.last?.center === center) this.finding = 'failed';
+      this.renderFeeds();
+      return;
+    }
+    if (this.last?.center !== center) return;
+    const found = { center, feeds, sizes: new Map<string, number | null>() };
+    this.found = found;
+    this.finding = 'idle';
+    this.renderFeeds();
+    // how big each is, to say so and to leave out what's too big for a browser
+    await Promise.all(
+      feeds.map(async (f) => {
+        found.sizes.set(f.url, await feedSize(f.url));
+        if (this.found === found) this.renderFeeds();
+      }),
+    );
+  }
+
+  /** Download a timetable from the Mobility Database and show it, with any shown already. */
+  async loadFeed(feed: CatalogFeed): Promise<void> {
+    if (this.sources.some((s) => s.feed?.url === feed.url)) return;
+    this.abort?.abort();
+    const ac = new AbortController();
+    this.abort = ac;
+    this.status = 'reading';
+    this.progress = 0;
+    this.problem = '';
+    this.downloading = feed.provider;
+    this.syncPanel();
+    let shown = -1;
+    try {
+      const blob = await downloadFeed(
+        feed.url,
+        (share) => {
+          if (this.abort !== ac) return;
+          this.progress = Number.isNaN(share) ? 0 : share;
+          if (Math.floor(this.progress * 100) !== shown) {
+            shown = Math.floor(this.progress * 100);
+            this.syncPanel();
+          }
+        },
+        ac.signal,
+      );
+      if (this.abort !== ac) return;
+      this.abort = null;
+      this.loadFile(blob, { feed, add: true });
+    } catch (err) {
+      if (ac.signal.aborted || this.abort !== ac) return;
+      this.abort = null;
+      console.warn('The timetable could not be downloaded', err);
+      this.downloading = '';
+      if (this.sources.length) {
+        // what was shown stays
+        this.host.say(t.transitDownloadFailed, 5000);
+        this.key = '';
+        this.refresh();
+      } else this.fail('download');
+    }
+  }
+
+  /** Take one timetable away; the rest stay. */
+  removeSource(k: number): void {
+    if (this.sources.length <= 1) return this.remove();
+    this.sources = this.sources.filter((_, i) => i !== k);
+    this.version++;
+    this.timetable = null;
+    this.key = '';
+    this.picked = null;
+    this.detach();
+    this.renderFeeds();
+    this.refresh();
+  }
+
+  /** Take the timetables away. */
   remove(): void {
     this.abort?.abort();
     this.abort = null;
-    this.file = null;
+    this.sources = [];
+    this.version++;
+    this.downloading = '';
     this.timetable = null;
     this.dayData = null;
     this.key = '';
@@ -229,6 +360,7 @@ export class TransitController {
     this.playback.pause();
     this.detach();
     this.status = 'empty';
+    this.renderFeeds();
     this.syncPanel();
     this.host.changed();
     this.host.viewer.requestRender();
@@ -285,7 +417,10 @@ export class TransitController {
       status: this.status,
       problem: this.problem,
       shown: !!d,
-      demo: this.demo,
+      demo: this.sources.some((s) => s.demo),
+      sources: this.sources.map((s) => (s.demo ? 'demo' : s.feed ? s.feed.id : 'file')),
+      finding: this.finding,
+      found: this.found?.feeds.map((f) => f.id) ?? null,
       day: Number.isFinite(this.dayNo) ? isoDay(this.dayNo) : null,
       time: this.time,
       runs: this.timetable?.runs.tIn.length ?? 0,
@@ -310,8 +445,8 @@ export class TransitController {
 
   private refresh(): void {
     if (!this.on) return;
-    if (!this.file) {
-      this.status = 'empty';
+    if (!this.sources.length) {
+      if (this.status !== 'error') this.status = 'empty';
       this.detach();
       this.syncPanel();
       return;
@@ -325,7 +460,7 @@ export class TransitController {
       if (!model && !this.opening) this.read(null);
       return;
     }
-    const key = `${this.fileId}|${last.center.lat.toFixed(5)}|${last.center.lon.toFixed(5)}|${model.sizeM}`;
+    const key = `${this.version}|${last.center.lat.toFixed(5)}|${last.center.lon.toFixed(5)}|${model.sizeM}`;
     if (this.timetable && this.key === key) {
       if (this.display?.model !== model) this.show(model);
       return;
@@ -334,8 +469,8 @@ export class TransitController {
   }
 
   private read(square: { model: CityModel; center: LngLat; key: string } | null): void {
-    const file = this.file;
-    if (!file) return;
+    const files = this.sources.map((s) => s.blob);
+    if (!files.length) return;
     this.abort?.abort();
     const ac = new AbortController();
     this.abort = ac;
@@ -347,7 +482,7 @@ export class TransitController {
     const center = square?.center ?? { lat: 0, lon: 0 };
     let shown = 0;
     readTimetable(
-      { file, center, sizeM: square ? square.model.sizeM : 0 },
+      { files, center, sizeM: square ? square.model.sizeM : 0 },
       (share) => {
         if (this.abort !== ac) return;
         this.progress = share;
@@ -395,14 +530,22 @@ export class TransitController {
       (err) => {
         if (ac.signal.aborted || this.abort !== ac) return;
         this.abort = null;
-        this.fail(err instanceof TimetableProblem ? err.kind : 'unreadable');
+        const kind = err instanceof TimetableProblem ? err.kind : 'unreadable';
+        const k = err instanceof TimetableProblem ? err.file : 0;
+        if (this.sources.length > 1) {
+          // one of several can't be read: it goes, the others are shown
+          this.host.say(t.transitProblems[kind] ?? t.transitProblems.unreadable, 6000);
+          this.removeSource(k);
+        } else this.fail(kind);
       },
     );
   }
 
   private fail(kind: string): void {
     // a file that can't be read is let go: a new place won't try it again
-    this.file = null;
+    this.sources = [];
+    this.version++;
+    this.downloading = '';
     this.timetable = null;
     this.status = 'error';
     this.problem = kind;
@@ -687,13 +830,16 @@ export class TransitController {
     const s = this.status;
     const tt = this.timetable;
     const ready = this.on && s === 'ready' && !!tt && !!this.dayData;
-    const loaded = !!this.file;
+    const loaded = this.sources.length > 0;
     // the way to load one: until one is read, and again when it couldn't be
     $('transit-empty').hidden = s === 'reading' || (loaded && s !== 'error');
+    const pct = `${num(Math.round(this.progress * 100))} %`;
     const text =
       override ??
       (s === 'reading'
-        ? t.transitReading(`${num(Math.round(this.progress * 100))} %`)
+        ? this.downloading
+          ? t.transitDownloading(this.downloading, pct)
+          : t.transitReading(pct)
         : s === 'error'
           ? (t.transitProblems[this.problem] ?? t.transitProblems.unreadable)
           : s === 'outside'
@@ -712,10 +858,12 @@ export class TransitController {
     $('transit-loaded').hidden = !(loaded && (s === 'ready' || s === 'outside'));
     $('transit-figure').hidden = !ready;
     $('transit-day-row').hidden = !ready;
+    $('transit-control').classList.toggle('has-timetable', loaded && (s === 'ready' || s === 'outside'));
+    $('transit-remove').textContent = this.sources.length > 1 ? t.transitRemoveAll : t.transitRemove;
+    this.renderSources();
+    this.renderFeeds();
     if (tt) {
-      $('transit-name').textContent = this.demo ? 'Freiburger Verkehrs AG (VAG)' : tt.agencies.join(', ');
-      $('transit-credit').textContent = this.demo ? t.transitDemoCredit : t.transitCredit(tt.agencies.join(', ') || '–');
-      $('transit-shapes').hidden = tt.hasShapes;
+      $('transit-shapes').hidden = tt.parts.every((p) => p.hasShapes);
       const input = $<HTMLInputElement>('transit-date');
       if (Number.isFinite(tt.firstDay)) {
         input.min = isoDay(tt.firstDay);
@@ -726,24 +874,131 @@ export class TransitController {
     }
   }
 
+  /** The timetables shown, each with a way to take it away, and who to credit for them. */
+  private renderSources(): void {
+    const tt = this.timetable;
+    $('transit-sources').replaceChildren(
+      ...this.sources.map((src, k) => {
+        const { name } = this.creditOf(src, k);
+        const li = document.createElement('li');
+        const text = document.createElement('span');
+        text.className = 'feed-text';
+        const strong = document.createElement('strong');
+        strong.textContent = name || '–';
+        const small = document.createElement('small');
+        small.textContent = src.demo ? t.transitFreiburg : src.feed ? src.feed.place || src.feed.name : t.transitYourFile;
+        text.append(strong, small);
+        const x = document.createElement('button');
+        x.type = 'button';
+        x.className = 'icon-btn feed-remove';
+        x.setAttribute('aria-label', t.transitRemoveOne(name));
+        x.title = t.transitRemoveOne(name);
+        x.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>';
+        x.addEventListener('click', () => this.removeSource(k));
+        li.append(text, x);
+        return li;
+      }),
+    );
+    const credit = $('transit-credit');
+    if (!tt) {
+      credit.replaceChildren();
+      return;
+    }
+    const parts: Array<string | Node> = [`${t.transitCreditsLabel} `];
+    this.sources.forEach((src, k) => {
+      const { name, licence } = this.creditOf(src, k);
+      if (k) parts.push('; ');
+      parts.push(name || '–');
+      if (licence) {
+        const a = document.createElement('a');
+        a.href = licence;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = licenceName(licence) ?? t.transitLicence;
+        parts.push(' (', a, ')');
+      } else if (!src.demo && !src.feed) parts.push(` (${t.transitYourFile})`);
+    });
+    if (this.sources.some((src) => src.feed)) {
+      const a = document.createElement('a');
+      a.href = CATALOG_SITE;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.textContent = t.transitViaCatalog;
+      parts.push(', ', a);
+    }
+    parts.push('.');
+    credit.replaceChildren(...parts);
+  }
+
+  /** The finder: a button, then the Mobility Database's timetables for the square, each to load or add. */
+  private renderFeeds(): void {
+    const model = this.host.model();
+    const here = !!model && this.last?.model === model;
+    $('transit-find').hidden = !this.on || !here || (this.status === 'reading' && !this.found);
+    const found = this.found && this.last && this.found.center === this.last.center ? this.found : null;
+    const btn = $<HTMLButtonElement>('transit-find-btn');
+    btn.hidden = !!found;
+    btn.disabled = this.finding === 'busy';
+    const status = this.finding === 'busy' ? t.transitFinding : this.finding === 'failed' ? t.transitFindFailed : found && !found.feeds.length ? t.transitFindNone : '';
+    $('transit-find-status').textContent = status;
+    $('transit-find-status').hidden = !status;
+    const list = $('transit-feeds');
+    list.hidden = !found?.feeds.length;
+    if (!found) {
+      list.replaceChildren();
+      return;
+    }
+    const busy = this.status === 'reading';
+    list.replaceChildren(
+      ...found.feeds.map((f) => {
+        const li = document.createElement('li');
+        const text = document.createElement('span');
+        text.className = 'feed-text';
+        const strong = document.createElement('strong');
+        strong.textContent = f.provider;
+        const size = found.sizes.get(f.url);
+        const small = document.createElement('small');
+        small.textContent = [f.name, f.place, size ? t.transitFeedSize(num(size / 1048576, size < 10 * 1048576 ? 1 : 0)) : ''].filter(Boolean).join(' · ');
+        text.append(strong, small);
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn btn-small';
+        const shown = this.sources.some((s) => s.feed?.url === f.url);
+        const big = !!size && size > MAX_GTFS_BYTES;
+        b.textContent = shown ? t.transitFeedShown : big ? t.transitFeedTooBig : this.sources.length ? t.transitFeedAdd : t.transitFeedLoad;
+        b.disabled = shown || big || busy;
+        b.addEventListener('click', () => void this.loadFeed(f));
+        li.append(text, b);
+        return li;
+      }),
+    );
+  }
+
   private bind(): void {
     const input = $<HTMLInputElement>('transit-file');
-    $('transit-load-btn').addEventListener('click', () => this.pickFile());
-    $('transit-another').addEventListener('click', () => this.pickFile());
-    $('transit-landing-btn').addEventListener('click', () => this.pickFile());
+    // a file to add to those shown, or the first one
+    let adding = false;
+    const pick = (add: boolean) => {
+      adding = add;
+      this.pickFile();
+    };
+    $('transit-load-btn').addEventListener('click', () => pick(false));
+    $('transit-another').addEventListener('click', () => pick(true));
+    $('transit-landing-btn').addEventListener('click', () => pick(false));
+    $('transit-find-btn').addEventListener('click', () => void this.find());
     $('transit-remove').addEventListener('click', () => this.remove());
     $('transit-demo').addEventListener('click', () => void this.loadDemo());
     input.addEventListener('change', () => {
       const file = input.files?.[0];
       input.value = '';
-      if (file) this.loadFile(file);
+      if (file) this.loadFile(file, { add: adding });
     });
     // a ZIP dropped on the page is a timetable (a route is a GPX or TCX)
     window.addEventListener('drop', (e) => {
       const file = e.dataTransfer?.files[0];
       if (!file || !/\.zip$/i.test(file.name)) return;
       e.preventDefault();
-      this.loadFile(file);
+      this.loadFile(file, { add: true });
     });
     $('transit-go').addEventListener('click', () => {
       const b = this.timetable?.busiest;

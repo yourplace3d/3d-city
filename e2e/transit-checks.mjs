@@ -7,7 +7,7 @@
  * never goes out in a request, and that the panel fits a phone.
  */
 
-import { gtfsZip } from './fixtures/transit.mjs';
+import { catalogCsv, gtfsZip } from './fixtures/transit.mjs';
 
 /** Freiburg's centre, where the demo opens (src/ui/transit.ts). */
 const DEMO = { lat: 47.99555, lon: 7.85065 };
@@ -20,6 +20,19 @@ export async function transitChecks({ browser, base, routeAll, expect, watchCons
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 }, deviceScaleFactor: 1, acceptDownloads: true });
   await routeAll(ctx);
   await ctx.route(/timetables\/freiburg-2026\.zip$/, (route) => route.fulfill({ status: 200, contentType: 'application/zip', body: Buffer.from(gtfsZip(DEMO)) }));
+  // the Mobility Database: its list, and two timetables for the made-up Hamburg
+  const box = (c, d) => ({ south: c.lat - d, north: c.lat + d, west: c.lon - d * 1.6, east: c.lon + d * 1.6 });
+  const catalog = catalogCsv([
+    { id: 'test-city', provider: 'Test Transit', place: 'Hamburg', ...box(HAMBURG, 0.05), url: 'https://files.mobilitydatabase.org/test-city/latest.zip', licence: 'https://creativecommons.org/licenses/by/4.0/' },
+    { id: 'test-other', provider: 'Other Lines', name: 'Buses and trains', ...box(HAMBURG, 0.3), url: 'https://files.mobilitydatabase.org/test-other/latest.zip', licence: 'https://www.govdata.de/dl-de/by-2-0' },
+    { id: 'test-far', provider: 'Far Away', ...box(DEMO, 0.05), url: 'https://files.mobilitydatabase.org/test-far/latest.zip' },
+  ]);
+  const cors = { 'access-control-allow-origin': '*', 'access-control-expose-headers': '*' };
+  await ctx.route(/files\.mobilitydatabase\.org\/feeds_v2\.csv/, (route) => route.fulfill({ status: 200, contentType: 'text/csv', headers: cors, body: catalog }));
+  await ctx.route(/files\.mobilitydatabase\.org\/test-(city|other)\/latest\.zip/, (route) => {
+    const tag = /test-other/.test(route.request().url()) ? 'x' : '';
+    route.fulfill({ status: 200, contentType: 'application/zip', headers: cors, body: Buffer.from(gtfsZip(HAMBURG, { tag })) });
+  });
   const page = await ctx.newPage();
   watchConsole(page, 'transit');
   const requests = [];
@@ -123,6 +136,47 @@ export async function transitChecks({ browser, base, routeAll, expect, watchCons
   const msg = await page.textContent('#share-msg');
   expect(/\.stl$/.test(dl.suggestedFilename()) && / Transit lines raised 0\.4–1\.2 mm\./.test(msg), `the STL has the lines raised by their trips (“${msg.slice(0, 90)}…”)`);
   await page.keyboard.press('Escape');
+
+  // ---- timetables for this place, from the Mobility Database: load one, add another
+  const monday = async () => {
+    await page.fill('#transit-date', '2026-11-09');
+    await page.dispatchEvent('#transit-date', 'change');
+    await page.waitForFunction(() => window.__yourPlace.transit().day === '2026-11-09', null, { timeout: 10000 }).catch(() => undefined);
+  };
+  await page.goto('about:blank');
+  await page.goto(`${dataBase}#lat=${HAMBURG.lat}&lon=${HAMBURG.lon}&km=2&ex=1.5&dl=transit`);
+  await waitStage(page, ['ready', 'error']);
+  expect(await page.isVisible('#transit-find-btn'), 'the panel offers to find the timetables for the place shown');
+  requests.length = 0;
+  await page.click('#transit-find-btn');
+  await page.waitForSelector('#transit-feeds li', { timeout: 20000 }).catch(() => undefined);
+  await page.waitForFunction(() => /MB/.test(document.querySelector('#transit-feeds li small')?.textContent ?? ''), null, { timeout: 10000 }).catch(() => undefined);
+  x = await transit();
+  const listed = await page.locator('#transit-feeds li').allTextContents();
+  expect(x.found?.join(' ') === 'test-city test-other' && /Test Transit/.test(listed[0]) && /MB/.test(listed[0]), `it lists the Mobility Database’s timetables for the place, the most local first, with their size (${listed.map((l) => l.slice(0, 40)).join(' | ')})`);
+  const asked = requests.filter((r) => /mobilitydatabase/.test(r.url));
+  expect(asked.length > 0 && asked.every((r) => !new URL(r.url).search && !r.body), 'looking sends nothing about the place: the whole list is read and picked from on the device');
+  await shot(page, 'p5-transit-find');
+  await page.click('#transit-feeds li:nth-child(1) button');
+  await page.waitForFunction(() => window.__yourPlace.transit()?.status === 'ready' && window.__yourPlace.transit().sources.length === 1, null, { timeout: 60000 }).catch(() => undefined);
+  await monday();
+  x = await transit();
+  const credit = await page.textContent('#transit-credit');
+  expect(x.sources.join() === 'test-city' && x.lines.join(' ') === 'rail:S3 subway:U4 tram:T1 bus:B2' && (await page.textContent('#transit-feeds li:nth-child(1) button')) === 'Shown', `“Load” downloads it and shows it in one tap (${x.lines.length} lines)`);
+  expect(/Test Transit \(CC BY 4\.0\)/.test(credit) && /Mobility Database/.test(credit), `it is credited with its licence (“${credit}”)`);
+  expect((await page.textContent('#transit-feeds li:nth-child(2) button')) === 'Add', 'the others can be added to it');
+  await page.click('#transit-feeds li:nth-child(2) button');
+  await page.waitForFunction(() => window.__yourPlace.transit()?.status === 'ready' && window.__yourPlace.transit().sources.length === 2, null, { timeout: 60000 }).catch(() => undefined);
+  await monday();
+  x = await transit();
+  expect(x.sources.join() === 'test-city,test-other' && x.lines.join(' ') === 'rail:S3 rail:S3x subway:U4 subway:U4x tram:T1 tram:T1x bus:B2 bus:B2x' && (await page.locator('#transit-sources li').count()) === 2, `two timetables show together (${x.lines.join(' ')})`);
+  expect(/Test Transit \(CC BY 4\.0\); Other Lines \(dl-de\/by-2-0\)/.test(await page.textContent('#transit-credit')) && (await page.textContent('#transit-remove')) === 'Remove all timetables', 'both are credited');
+  await settle(page, 1000);
+  await shot(page, 'p6-transit-two');
+  await page.click('#transit-sources li:nth-child(2) .feed-remove');
+  await page.waitForFunction(() => window.__yourPlace.transit()?.status === 'ready' && window.__yourPlace.transit().sources.length === 1, null, { timeout: 60000 }).catch(() => undefined);
+  x = await transit();
+  expect(x.sources.join() === 'test-city' && x.lines.length === 4, 'one of them can be taken away, the other stays');
 
   // ---- a timetable of your own, picked while looking at another place: the app goes where it runs
   await page.goto('about:blank');

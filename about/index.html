@@ -127,7 +127,8 @@
           <li>A route file (GPX, TCX) is read in your browser and never uploaded or stored; reloading the page forgets it.
             Share links include the route only if you tick that, and then only the stretch shown, without times or a name.</li>
           <li>With the traffic layer on in Hamburg, the corners of the square you’re looking at go to the City of Hamburg’s traffic server, which returns its counts.</li>
-          <li>A timetable file (GTFS) is read in your browser and never uploaded or stored; reloading the page forgets it.</li>
+          <li>A timetable file (GTFS) is read in your browser and never uploaded or stored; reloading the page forgets it.
+            “Find timetables for this place” downloads the <a href="https://mobilitydatabase.org/">Mobility Database</a>’s whole list of timetables, the same for everyone, and picks those for your place on your device; loading one downloads it from the Mobility Database, which so learns which timetable you chose, not where you’re looking.</li>
         </ul>
       </section>
 
@@ -157,6 +158,7 @@
           <li>Address search: <a href="https://photon.komoot.io/">Photon</a> by komoot, <a href="https://nominatim.org/">Nominatim</a></li>
           <li>Fallback map data: <a href="https://overpass-api.de/">Overpass API</a></li>
           <li>Traffic counts: Freie und Hansestadt Hamburg, Behörde für Verkehr und Mobilitätswende, <a href="https://www.govdata.de/dl-de/by-2-0">dl-de/by-2-0</a>, via the city’s <a href="https://iot.hamburg.de/">SensorThings API</a></li>
+          <li>Timetables for a place: found through the <a href="https://mobilitydatabase.org/">Mobility Database</a> by MobilityData, each credited with its operator and licence in the panel</li>
           <li>Freiburg’s timetable (public transport demo): Freiburger Verkehrs AG (VAG), <a href="https://www.govdata.de/dl-de/by-2-0">dl-de/by-2-0</a>, cut down to what the app uses</li>
         </ul>
         <p>

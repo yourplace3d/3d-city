@@ -479,3 +479,54 @@ export function pointOn(p: TransitPath, m: number, out: VehicleAt): VehicleAt {
   out.dy = dy / l;
   return out;
 }
+
+/** Several timetables' runs through the same square as one (a city's buses and its trains, say). */
+export function mergeRuns(list: TransitRuns[]): TransitRuns {
+  if (list.length === 1) return list[0];
+  const cat = <T extends Int32Array | Float32Array>(make: (n: number) => T, parts: T[], add: (k: number) => number = () => 0, keepNegative = false): T => {
+    const out = make(parts.reduce((s, p) => s + p.length, 0));
+    let at = 0;
+    parts.forEach((p, k) => {
+      const d = add(k);
+      for (let i = 0; i < p.length; i++) out[at + i] = keepNegative && p[i] < 0 ? p[i] : p[i] + d;
+      at += p.length;
+    });
+    return out;
+  };
+  const offsets = (count: (r: TransitRuns) => number) => {
+    const o: number[] = [];
+    let s = 0;
+    for (const r of list) {
+      o.push(s);
+      s += count(r);
+    }
+    return o;
+  };
+  const routeOff = offsets((r) => r.routes.length);
+  const serviceOff = offsets((r) => r.services.length);
+  const pathOff = offsets((r) => r.paths.length);
+  const stopOff = offsets((r) => r.at.length);
+  const i32 = (n: number) => new Int32Array(n);
+  const f32 = (n: number) => new Float32Array(n);
+  const firsts = list.map((r) => r.runFirst.slice(0, r.runFirst.length - 1));
+  const runFirst = cat(i32, firsts, (k) => stopOff[k]);
+  const all = new Int32Array(runFirst.length + 1);
+  all.set(runFirst);
+  all[runFirst.length] = stopOff[list.length - 1] + list[list.length - 1].at.length;
+  return {
+    sizeM: list[0].sizeM,
+    routes: list.flatMap((r) => r.routes),
+    services: list.flatMap((r) => r.services),
+    paths: list.flatMap((r, k) => r.paths.map((p) => ({ ...p, route: p.route + routeOff[k] }))),
+    runPath: cat(i32, list.map((r) => r.runPath), (k) => pathOff[k]),
+    runRoute: cat(i32, list.map((r) => r.runRoute), (k) => routeOff[k]),
+    runService: cat(i32, list.map((r) => r.runService), (k) => serviceOff[k], true),
+    runHeadsign: list.flatMap((r) => r.runHeadsign),
+    runFirst: all,
+    at: cat(f32, list.map((r) => r.at)),
+    arr: cat(i32, list.map((r) => r.arr)),
+    dep: cat(i32, list.map((r) => r.dep)),
+    tIn: cat(i32, list.map((r) => r.tIn)),
+    tOut: cat(i32, list.map((r) => r.tOut)),
+  };
+}

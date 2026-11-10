@@ -50,8 +50,10 @@ shows over whichever layer you pick.
   and the streets rise and fall; tap a dot for that point's day. The chart is also a table. In the 3D print
   the traffic streets stand 0.5 to 2 mm high by traffic, at least 0.8 mm wide: a gentle relief, no spikes.
   Only Hamburg so far; elsewhere the panel says so and offers Hamburg.
-- **Public transport, from your city's timetable:** load the timetable file your transit operator publishes
-  (GTFS, a ZIP) and trams, buses, trains, U-Bahn and ferries move through the square as the timetable has
+- **Public transport, from your city's timetable:** "Find timetables for this place" lists the open
+  timetables the [Mobility Database](https://mobilitydatabase.org/) has for the square shown (about 2,600
+  in use, worldwide), most local first, with their size; one tap loads one, and more can be added (a city's
+  buses and its trains often come separately). Or load a timetable file (GTFS, a ZIP) yourself. Trams, buses, trains, U-Bahn and ferries move through the square as the timetable has
   them, with the same panel as Traffic: a bar chart of the trips into the square per hour, a clock, a
   replay at 1 minute, 10 minutes or 1 hour a second, and the lines as chips. Tap a vehicle or a chip to see
   one line; pick any day the timetable has. The file is read in the browser, in a background worker, and
@@ -201,6 +203,9 @@ Design notes:
 - Traffic counts (Your Place · Data): Freie und Hansestadt Hamburg, Behörde für Verkehr und
   Mobilitätswende, [Datenlizenz Deutschland – Namensnennung 2.0](https://www.govdata.de/dl-de/by-2-0),
   from the city's open [SensorThings API](https://iot.hamburg.de/). Credited in the panel and on posters.
+- Timetables found for a place: the [Mobility Database](https://mobilitydatabase.org/) by MobilityData,
+  its list and its copies of each operator's file. Each timetable is credited in the panel with its
+  operator and licence, as the list gives them.
 - Freiburg's timetable (the public transport demo, `public/timetables/`): Freiburger Verkehrs AG (VAG),
   [dl-de/by-2-0](https://www.govdata.de/dl-de/by-2-0), cut down to the files and columns the app reads.
   It runs until 12 December 2026; replace it with the next year's file. A timetable of your own is
@@ -216,7 +221,9 @@ loaded is cached on your device. A route file is read in your browser and never 
 no search service is asked where it runs; a share link includes the route only if you tick that, and then
 only the stretch shown, without times or a name. With the traffic layer on in Hamburg, the corners of the
 square shown go to the City of Hamburg's traffic server to fetch its counts. A timetable file (GTFS) is
-read in your browser and never uploaded or stored; reloading the page forgets it.
+read in your browser and never uploaded or stored; reloading the page forgets it. "Find timetables for
+this place" downloads the Mobility Database's whole list (the same for everyone) and picks from it on your
+device; loading one downloads it from the Mobility Database, which so learns which timetable, not where.
 
 ## Known limitations
 

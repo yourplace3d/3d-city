@@ -19,6 +19,7 @@ declare module 'node:fs' {
 // The made-up timetable shared with the end-to-end test.
 declare module '*/fixtures/transit.mjs' {
   export function zipFiles(files: Record<string, string | Uint8Array>, opts?: { deflate?: boolean; folder?: string }): Uint8Array;
-  export function gtfsFiles(center: { lat: number; lon: number }): Record<string, string>;
-  export function gtfsZip(center: { lat: number; lon: number }, opts?: { deflate?: boolean; folder?: string }): Uint8Array;
+  export function gtfsFiles(center: { lat: number; lon: number }, tag?: string): Record<string, string>;
+  export function gtfsZip(center: { lat: number; lon: number }, opts?: { deflate?: boolean; folder?: string; tag?: string }): Uint8Array;
+  export function catalogCsv(feeds: Array<Record<string, string | number>>): string;
 }

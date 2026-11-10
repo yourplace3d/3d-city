@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { gtfsFiles, gtfsZip, zipFiles } from '../e2e/fixtures/transit.mjs';
+import { catalogCsv, gtfsFiles, gtfsZip, zipFiles } from '../e2e/fixtures/transit.mjs';
+import { feedAreaKm2, feedsFor, licenceName, parseCatalog } from '../src/data/sources/feedCatalog';
 import { findItem, listZip, openItem, ZipProblem } from '../src/data/sources/zipFile';
 import { crossesBox, cutGtfs, GtfsProblem, modeOf, parseDay, parseTime, runsOn, splitCsv, weekday, type GtfsCut } from '../src/data/sources/gtfs';
-import { cumulative, DAY_S, dayRuns, dayWithin, makeRuns, projectStops, runAt, runsPerHour, spanInside, stretch, type TransitRuns, type VehicleAt } from '../src/data/match/transit';
+import { cumulative, DAY_S, dayRuns, dayWithin, makeRuns, mergeRuns, projectStops, runAt, runsPerHour, spanInside, stretch, type TransitRuns, type VehicleAt } from '../src/data/match/transit';
 import { resample, transitForPrint, TRANSIT_PRINT_MM } from '../src/export/transit';
 
 const CENTRE = { lat: 53.5511, lon: 9.9937 };
@@ -264,5 +265,75 @@ describe('transit lines in the 3D print', () => {
   it('samples a line evenly, ends included', () => {
     const pts = resample([0, 0, 25, 0], 8);
     expect(pts.map((p) => p[0])).toEqual([0, 8, 16, 25]);
+  });
+});
+
+describe('several timetables at once', () => {
+  it('shows another operator’s lines with the first one’s, each run where it was', async () => {
+    const a = await runs();
+    const other = await cutGtfs(blob(gtfsZip(CENTRE, { tag: 'x' })), { center: CENTRE, sizeM: SIZE });
+    const b = makeRuns(other, SIZE);
+    const m = mergeRuns([a, b]);
+    expect(m.routes.length).toBe(a.routes.length + b.routes.length);
+    expect(m.tIn.length).toBe(a.tIn.length + b.tIn.length);
+    expect(m.runFirst.length).toBe(m.tIn.length + 1);
+    expect(m.runFirst[m.runFirst.length - 1]).toBe(m.at.length);
+    const d = dayRuns(m, MONDAY);
+    expect(d.lines.map((l) => l.name)).toEqual(['S3', 'S3x', 'U4', 'U4x', 'T1', 'T1x', 'B2', 'B2x']);
+    expect(d.run.length).toBe(dayRuns(a, MONDAY).run.length + dayRuns(b, MONDAY).run.length);
+    // a run of the second timetable is where it was in its own
+    const k = a.tIn.length + 5;
+    const v1: VehicleAt = { e: 0, n: 0, dx: 0, dy: 0 };
+    const v2: VehicleAt = { e: 0, n: 0, dx: 0, dy: 0 };
+    const t = b.tIn[5] + 30;
+    expect(runAt(m, k, t, v1)).toBe(runAt(b, 5, t, v2));
+    expect([v1.e, v1.n]).toEqual([v2.e, v2.n]);
+    expect(m.routes[m.runRoute[k]].short).toBe(b.routes[b.runRoute[5]].short);
+    expect(m.paths[m.runPath[k]].pts).toBe(b.paths[b.runPath[5]].pts);
+    expect(mergeRuns([a])).toBe(a);
+  });
+});
+
+describe('finding a place’s timetables', () => {
+  const box = (lat: number, lon: number, d: number) => ({ south: lat - d, north: lat + d, west: lon - d * 1.6, east: lon + d * 1.6 });
+  const csv = catalogCsv([
+    { id: 'region', provider: 'Regional, Buses & Trains', ...box(53.55, 9.99, 0.6), url: 'https://files.example/region/latest.zip', licence: 'https://www.govdata.de/dl-de/by-2-0' },
+    { id: 'city', provider: 'City Trams', name: 'Trams and buses', place: 'Hamburg', ...box(53.55, 9.99, 0.08), url: 'https://files.example/city/latest.zip', licence: 'https://creativecommons.org/licenses/by/4.0/' },
+    { id: 'far', provider: 'Far Away Buses', ...box(48.1, 11.6, 0.1), url: 'https://files.example/far/latest.zip' },
+    { id: 'old', provider: 'Old Feed', ...box(53.55, 9.99, 0.05), url: 'https://files.example/old/latest.zip', status: 'deprecated' },
+    { id: 'key', provider: 'Needs A Key', ...box(53.55, 9.99, 0.05), url: 'https://files.example/key/latest.zip', auth: '2' },
+    { id: 'rt', provider: 'Live Positions', ...box(53.55, 9.99, 0.05), url: 'https://files.example/rt/latest.zip', type: 'gtfs_rt' },
+    { id: 'nocopy', provider: 'No Copy', ...box(53.55, 9.99, 0.05), url: '' },
+    { id: 'country', provider: 'A Whole Country', ...box(51, 10, 4), url: 'https://files.example/country/latest.zip' },
+  ]);
+
+  it('reads the list: timetables in use, open, with a copy to download and an area', () => {
+    const feeds = parseCatalog(csv);
+    expect(feeds.map((f) => f.id)).toEqual(['region', 'city', 'far', 'country']);
+    const city = feeds[1];
+    expect(city.provider).toBe('City Trams');
+    expect(city.name).toBe('Trams and buses');
+    expect(city.place).toBe('Hamburg');
+    expect(city.url).toBe('https://files.example/city/latest.zip');
+    expect(feeds[0].provider).toBe('Regional, Buses & Trains');
+    expect(feedAreaKm2(feeds[0])).toBeGreaterThan(feedAreaKm2(city));
+  });
+
+  it('picks those for the place, the most local first, and leaves out a whole country’s', () => {
+    const feeds = parseCatalog(csv);
+    expect(feedsFor(feeds, { lat: 53.55, lon: 9.99 }).map((f) => f.id)).toEqual(['city', 'region']);
+    expect(feedsFor(feeds, { lat: 48.1, lon: 11.6 }).map((f) => f.id)).toEqual(['far']);
+    expect(feedsFor(feeds, { lat: 0, lon: 0 })).toEqual([]);
+    expect(feedsFor(feeds, { lat: 53.55, lon: 9.99 }, 1).map((f) => f.id)).toEqual(['city']);
+  });
+
+  it('names common licences from their links', () => {
+    expect(licenceName('https://www.govdata.de/dl-de/by-2-0')).toBe('dl-de/by-2-0');
+    expect(licenceName('https://creativecommons.org/licenses/by/4.0/')).toBe('CC BY 4.0');
+    expect(licenceName('https://creativecommons.org/licenses/by-sa/4.0/deed.de')).toBe('CC BY-SA 4.0');
+    expect(licenceName('https://creativecommons.org/publicdomain/zero/1.0/deed.ja')).toBe('CC0');
+    expect(licenceName('https://opendatacommons.org/licenses/odbl/1.0/')).toBe('ODbL');
+    expect(licenceName('https://www.data.gouv.fr/pages/legal/licences/etalab-2.0')).toBe('Licence Ouverte');
+    expect(licenceName('https://www.vag-freiburg.de/service-info')).toBeNull();
   });
 });

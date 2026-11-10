@@ -89,8 +89,11 @@ function toLatLon(center) {
 
 const hms = (s) => `${String(Math.floor(s / 3600)).padStart(2, '0')}:${String(Math.floor(s / 60) % 60).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
-/** The timetable's files (name → text) around `center`. Weekday service `WD`, weekend `WE`. */
-export function gtfsFiles(center) {
+/**
+ * The timetable's files (name → text) around `center`. Weekday service `WD`, weekend `WE`. A `tag`
+ * makes it another operator's: its name and its lines' names end in it.
+ */
+export function gtfsFiles(center, tag = '') {
   const ll = toLatLon(center);
   const stops = [];
   const stop = (id, name, e, n) => {
@@ -149,14 +152,14 @@ export function gtfsFiles(center) {
   [times[swapAt], times[swapAt + 1]] = [times[swapAt + 1], times[swapAt]];
 
   return {
-    'agency.txt': '﻿agency_id,agency_name,agency_url,agency_timezone\n1,"Test Transit",https://example.org,Europe/Berlin\n',
+    'agency.txt': `\uFEFFagency_id,agency_name,agency_url,agency_timezone\n1,"Test Transit${tag}",https://example.org,Europe/Berlin\n`,
     'routes.txt': [
       'route_id,agency_id,route_short_name,route_long_name,route_type,route_color,route_desc',
-      'T1,1,"T1","Tram East–West",0,E34948,""',
-      'B2,1,"B2","Bus North–South",3,,""',
-      'S3,1,"S3","Suburban, diagonal",109,008300,""',
-      'U4,1,"U4","Underground",1,2A78D6,""',
-      'R9,1,"R9","Far away",3,,""',
+      `T1,1,"T1${tag}","Tram East–West",0,E34948,""`,
+      `B2,1,"B2${tag}","Bus North–South",3,,""`,
+      `S3,1,"S3${tag}","Suburban, diagonal",109,008300,""`,
+      `U4,1,"U4${tag}","Underground",1,2A78D6,""`,
+      `R9,1,"R9${tag}","Far away",3,,""`,
     ].join('\r\n') + '\r\n',
     'stops.txt': '﻿"stop_id","stop_name","stop_lat","stop_lon","parent_station"\n' + stops.join('\n') + '\n',
     'calendar.txt': 'service_id,monday,tuesday,wednesday,thursday,friday,saturday,sunday,start_date,end_date\nWD,1,1,1,1,1,0,0,20260101,20271231\nWE,0,0,0,0,0,1,1,20260101,20271231\n',
@@ -170,6 +173,21 @@ export function gtfsFiles(center) {
 }
 
 /** The timetable around `center` as a ZIP file's bytes. */
-export function gtfsZip(center, opts) {
-  return zipFiles(gtfsFiles(center), opts);
+export function gtfsZip(center, opts = {}) {
+  return zipFiles(gtfsFiles(center, opts.tag ?? ''), opts);
+}
+
+/**
+ * The Mobility Database's list of timetables (feeds_v2.csv) with these feeds: { id, provider, name,
+ * place, south, west, north, east, url, licence, status, auth, type }, the columns it really has.
+ */
+export function catalogCsv(feeds) {
+  const head = 'id,data_type,entity_type,location.country_code,location.subdivision_name,location.municipality,provider,is_official,name,note,feed_contact_email,static_reference,urls.direct_download,urls.authentication_type,urls.authentication_info,urls.api_key_parameter_name,urls.latest,urls.license,location.bounding_box.minimum_latitude,location.bounding_box.maximum_latitude,location.bounding_box.minimum_longitude,location.bounding_box.maximum_longitude,location.bounding_box.extracted_on,status,features,redirect.id,redirect.comment';
+  const q = (v) => (/[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+  const rows = feeds.map((f) =>
+    [f.id, f.type ?? 'gtfs', '', 'DE', 'Hamburg', f.place ?? '', f.provider, 'True', f.name ?? '', 'a note,\nover two lines', '', '', `https://example.org/${f.id}.zip`, f.auth ?? '0', '', '', f.url, f.licence ?? '', f.south, f.north, f.west, f.east, '2026-11-01 00:00:00+00:00', f.status ?? 'active', 'Shapes', '', '']
+      .map(q)
+      .join(','),
+  );
+  return `${head}\n${rows.join('\n')}\n`;
 }
