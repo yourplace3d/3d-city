@@ -17,6 +17,7 @@ import { SteepController } from './ui/steepness';
 import { TrafficController } from './ui/traffic';
 import { TRAFFIC_ATTRIBUTION } from './data/sources/hamburgTraffic';
 import { TransitController } from './ui/transit';
+import { bindQuickPlay } from './ui/quickPlay';
 import { AreaController } from './ui/areas';
 import type { AreaLayer } from './data/sources/areaProviders';
 import { area, direction, distance, num, t, translatePage } from './i18n';
@@ -187,6 +188,7 @@ const income = makeAreas('income');
 renderLegend();
 syncControls();
 bindControls();
+bindQuickPlay();
 setupSearch({
   form: $<HTMLFormElement>('search-form'),
   input: $<HTMLInputElement>('search-input'),

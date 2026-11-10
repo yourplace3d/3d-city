@@ -800,6 +800,8 @@ export class TransitController {
     const count = this.shownDisplay()?.overlay.vehicles.length ?? 0;
     const shown = this.hover != null ? `${pad(this.hover)}:00–${pad(this.hover + 1)}:00: ${t.transitTrips(values[this.hover], num(values[this.hover]))}` : `${when} · ${t.transitVehicles(count, num(count))}`;
     $('transit-readout').textContent = shown;
+    // the quick play button in the panel's bar shows the time too
+    $('transit-play').dataset.clock = clock(this.time);
     const chart = $('transit-chart');
     const minute = Math.floor(this.time / 60);
     chart.setAttribute('aria-valuenow', String(minute));

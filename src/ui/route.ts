@@ -415,11 +415,13 @@ export class RouteController {
     const d = this.display;
     if (!r || !d) {
       $('route-clock').textContent = '';
+      btn.dataset.clock = '';
       return;
     }
     if (!playing && position === 0) {
       d.overlay.setRunner(null);
       $('route-clock').textContent = '';
+      btn.dataset.clock = '';
       $('profile-runner').hidden = true;
       return;
     }
@@ -428,6 +430,8 @@ export class RouteController {
     const p = this.profile;
     if (p) this.placeOnProfile($('profile-runner'), sampleAtFraction(p.samples, (at.m - this.fromM) / (p.scale.dMax || 1)));
     $('route-clock').textContent = `${num(at.m / 1000, 1)} km${at.elapsed != null ? ` · ${formatClock(at.elapsed)}` : ''}`;
+    // the quick play button in the panel's bar shows how far the replay is
+    btn.dataset.clock = `${num(at.m / 1000, 1)} km`;
   }
 
   private syncPanel(): void {

@@ -553,7 +553,15 @@ a {
   padding-bottom: var(--safe-bottom);
 }
 
+.sheet-top {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
 .sheet-head {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -564,7 +572,61 @@ a {
   background: transparent;
   text-align: left;
   cursor: pointer;
-  position: relative;
+}
+
+/* a layer that moves in time plays from here, with the panel closed too */
+.quick-play {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  min-width: 40px;
+  margin-left: 12px;
+  margin-top: 2px;
+  padding: 0 14px 0 11px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.quick-play[hidden] {
+  display: none;
+}
+
+.quick-play:hover {
+  filter: brightness(1.06);
+}
+
+.quick-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  fill: currentColor;
+}
+
+.quick-clock:empty {
+  display: none;
+}
+
+.quick-pause-icon,
+.quick-play[aria-pressed='true'] .quick-play-icon {
+  display: none;
+}
+
+.quick-play[aria-pressed='true'] .quick-pause-icon {
+  display: inline;
+}
+
+.quick-play:not([hidden]) + .sheet-head {
+  padding-left: 12px;
 }
 
 .sheet-head::before {

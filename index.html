@@ -159,13 +159,19 @@
       </div>
 
       <aside class="sheet" id="sheet" aria-label="Model settings" data-t-attr="aria-label:settings">
-        <button type="button" class="sheet-head" id="sheet-toggle" aria-expanded="false" aria-controls="sheet-body">
-          <span class="sheet-title">
-            <span class="place-title" id="place-title">—</span>
-            <span class="place-meta" id="place-meta"></span>
-          </span>
-          <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6" /></svg>
-        </button>
+        <div class="sheet-top">
+          <button type="button" class="quick-play" id="quick-play" aria-pressed="false" hidden>
+            <svg class="quick-icon" viewBox="0 0 24 24" aria-hidden="true"><path class="quick-play-icon" d="M8 5.5v13l10.5-6.5z" /><path class="quick-pause-icon" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" /></svg>
+            <span class="quick-clock" id="quick-clock"></span>
+          </button>
+          <button type="button" class="sheet-head" id="sheet-toggle" aria-expanded="false" aria-controls="sheet-body">
+            <span class="sheet-title">
+              <span class="place-title" id="place-title">—</span>
+              <span class="place-meta" id="place-meta"></span>
+            </span>
+            <svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6" /></svg>
+          </button>
+        </div>
         <div class="sheet-body" id="sheet-body">
           <div class="control data-layer">
             <div class="control-label"><span id="data-layer-label" data-t="dataLayer">Data layer</span></div>

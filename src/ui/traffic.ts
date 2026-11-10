@@ -513,6 +513,9 @@ export class TrafficController {
     const shown = this.hover ?? this.hour;
     const readout = `${this.when(shown)}: ${this.countText(values[shown])}`;
     $('traffic-readout').textContent = readout;
+    // the quick play button in the panel's bar shows the hour too
+    const at = this.day?.hours[this.hour];
+    $('traffic-play').dataset.clock = at == null ? '' : this.hourFormat.format(at);
     const chart = $('traffic-chart');
     chart.setAttribute('aria-valuenow', String(this.hour));
     chart.setAttribute('aria-valuetext', `${this.when(this.hour)}: ${this.countText(values[this.hour])}`);

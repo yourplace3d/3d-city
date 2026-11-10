@@ -51,6 +51,7 @@ export async function transitChecks({ browser, base, routeAll, expect, watchCons
   await page.fill('#search-input', 'Stuttgart');
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => window.__yourPlace?.stage === 'ready', null, { timeout: 180000 });
+  expect(await page.isHidden('#quick-play'), 'Steepness doesn’t move in time: no play button in the panel’s bar');
   await page.click('#data-layer-group [data-value="transit"]');
   await page.click('#transit-demo');
   await page.waitForFunction((d) => Math.abs((window.__yourPlace.state().center?.lat ?? 0) - d.lat) < 0.001, DEMO, { timeout: 60000 }).catch(() => undefined);
@@ -123,6 +124,21 @@ export async function transitChecks({ browser, base, routeAll, expect, watchCons
   await page.click('#transit-play');
   x = await transit();
   expect(!x.playing && x.labels > 0 && !x.trails, 'pausing stops it, the trails go and the lines’ names come back');
+
+  // the play button in the panel's bar: it plays with the panel closed
+  if ((await page.getAttribute('#sheet', 'data-open')) === 'true') await page.click('#sheet-toggle');
+  const quickClock = (await page.textContent('#quick-clock')).trim();
+  expect((await page.isVisible('#quick-play')) && quickClock === (await page.textContent('#transit-readout')).match(/\d\d:\d\d/)?.[0], `with the panel closed, a play button stays on screen, with the time (${quickClock})`);
+  await page.click('#quick-play');
+  await page.waitForTimeout(800);
+  x = await transit();
+  expect(x.playing && (await page.getAttribute('#quick-play', 'aria-pressed')) === 'true' && (await page.getAttribute('#quick-play', 'aria-label')) === 'Pause' && (await page.textContent('#quick-clock')).trim() !== quickClock, `it plays the timetable, its time running (${(await page.textContent('#quick-clock')).trim()}), and turns into a pause button`);
+  await settle(page, 300);
+  await shot(page, 'p8-transit-quick-play');
+  await page.click('#quick-play');
+  x = await transit();
+  expect(!x.playing && (await page.getAttribute('#quick-play', 'aria-pressed')) === 'false' && (await page.textContent('#transit-play')) === 'Replay', 'a second tap pauses it, the panel’s Replay button too');
+  await page.click('#sheet-toggle');
 
   // table, description, a weekend day
   await page.click('#transit-figure .ttable summary');
@@ -226,7 +242,17 @@ export async function transitChecks({ browser, base, routeAll, expect, watchCons
   await pp.locator('#transit-demo').scrollIntoViewIfNeeded();
   await pp.tap('#transit-demo');
   await pp.waitForFunction(() => window.__yourPlace?.stage === 'ready' && window.__yourPlace.transit()?.status === 'ready', null, { timeout: 180000 }).catch(() => undefined);
-  if ((await pp.getAttribute('#sheet', 'data-open')) !== 'true') await pp.tap('#sheet-toggle');
+  // the bar at the bottom, with the panel closed: the play button and the place, side by side
+  if ((await pp.getAttribute('#sheet', 'data-open')) === 'true') await pp.tap('#sheet-toggle');
+  await settle(pp, 400);
+  const bar = await pp.evaluate(() => {
+    const r = (id) => document.getElementById(id).getBoundingClientRect();
+    const q = r('quick-play'), title = r('place-title');
+    return { quick: q.width > 0, titleW: title.width, apart: q.right <= title.left, inside: q.left >= 0 && q.bottom <= innerHeight };
+  });
+  expect(bar.quick && bar.apart && bar.inside && bar.titleW > 80, `on a phone the play button sits in the bar, next to the place’s name (${Math.round(bar.titleW)} px left for it)`);
+  await shot(pp, 'p9-transit-phone-bar');
+  await pp.tap('#sheet-toggle');
   await pp.locator('#transit-play').scrollIntoViewIfNeeded();
   await settle(pp, 400);
   const overflow = await pp.evaluate(() => document.documentElement.scrollWidth - innerWidth);
