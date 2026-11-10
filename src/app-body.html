@@ -58,8 +58,8 @@
         <!-- /only:place -->
         <!-- only:data -->
         <p class="eyebrow">Your Place · Data</p>
-        <h1 id="welcome-title" data-t="dataWelcomeTitle">Your place, through data</h1>
-        <p class="lede" data-t="dataWelcomeLede">Planning a run, a ride or a walk, or curious about your street? Pick a layer and a place.</p>
+        <h1 id="welcome-title" data-t="dataWelcomeTitle">Your city, through data</h1>
+        <p class="lede" data-t="dataWelcomeLede">Open data about a city on a 3D model: how steep its streets are, how busy, how its trams and buses run, what homes cost and what people earn. Pick a layer and a place.</p>
         <div class="layer-cards">
           <section class="layer-card" aria-labelledby="card-steep-title">
             <h2 id="card-steep-title"><i class="swatch swatch-steep" aria-hidden="true"></i><span data-t="dataLayers.steep">Steepness</span></h2>
@@ -96,7 +96,12 @@
         <p class="layers-more" data-t="moreLayers">More layers are on the way: water, energy.</p>
         <p class="welcome-more"><a href="../" data-t="partOf">Part of Your Place: any address as a 3D model, to share, hang or print</a></p>
         <!-- /only:data -->
+        <!-- only:place -->
         <p class="welcome-more"><a href="%ROOT%about/" data-t="aboutLink">How it works, 3D printing tips and data sources</a></p>
+        <!-- /only:place -->
+        <!-- only:data -->
+        <p class="welcome-more"><a href="%ROOT%about/" data-t="dataAboutLink">How it works and where the data comes from</a></p>
+        <!-- /only:data -->
         <label class="lang"><span data-t="language">Language</span> <select class="lang-select"></select></label>
       </section>
 
@@ -365,7 +370,12 @@
       <dialog class="dialog" id="share-dialog" aria-labelledby="share-title">
         <form method="dialog" class="dialog-inner">
           <div class="dialog-head">
+            <!-- only:place -->
             <h2 id="share-title" data-t="shareTitle">Share this model</h2>
+            <!-- /only:place -->
+            <!-- only:data -->
+            <h2 id="share-title" data-t="dataShareTitle">Share this view</h2>
+            <!-- /only:data -->
             <button class="icon-btn" value="close" aria-label="Close" data-t-attr="aria-label:close">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
             </button>
@@ -381,15 +391,33 @@
           <button type="button" class="btn btn-wide" id="native-share-btn" data-t="shareNative" hidden>Share…</button>
           <div class="title-fields">
             <div class="field">
+              <!-- only:place -->
               <label for="print-title" data-t="titleField">Title on the poster and print</label>
+              <!-- /only:place -->
+              <!-- only:data -->
+              <label for="print-title" data-t="dataTitleField">Title on the image and the print</label>
+              <!-- /only:data -->
               <input id="print-title" type="text" maxlength="48" autocomplete="off" enterkeyhint="done" />
             </div>
             <div class="field">
               <label for="print-subtitle"><span data-t="secondLine">Second line</span> <small data-t="optional">optional</small></label>
+              <!-- only:place -->
               <input id="print-subtitle" type="text" maxlength="48" autocomplete="off" enterkeyhint="done" placeholder="Where we met · June 2019" data-t-attr="placeholder:secondLineExample" />
+              <!-- /only:place -->
+              <!-- only:data -->
+              <input id="print-subtitle" type="text" maxlength="48" autocomplete="off" enterkeyhint="done" placeholder="Rent per m² · 2022 census" data-t-attr="placeholder:dataSecondLineExample" />
+              <!-- /only:data -->
             </div>
           </div>
+          <!-- only:place -->
           <button type="button" class="btn btn-wide btn-primary" id="poster-btn" data-t="posterButton">Download poster (PNG)</button>
+          <!-- /only:place -->
+          <!-- only:data -->
+          <button type="button" class="btn btn-wide btn-primary" id="poster-btn" data-t="dataImageButton">Download image (PNG)</button>
+          <!-- the data app is about what the data shows: the 3D print is there, folded away -->
+          <details class="print-details" id="print-details">
+            <summary data-t="dataPrintSection">3D print</summary>
+          <!-- /only:data -->
           <div class="print-block">
             <div class="control-label">
               <span id="print-label" data-t="printSize">3D print size</span>
@@ -419,6 +447,9 @@
             </fieldset>
             <button type="button" class="btn btn-wide" id="stl-btn" data-t="stlButton">Download 3D print file (STL)</button>
           </div>
+          <!-- only:data -->
+          </details>
+          <!-- /only:data -->
           <p class="dialog-note" id="share-msg" role="status" aria-live="polite"></p>
         </form>
       </dialog>
@@ -437,8 +468,14 @@
       </div>
     </div>
     <noscript>
+      <!-- only:place -->
       <p class="noscript">Your Place builds a 3D model of any address in your browser and needs JavaScript and WebGL 2.
         <a href="%ROOT%about/">Read how it works</a>.</p>
+      <!-- /only:place -->
+      <!-- only:data -->
+      <p class="noscript">Your Place · Data shows open data about a city on a 3D model in your browser and needs JavaScript and WebGL 2.
+        <a href="%ROOT%about/">Read how it works</a>.</p>
+      <!-- /only:data -->
     </noscript>
     <script type="module" src="/src/main.ts"></script>
   

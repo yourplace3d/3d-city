@@ -133,6 +133,8 @@ export async function transitChecks({ browser, base, routeAll, expect, watchCons
 
   // the lines in the 3D print
   await page.click('#share-btn');
+  // the data app folds the 3D print away
+  await page.evaluate(() => { const d = document.getElementById('print-details'); if (d) d.open = true; });
   expect((await page.isVisible('#print-transit-row')) && (await page.isChecked('#print-transit')) && (await page.isHidden('#print-traffic-row')), 'the 3D print offers the transit lines raised, ticked');
   await page.click('#print-size-group [data-value="150"]');
   const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.click('#stl-btn')]);

@@ -2093,3 +2093,22 @@ a.fab {
   font-size: 13.5px;
   font-weight: 560;
 }
+
+/* Your Place · Data: the 3D print is there, folded away */
+.print-details {
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.print-details > summary {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  font-weight: 560;
+  cursor: pointer;
+}
+
+.print-details[open] > summary {
+  margin-bottom: 8px;
+}

@@ -629,9 +629,9 @@ function offerOwnPlace(): void {
   const token = loadToken;
   window.setTimeout(() => {
     if (token !== loadToken || notice.visible) return;
-    notice.show(t.sharedInvite, [
+    notice.show(APP === 'data' ? t.dataSharedInvite : t.sharedInvite, [
       {
-        label: t.makeMyPlace,
+        label: APP === 'data' ? t.dataSearchPlace : t.makeMyPlace,
         primary: true,
         onClick: () => {
           notice.hide();
@@ -1184,7 +1184,7 @@ function bindShare(): void {
 
   nativeBtn.addEventListener('click', async () => {
     try {
-      await navigator.share({ title: placeLabel ? t.shareInApp(placeLabel) : 'Your Place', text: t.shareText(placeLabel || t.thisPlace), url: url.value });
+      await navigator.share({ title: placeLabel ? t.shareInApp(placeLabel) : 'Your Place', text: (APP === 'data' ? t.dataShareText : t.shareText)(placeLabel || t.thisPlace), url: url.value });
     } catch {
       /* dismissed */
     }
@@ -1194,7 +1194,7 @@ function bindShare(): void {
   posterBtn.addEventListener('click', async () => {
     if (!model || !state.center) return;
     posterBtn.disabled = true;
-    msg.textContent = t.renderingPoster;
+    msg.textContent = APP === 'data' ? t.dataRenderingImage : t.renderingPoster;
     try {
       // third-party data on the model is credited on the poster too
       const credit = traffic?.describe() ? TRAFFIC_ATTRIBUTION.text : (transit?.credit() ?? homes?.credit() ?? income?.credit() ?? undefined);
@@ -1202,10 +1202,10 @@ function bindShare(): void {
       saveBlob(blob, posterFileName(title(), state.size));
       msg.textContent = '';
       dialog.close();
-      toast(t.posterSaved);
+      toast(APP === 'data' ? t.dataImageSaved : t.posterSaved);
     } catch (err) {
       console.error(err);
-      msg.textContent = t.posterFailed;
+      msg.textContent = APP === 'data' ? t.dataImageFailed : t.posterFailed;
     } finally {
       posterBtn.disabled = false;
     }
