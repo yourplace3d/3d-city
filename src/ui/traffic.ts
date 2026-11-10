@@ -213,6 +213,23 @@ export class TrafficController {
     return t.trafficSummary(t.trafficCount[this.kind](num(day.totals[i])), day.counted[i], this.when(i));
   }
 
+  /** One moment of the day (hours from its first, fractions too), without labels, for rendering a video frame by frame. */
+  frameAt(at: number): void {
+    this.playback.pause();
+    const d = this.shownDisplay();
+    if (!d) return;
+    const h = Math.max(0, Math.min(HOURS - 1, at));
+    d.overlay.setTime(h);
+    d.overlay.setLabels([]);
+    this.host.moved();
+    const hour = Math.round(h);
+    if (hour !== this.hour) {
+      this.hour = hour;
+      this.renderChart();
+    }
+    this.host.viewer.requestRender();
+  }
+
   /** For tests (window.__yourPlace.traffic()). */
   debugInfo(): unknown {
     const d = this.shownDisplay();

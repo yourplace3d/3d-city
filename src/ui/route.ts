@@ -255,6 +255,13 @@ export class RouteController {
     return summary ? `${line} ${t.profileLabel(summary)}` : line;
   }
 
+  /** The replay at one point (0–1), paused, for rendering a video frame by frame. */
+  frameAt(position: number): void {
+    this.playback.pause();
+    this.playback.seek(position);
+    this.host.viewer.requestRender();
+  }
+
   /** For tests (window.__yourPlace.route()). */
   debugInfo(): unknown {
     const r = this.route;

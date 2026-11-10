@@ -108,6 +108,12 @@ const debug = {
   transit: () => transit?.debugInfo() ?? null,
   /** show the timetable at a moment (s after midnight), with trails that long (s), for tools/video */
   transitAt: (s: number, trail = 0) => transit?.frameAt(s, trail),
+  /** the route's replay at a point (0–1), for tools/video */
+  routeAt: (position: number) => route?.frameAt(position),
+  /** the traffic at a moment of the day (hours from its first, fractions too), for tools/video */
+  trafficAt: (hour: number) => traffic?.frameAt(hour),
+  /** the model's streets and paths (metres E, N of the centre), for tools/video to lay a run along them */
+  streets: () => model?.featureSet?.lines.filter((l) => !['rail', 'river', 'canal', 'stream'].includes(l.kind)).map((l) => ({ kind: l.kind, pts: l.pts })) ?? null,
   /** the Homes and Income layers */
   areas: (layer: AreaLayer) => (layer === 'homes' ? homes : income)?.debugInfo() ?? null,
 };
