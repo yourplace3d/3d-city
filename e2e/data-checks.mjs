@@ -63,6 +63,8 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
 
   // ---- your route, over steepness
   expect(!requests.some((q) => /iot\.hamburg\.de/.test(q.url)), 'no traffic counts are asked for while the traffic layer is off');
+  // from here on, only what loading the route asks for (the place above was searched for by name)
+  requests.length = 0;
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('#route-load-btn')]);
   await chooser.setFiles({ name: 'test-city-half.gpx', mimeType: 'application/gpx+xml', buffer: Buffer.from(routeGpx()) });
   await page.waitForFunction(() => window.__yourPlace.route()?.shown && window.__yourPlace.route()?.name === 'Test City Half', null, { timeout: 60000 });
