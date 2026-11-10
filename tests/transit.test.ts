@@ -75,7 +75,7 @@ describe('GTFS parsing', () => {
   });
 
   it('turns route types, basic and extended, into modes', () => {
-    const cases: Array<[number, string]> = [[0, 'tram'], [1, 'subway'], [2, 'rail'], [3, 'bus'], [4, 'ferry'], [7, 'other'], [109, 'rail'], [402, 'subway'], [702, 'bus'], [900, 'tram'], [1200, 'ferry'], [1300, 'other'], [11, 'bus']];
+    const cases: Array<[number, string]> = [[0, 'tram'], [1, 'subway'], [2, 'rail'], [3, 'bus'], [4, 'ferry'], [7, 'other'], [109, 'rail'], [400, 'subway'], [402, 'subway'], [404, 'subway'], [405, 'rail'], [702, 'bus'], [900, 'tram'], [1200, 'ferry'], [1300, 'other'], [11, 'bus']];
     for (const [type, mode] of cases) expect(modeOf(type), String(type)).toBe(mode);
   });
 

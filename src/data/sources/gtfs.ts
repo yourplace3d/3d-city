@@ -20,8 +20,9 @@ export const TRANSIT_MODES: readonly TransitMode[] = ['rail', 'subway', 'tram', 
 /** A GTFS route type (basic or extended) as one of our modes. */
 export function modeOf(type: number): TransitMode {
   if (type === 0 || type === 5 || (type >= 900 && type < 1000)) return 'tram';
-  if (type === 1 || type === 401 || type === 402) return 'subway';
-  if (type === 2 || (type >= 100 && type < 200) || type === 400 || type === 403 || type === 404 || type === 12 || type === 405) return 'rail';
+  // 400–404, the urban railways: Berlin's U-Bahn is 400 (as other GTFS tools read it, e.g. OpenTripPlanner)
+  if (type === 1 || (type >= 400 && type <= 404)) return 'subway';
+  if (type === 2 || (type >= 100 && type < 200) || type === 12 || type === 405) return 'rail';
   if (type === 3 || type === 11 || (type >= 200 && type < 300) || (type >= 700 && type < 900)) return 'bus';
   if (type === 4 || (type >= 1000 && type < 1100) || (type >= 1200 && type < 1300)) return 'ferry';
   return 'other';
