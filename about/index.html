@@ -76,6 +76,7 @@
             (the terrain data has points 10–30 m apart, so it’s an estimate: short ramps and stairs can be missed, and bridges are left out);
             <strong>traffic</strong> in Hamburg, the cars or bikes the city counted in each of the last 24 hours, as red streets that rise with the traffic, with a bar chart of the day;
             <strong>public transport</strong> from your city’s timetable (a GTFS file from your transit operator), with trams, buses, trains and ferries moving through the square as the timetable has them;
+            <strong>homes</strong> and <strong>income</strong>, the buildings coloured by what homes cost or what people earn in the area they stand in, from open data you load (the panel lists the sources known for your place);
             and, over any of them, <strong>your route</strong> from a GPX or TCX file (a run, a ride, a race), with its steepest climbs, a height profile and a replay.</li>
         </ul>
       </section>
@@ -129,6 +130,8 @@
           <li>With the traffic layer on in Hamburg, the corners of the square you’re looking at go to the City of Hamburg’s traffic server, which returns its counts.</li>
           <li>A timetable file (GTFS) is read in your browser and never uploaded or stored; reloading the page forgets it.
             “Find timetables for this place” downloads the <a href="https://mobilitydatabase.org/">Mobility Database</a>’s whole list of timetables, the same for everyone, and picks those for your place on your device; loading one downloads it from the Mobility Database, which so learns which timetable you chose, not where you’re looking.</li>
+          <li>A file of values for Homes or Income is read in your browser and never uploaded or stored; share links carry the layer, not the file.
+            “Load for this square” asks the Dutch statistics office’s map server (PDOK) for the corners of the square shown; the other sources are links you open yourself.</li>
         </ul>
       </section>
 
@@ -160,6 +163,9 @@
           <li>Traffic counts: Freie und Hansestadt Hamburg, Behörde für Verkehr und Mobilitätswende, <a href="https://www.govdata.de/dl-de/by-2-0">dl-de/by-2-0</a>, via the city’s <a href="https://iot.hamburg.de/">SensorThings API</a></li>
           <li>Timetables for a place: found through the <a href="https://mobilitydatabase.org/">Mobility Database</a> by MobilityData, each credited with its operator and licence in the panel</li>
           <li>Freiburg’s timetable (public transport demo): Freiburger Verkehrs AG (VAG), <a href="https://www.govdata.de/dl-de/by-2-0">dl-de/by-2-0</a>, cut down to what the app uses</li>
+          <li>Rents (Homes): Zensus 2022, Statistische Ämter des Bundes und der Länder, <a href="https://www.govdata.de/dl-de/by-2-0">dl-de/by-2-0</a>; the Freiburg example is cut from it</li>
+          <li>Home values and incomes for the Netherlands: CBS, Kerncijfers wijken en buurten, via PDOK, <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>; the Amsterdam example is cut from it</li>
+          <li>Home values and incomes for the US: U.S. Census Bureau, American Community Survey, via <a href="https://censusreporter.org/">Census Reporter</a></li>
         </ul>
         <p>
           Your Place is open source under the MIT licence:

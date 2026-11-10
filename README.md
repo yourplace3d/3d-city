@@ -65,6 +65,17 @@ shows over whichever layer you pick.
   behind them. It's the plan, not live, so delays don't show. In the 3D print
   the lines that run that day stand 0.4 to 1.2 mm high by the trips on them, adding up where lines share a
   street.
+- **Homes and Income:** the buildings coloured by what homes cost, or what people earn, in the area they
+  stand in, from open data you load. The panel lists the open sources we know for the place: Germany's
+  2022 census (average rent per m² in 100 m squares: download the 9 MB ZIP and load it as it is), CBS for
+  the Netherlands (home values per neighbourhood, incomes per district, loaded in one tap for the square),
+  and Census Reporter for the US (median home value and household income per block group: download your
+  county as GeoJSON). Any GeoJSON or CSV with values per area works too: grid squares (the INSPIRE codes
+  the census uses), polygons in longitude/latitude, UTM or Web Mercator, or single points such as sales,
+  which only show as the median of each 100 m square with at least five. Five blues, light to dark, each
+  hold a fifth of the areas in the square; buildings without a value turn grey. The pin's area is outlined
+  and its value shown, with how it compares. "Try" loads Freiburg's rents or Amsterdam's incomes, which we
+  host. Germany publishes incomes only per town, so the Income layer has no source there yet.
 - **Your route:** load a GPX or TCX file (Strava, Garmin, a race website) and pick the stretch to show; the
   model follows it, over any layer. On Steepness the line takes the steepness colours (and only the route is
   coloured), with start, finish, km markers and the
@@ -211,6 +222,12 @@ Design notes:
   [dl-de/by-2-0](https://www.govdata.de/dl-de/by-2-0), cut down to the files and columns the app reads.
   It runs until 12 December 2026; replace it with the next year's file. A timetable of your own is
   credited with the operators named in it.
+- Homes and Income sources, each credited in the panel and on posters: Zensus 2022, Statistische Ämter
+  des Bundes und der Länder ([dl-de/by-2-0](https://www.govdata.de/dl-de/by-2-0)); CBS, Kerncijfers wijken
+  en buurten, via PDOK ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)); U.S. Census Bureau,
+  American Community Survey 5-year estimates, via [Census Reporter](https://censusreporter.org/). The
+  examples in `public/areas/` (Freiburg's rents, Amsterdam's incomes) are cut from the first two; see the
+  README there.
 - Photon, Nominatim and Overpass are shared community services with fair-use limits. If the app gets
   very popular, the address search should move to an own or paid geocoder.
 
@@ -225,6 +242,9 @@ square shown go to the City of Hamburg's traffic server to fetch its counts. A t
 read in your browser and never uploaded or stored; reloading the page forgets it. "Find timetables for
 this place" downloads the Mobility Database's whole list (the same for everyone) and picks from it on your
 device; loading one downloads it from the Mobility Database, which so learns which timetable, not where.
+A file of values for Homes or Income is read in your browser and never uploaded or stored; share links
+carry the layer, not the file. "Load for this square" (CBS) asks PDOK's server for the square's
+corners, as the traffic layer does; the other sources are links you open yourself.
 
 ## Known limitations
 
@@ -257,7 +277,9 @@ classes, bridges, climbs, height totals, the profile), and traffic counts (the r
 24 hours, adding up both directions of a road, the chart's scale), and timetables (ZIP reading, CSV with
 quotes, times past midnight, days and exceptions, route types, the cut to the square for trips that stop
 in it, run through it on a shape or cross it straight, positions between stops, the evening before after
-midnight, the print's heights).
+midnight, the print's heights), and values per area (map projections, numbers as statistics offices write
+them, grid codes, the census's ZIP, GeoJSON in a projection or none named, Census Reporter's download,
+points as medians, holes, the classes, the sources for a place).
 
 `npm run e2e` serves the build, answers Overpass and geocoding from a deterministic synthetic city
 (`e2e/fixtures/synthetic-city.mjs`), uses real terrain tiles, and drives search, every control,
@@ -273,7 +295,10 @@ own, the table, replay, bikes, the traffic streets in the 3D print, and a route 
 transport (a made-up timetable, `e2e/fixtures/transit.mjs`): the Freiburg demo, the day, the chart by
 pointer and keyboard, a vehicle tapped, a line's chip, replay and its speed, the table, the 3D print, a
 file of your own that opens where it runs, a square it doesn't reach, a file that isn't one, a phone, and
-that the file never leaves the browser. It fails on any console error.
+that the file never leaves the browser. Homes and Income (`e2e/fixtures/areas.mjs`): both examples, a
+place with no source known, CBS in one tap for the square's box, the census's ZIP as it comes, taps on
+buildings, another file and column, a file for elsewhere, files it can't use, a phone, and that the file
+never leaves the browser. It fails on any console error.
 
 ## Licence
 

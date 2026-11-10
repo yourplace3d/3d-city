@@ -371,7 +371,7 @@ export const de: Messages = {
   areaDemoPlace: { homes: 'Freiburg im Breisgau', income: 'Amsterdam' },
   areaDownloading: 'Wird heruntergeladen…',
   areaReading: (pct) => `Datei wird gelesen… ${pct}`,
-  areaShowing: 'Zeigt',
+  areaShowing: 'Angezeigt',
   areaLegend: 'Farben',
   areaOtherColumns: 'Weitere Spalten der Datei',
   areaMeasures: {

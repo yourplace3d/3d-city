@@ -298,8 +298,17 @@ export class AreaController {
     const model = this.host.model();
     const last = this.last;
     if (!model || !last || last.model !== model) return;
-    // a provider's download is for one square: get this one's
+    // a provider's download is for one square: get this one's, if it has data here
     if (src.provider?.load && src.square !== squareKey(last.center, model.sizeM)) {
+      if (!providersFor(this.layer, last.center.lat, last.center.lon).includes(src.provider)) {
+        this.cut = null;
+        this.key = '';
+        this.detach();
+        this.status = 'outside';
+        this.syncPanel();
+        this.host.changed();
+        return;
+      }
       void this.loadProvider(src.provider);
       return;
     }

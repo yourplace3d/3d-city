@@ -44,6 +44,27 @@ The contracts are in `src/data/types.ts`. Four worked examples:
   instanced blocks moved per frame), wired up by `src/ui/transit.ts`; in the print `export/transit.ts`. A
   demo file is hosted in `public/timetables/`. The e2e fixture `e2e/fixtures/transit.mjs` makes a timetable
   around any centre, also used by the unit tests.
+- **Homes and Income** (values per area the user brings, with a list of where to get them):
+  `sources/areaFile.ts` reads GeoJSON (polygons or points, in lon/lat or a projection `geo/crs.ts` knows,
+  named or guessed from where it lands), CSV grids with INSPIRE cell codes (EPSG:3035, the census's), CSV
+  points with latitude/longitude, or a ZIP of one (the finest grid wins); numbers as offices write them
+  (decimal commas, placeholders such as −99997). `sources/areaProviders.ts` is the short, checked list of
+  open sources per area (`load` for servers a browser may read, cut to the square's box; `link` for a
+  download the user opens) and the profiles of columns we know (unit, scale, credit). `match/areas.ts` gives
+  each building its area's value (a bucketed index, the smallest area wins, holes respected) and turns
+  points into medians of 100 m squares with at least five, so no single sale shows. `display/areas.ts`
+  colours buildings through `CityModel.setBuildingTint` and outlines areas on the ground; `ui/areas.ts` is
+  one controller per layer. Examples in `public/areas/`; the fixture `e2e/fixtures/areas.mjs`.
+
+**No worldwide catalogue? Keep a short list, and check each entry.** For data published country by
+country, list the sources you have actually opened: the file's format, its columns, its licence, whether a
+browser may read the server (CORS) and how big it is. Say plainly where there's none (Germany publishes
+incomes only per town), and let any file in a common format work.
+
+**Values per area: colour by class, say where they come from.** Five classes of one hue (a validated ordered
+ramp: lightest still clear of white buildings and the ground), split at the fifths of the areas in the
+square and rounded to two figures; grey for no value, never the lightest class. Show the value at the pin
+and how it compares; mark what the office marks as uncertain; credit the office and its licence.
 
 **Big files: stream them, cut them, keep them off the page's thread.** Read a file the user brings in a
 worker, in pieces (never `arrayBuffer()` on hundreds of MB), keep only what the square needs, and send back
