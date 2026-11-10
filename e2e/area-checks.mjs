@@ -154,10 +154,7 @@ export async function areaChecks({ browser, base, routeAll, expect, watchConsole
   expect(/very few homes/.test(await text('#homes-control')), 'uncertain values are explained');
   expect(!requests.some((r) => /durchschnMieteQM|GITTER_ID|PK\u0003\u0004/.test(r.body) || /\.(zip|csv|geojson)$/i.test(new URL(r.url).pathname)), 'the file never leaves the device: no request carries it');
   expect(!/Zensus|zip/i.test(await page.evaluate(() => location.hash)), 'the share link carries the layer, not the file');
-  // the data app speaks of data: the invitation of a shared link, the share dialog
-  await page.waitForFunction(() => /See your own city/.test(window.__yourPlace.notice() ?? ''), null, { timeout: 8000 }).catch(() => undefined);
-  expect(/See your own city/.test((await page.evaluate(() => window.__yourPlace.notice())) ?? ''), 'a shared view invites to look at one’s own city, not to make a keepsake');
-  await page.click('#notice-close').catch(() => undefined);
+  // the data app speaks of data: its share dialog
   await page.click('#share-btn');
   expect(
     (await text('#share-title')) === 'Share this view' && (await text('#poster-btn')) === 'Download image (PNG)' && /Rent per m²/.test((await page.getAttribute('#print-subtitle', 'placeholder')) ?? '') && !(await page.isVisible('#stl-btn')) && (await page.isVisible('#print-details > summary')),
@@ -206,6 +203,20 @@ export async function areaChecks({ browser, base, routeAll, expect, watchConsole
   x = await areas('homes');
   expect(x.status === 'error' && x.problem === 'sevenZip' && /7z/.test(await text('#homes-control .traffic-status')) && (await page.isVisible('#homes-control [data-act="load"]')), 'a 7z file gets told to unpack it first, and another can be picked');
   await ctx.close();
+
+  // ---- someone opening a shared view, for the first time: invited to look at their own city
+  const fresh = await browser.newContext({ viewport: { width: 1280, height: 860 }, deviceScaleFactor: 1 });
+  await routeAll(fresh);
+  const fp = await fresh.newPage();
+  watchConsole(fp, 'areas-shared');
+  await fp.goto(`${dataBase}#lat=${STUTTGART.lat}&lon=${STUTTGART.lon}&km=2&ex=1.5&dl=homes`);
+  await waitStage(fp, ['ready', 'error']);
+  await fp.waitForFunction(() => /See your own city/.test(window.__yourPlace.notice() ?? ''), null, { timeout: 10000 }).catch(() => undefined);
+  expect(
+    /See your own city/.test((await fp.evaluate(() => window.__yourPlace.notice())) ?? '') && (await fp.textContent('#notice-actions')).includes('Search a place'),
+    'a shared view invites to look at one’s own city, not to make a keepsake',
+  );
+  await fresh.close();
 
   // ---- a phone
   const phone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, reducedMotion: 'reduce' });
