@@ -1427,13 +1427,6 @@ a.fab {
   margin-top: auto;
 }
 
-.card-presets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: auto;
-}
-
 .swatch-route {
   background: var(--accent);
 }

@@ -77,11 +77,16 @@ export async function areaChecks({ browser, base, routeAll, expect, watchConsole
     return null;
   };
 
-  // ---- the examples, from the start page
+  // ---- the examples: a place searched, the layer, then the panel's example
   await page.goto(dataBase);
-  await page.waitForSelector('#homes-presets .chip', { state: 'visible' });
-  expect((await page.locator('#homes-presets .chip').count()) === 1 && (await page.locator('#income-presets .chip').count()) === 1, 'the start page has cards for Homes and Income, each with an example');
-  await page.click('#homes-presets .chip');
+  await page.waitForSelector('#card-homes-title', { state: 'visible' });
+  expect((await page.isVisible('#card-income-title')) && !(await page.$('.layer-card .chip')), 'the start page has cards for Homes and Income, without example places');
+  await page.fill('#search-input', 'Stuttgart');
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => window.__yourPlace?.stage === 'ready', null, { timeout: 180000 });
+  await page.click('#data-layer-group [data-value="homes"]');
+  await page.click('#homes-control [data-act="demo"]');
+  await page.waitForFunction((d) => Math.abs((window.__yourPlace.state().center?.lat ?? 0) - d.lat) < 0.001, FREIBURG, { timeout: 60000 }).catch(() => undefined);
   await ready('homes');
   let x = await areas('homes');
   let c = await center();
@@ -223,11 +228,13 @@ export async function areaChecks({ browser, base, routeAll, expect, watchConsole
   await routeAll(phone);
   const pp = await phone.newPage();
   watchConsole(pp, 'areas-phone');
-  await pp.goto(dataBase);
-  await pp.waitForSelector('#homes-presets .chip', { state: 'visible' });
-  await pp.tap('#homes-presets .chip');
-  await pp.waitForFunction(() => window.__yourPlace?.stage === 'ready' && window.__yourPlace.areas('homes')?.status === 'ready', null, { timeout: 180000 }).catch(() => undefined);
+  await pp.goto(`${dataBase}#lat=${STUTTGART.lat}&lon=${STUTTGART.lon}&km=2&ex=1.5&dl=homes`);
+  await pp.waitForFunction(() => window.__yourPlace?.stage === 'ready', null, { timeout: 180000 }).catch(() => undefined);
   await pp.tap('#sheet-toggle');
+  await pp.locator('#homes-control [data-act="demo"]').scrollIntoViewIfNeeded();
+  await pp.tap('#homes-control [data-act="demo"]');
+  await pp.waitForFunction(() => window.__yourPlace?.stage === 'ready' && window.__yourPlace.areas('homes')?.status === 'ready', null, { timeout: 180000 }).catch(() => undefined);
+  if ((await pp.getAttribute('#sheet', 'data-open')) !== 'true') await pp.tap('#sheet-toggle');
   await pp.locator('#homes-control .area-legend').scrollIntoViewIfNeeded();
   await settle(pp, 400);
   const overflow = await pp.evaluate(() => document.documentElement.scrollWidth - innerWidth);

@@ -515,12 +515,10 @@ try {
   const fitsPhone = await landingFits(mp);
   expect(fitsPhone.ok, `phone: the start page shows its title below the search bar and scrolls to its end (title at ${fitsPhone.title} px, bar ends at ${fitsPhone.bar})`);
   await shot(mp, '08-landing-phone');
-  // the start page scrolls under the fixed search bar: bring the example to the middle first
-  const lisbon = mp.locator('#steep-presets .chip', { hasText: 'Lisbon' });
-  await lisbon.evaluate((el) => el.scrollIntoView({ block: 'center' }));
-  await lisbon.click();
+  await mp.fill('#search-input', 'Stuttgart');
+  await mp.keyboard.press('Enter');
   const t4 = await waitStage(mp, ['ready', 'error']);
-  expect(t4.stage === 'ready', 'phone: an example place builds');
+  expect(t4.stage === 'ready', 'phone: a place searched builds');
   const overflow = await mp.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
   expect(!overflow, 'phone: no horizontal overflow');
   await settle(mp, 2000);

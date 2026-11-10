@@ -24,7 +24,7 @@ const SCENES = [
   {
     key: 'homes',
     hash: 'lat=47.99555&lon=7.85065&km=2&ex=1.5&dl=homes',
-    setup: click('#homes-presets .chip'),
+    setup: click('#homes-control [data-act="demo"]'),
     ready: () => window.__yourPlace.areas('homes')?.status === 'ready' && window.__yourPlace.areas('homes')?.tinted,
     kicker: 'Freiburg im Breisgau · 2022 census',
     title: 'Rent per m², by 100 m square',
@@ -36,7 +36,7 @@ const SCENES = [
   {
     key: 'income',
     hash: 'lat=52.3702&lon=4.8952&km=2&ex=1.5&dl=income',
-    setup: click('#income-presets .chip'),
+    setup: click('#income-control [data-act="demo"]'),
     ready: () => window.__yourPlace.areas('income')?.status === 'ready' && window.__yourPlace.areas('income')?.tinted,
     kicker: 'Amsterdam · 2023',
     title: 'Average income per resident, by district',
@@ -69,7 +69,7 @@ const SCENES = [
   {
     key: 'transit',
     hash: 'lat=47.99555&lon=7.85065&km=2&ex=1.5&dl=transit',
-    setup: click('#transit-presets .chip'),
+    setup: click('#transit-demo'),
     ready: () => window.__yourPlace.transit()?.status === 'ready' && window.__yourPlace.transit()?.shown,
     prepare: async (page) => {
       await page.evaluate(() => window.__yourPlace.transitAt(8.5 * 3600, 300));

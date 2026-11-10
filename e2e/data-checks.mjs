@@ -38,18 +38,18 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
     manifest: await fetch(document.querySelector('link[rel="manifest"]').href).then((r) => r.json()),
     icon: await fetch(document.querySelector('link[rel="icon"]').href).then((r) => r.ok),
     cards: document.querySelectorAll('.layer-card').length,
-    presets: document.querySelectorAll('#steep-presets button').length,
-    trafficPresets: document.querySelectorAll('#traffic-presets button').length,
+    examples: document.querySelectorAll('.layer-card .chip, .card-presets').length,
     print: !!document.getElementById('stl-btn'),
     other: !!document.querySelector('#other-app, a[href^="../"]'),
   }));
   expect(/^Your Place · Data/.test(head.title) && head.title.length <= 60 && /^https:\/\/.+\/$/.test(head.canonical) && !/\/data\/$/.test(head.canonical), `the data app has its own page at its own address (“${head.title}”, ${head.canonical})`);
   expect(head.manifest.name === 'Your Place · Data' && head.icon, 'it installs as its own app, with its own icon');
-  expect(head.cards === 6 && head.presets === 3 && head.trafficPresets === 3 && !head.print && !head.other, 'its start page shows the layers as cards and your route on its own; nothing to print, no way to another app');
+  expect(head.cards === 6 && head.examples === 0 && !head.print && !head.other, 'its start page shows the layers as cards, without example places, and your route on its own; nothing to print, no way to another app');
   await shot(page, 'd0-data-landing');
 
-  // ---- steepness, from a preset
-  await page.click('#steep-presets button:has-text("Stuttgart")');
+  // ---- steepness, the first layer, for a place searched
+  await page.fill('#search-input', 'Stuttgart');
+  await page.keyboard.press('Enter');
   await waitStage(page, ['ready', 'error']);
   await page.waitForFunction(() => window.__yourPlace.steep().shown, null, { timeout: 15000 }).catch(() => undefined);
   let s = await steep();

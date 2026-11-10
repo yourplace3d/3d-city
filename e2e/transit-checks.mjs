@@ -44,11 +44,16 @@ export async function transitChecks({ browser, base, routeAll, expect, watchCons
   const ready = () => page.waitForFunction(() => window.__yourPlace?.stage === 'ready' && ['ready', 'outside', 'error'].includes(window.__yourPlace.transit()?.status), null, { timeout: 180000 });
   const sum = (a) => a.reduce((s, v) => s + v, 0);
 
-  // ---- the demo, from the start page
+  // ---- the demo: a place searched, the layer, then the panel's example
   await page.goto(dataBase);
-  await page.waitForSelector('#transit-presets .chip', { state: 'visible' });
-  expect((await page.isVisible('#transit-landing-btn')) && (await page.locator('#transit-presets .chip').count()) === 1, 'the start page has a card for public transport: load a timetable, or try Freiburg’s');
-  await page.click('#transit-presets .chip');
+  await page.waitForSelector('#transit-landing-btn', { state: 'visible' });
+  expect(!(await page.$('#card-transit-title ~ * .chip')), 'the start page has a card for public transport, with a button to load a timetable and no example places');
+  await page.fill('#search-input', 'Stuttgart');
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => window.__yourPlace?.stage === 'ready', null, { timeout: 180000 });
+  await page.click('#data-layer-group [data-value="transit"]');
+  await page.click('#transit-demo');
+  await page.waitForFunction((d) => Math.abs((window.__yourPlace.state().center?.lat ?? 0) - d.lat) < 0.001, DEMO, { timeout: 60000 }).catch(() => undefined);
   await ready();
   // a known Monday, so the lines don't depend on the day the test runs
   await page.fill('#transit-date', '2026-11-09');
@@ -215,11 +220,13 @@ export async function transitChecks({ browser, base, routeAll, expect, watchCons
   await phone.route(/timetables\/freiburg-2026\.zip$/, (route) => route.fulfill({ status: 200, contentType: 'application/zip', body: Buffer.from(gtfsZip(DEMO)) }));
   const pp = await phone.newPage();
   watchConsole(pp, 'transit-phone');
-  await pp.goto(dataBase);
-  await pp.waitForSelector('#transit-presets .chip', { state: 'visible' });
-  await pp.tap('#transit-presets .chip');
-  await pp.waitForFunction(() => window.__yourPlace?.stage === 'ready' && window.__yourPlace.transit()?.status === 'ready', null, { timeout: 180000 }).catch(() => undefined);
+  await pp.goto(`${dataBase}#lat=${HAMBURG.lat}&lon=${HAMBURG.lon}&km=2&ex=1.5&dl=transit`);
+  await pp.waitForFunction(() => window.__yourPlace?.stage === 'ready', null, { timeout: 180000 }).catch(() => undefined);
   await pp.tap('#sheet-toggle');
+  await pp.locator('#transit-demo').scrollIntoViewIfNeeded();
+  await pp.tap('#transit-demo');
+  await pp.waitForFunction(() => window.__yourPlace?.stage === 'ready' && window.__yourPlace.transit()?.status === 'ready', null, { timeout: 180000 }).catch(() => undefined);
+  if ((await pp.getAttribute('#sheet', 'data-open')) !== 'true') await pp.tap('#sheet-toggle');
   await pp.locator('#transit-play').scrollIntoViewIfNeeded();
   await settle(pp, 400);
   const overflow = await pp.evaluate(() => document.documentElement.scrollWidth - innerWidth);

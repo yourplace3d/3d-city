@@ -40,7 +40,7 @@ async function freiburg(width, height) {
   page.on('pageerror', (e) => console.log(`page error: ${e.message}`));
   await page.goto(`${base}#lat=47.99555&lon=7.85065&km=2&ex=1.5&dl=homes`);
   await page.waitForFunction(() => ['ready', 'error'].includes(window.__yourPlace?.stage), null, { timeout: 240000 });
-  await page.evaluate(() => document.querySelector('#homes-presets .chip').click());
+  await page.evaluate(() => document.querySelector('#homes-control [data-act="demo"]').click());
   await page.waitForFunction(() => window.__yourPlace.areas('homes')?.tinted && window.__yourPlace.stage === 'ready', null, { timeout: 240000 });
   await page.addStyleTag({ content: '.toast, .notice, .status, .mouse-hint { display: none !important; }' });
   await page.waitForTimeout(1500);

@@ -14,7 +14,7 @@ import { NoticeView } from './ui/notice';
 import { StatusView } from './ui/status';
 import { RouteController } from './ui/route';
 import { SteepController } from './ui/steepness';
-import { TrafficController, TRAFFIC_PRESETS } from './ui/traffic';
+import { TrafficController } from './ui/traffic';
 import { TRAFFIC_ATTRIBUTION } from './data/sources/hamburgTraffic';
 import { TransitController } from './ui/transit';
 import { AreaController } from './ui/areas';
@@ -22,13 +22,6 @@ import type { AreaLayer } from './data/sources/areaProviders';
 import { area, direction, distance, num, t, translatePage } from './i18n';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-
-/** Hilly places for the steepness card. */
-const STEEP_PRESETS: Array<{ name: string; center: LngLat; size: AreaSize; ex: number }> = [
-  { name: 'Lisbon', center: { lat: 38.7139, lon: -9.1365 }, size: 2000, ex: 1.5 },
-  { name: 'San Francisco', center: { lat: 37.7935, lon: -122.4075 }, size: 2000, ex: 1.5 },
-  { name: 'Stuttgart', center: { lat: 48.7765, lon: 9.1772 }, size: 3000, ex: 1.5 },
-];
 
 // ------------------------------------------------------------------ state
 
@@ -191,7 +184,6 @@ const makeAreas = (layer: AreaLayer): AreaController =>
 const homes = makeAreas('homes');
 const income = makeAreas('income');
 
-renderDataPresets();
 renderLegend();
 syncControls();
 bindControls();
@@ -872,46 +864,6 @@ function updateContourNote(): void {
 function updateCompass(): void {
   const az = viewer.getCameraState().azimuth;
   $('compass-needle').style.transform = `rotate(${az}deg)`;
-}
-
-/** The layer cards: places that open with that layer on. */
-function renderDataPresets(): void {
-  const add = (hostId: string, layer: DataLayerId, name: string, center: LngLat, size: number, ex?: number) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'chip';
-    b.textContent = name;
-    b.addEventListener('click', () => {
-      $<HTMLInputElement>('search-input').value = name;
-      setDataLayer(layer);
-      void openPlace({ label: name, detail: t.dataLayers[layer], center }, { size, ex });
-    });
-    $(hostId).append(b);
-  };
-  for (const p of STEEP_PRESETS) add('steep-presets', 'steep', p.name, p.center, p.size, p.ex);
-  for (const p of TRAFFIC_PRESETS) add('traffic-presets', 'traffic', p.name(), p.center, p.size);
-  // the timetable's demo: Freiburg's, which we host
-  const demo = document.createElement('button');
-  demo.type = 'button';
-  demo.className = 'chip';
-  demo.textContent = t.transitFreiburg;
-  demo.addEventListener('click', () => {
-    setDataLayer('transit');
-    void transit?.loadDemo();
-  });
-  $('transit-presets').append(demo);
-  // the examples for Homes and Income, which we host
-  for (const [layer, ctl] of [['homes', homes], ['income', income]] as const) {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'chip';
-    chip.textContent = t.areaDemoPlace[layer];
-    chip.addEventListener('click', () => {
-      setDataLayer(layer);
-      void ctl?.loadDemo();
-    });
-    $(`${layer}-presets`).append(chip);
-  }
 }
 
 function renderLegend(): void {

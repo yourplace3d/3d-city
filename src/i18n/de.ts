@@ -178,7 +178,7 @@ export const de: Messages = {
   dataHomeTitle: 'Your Place · Data · offene Daten über deine Stadt in 3D',
   dataDocTitle: (place) => `${place} · Your Place Data`,
   dataWelcomeTitle: 'Deine Stadt in Daten',
-  dataWelcomeLede: 'Offene Daten über eine Stadt auf einem 3D-Modell: wie steil ihre Straßen sind, wie viel Verkehr dort ist, wie ihre Bahnen und Busse fahren, was Wohnen kostet und was Menschen verdienen. Wähle eine Ebene und einen Ort.',
+  dataWelcomeLede: 'Offene Daten über eine Stadt auf einem 3D-Modell: wie steil ihre Straßen sind, wie viel Verkehr dort ist, wie ihre Bahnen und Busse fahren, was Wohnen kostet und was Menschen verdienen. Such einen Ort und wähle dann eine Ebene.',
   dataLayer: 'Datenebene',
   dataSharedInvite: 'Diese Ansicht wurde mit dir geteilt. Sieh dir deine eigene Stadt an: Such einen Ort und wähle eine Ebene.',
   dataSearchPlace: 'Ort suchen',
@@ -192,8 +192,8 @@ export const de: Messages = {
   dataImageSaved: 'Bild gespeichert',
   dataImageFailed: 'Das Bild ließ sich auf diesem Gerät nicht erstellen.',
   dataLayers: { steep: 'Steigung', traffic: 'Verkehr', transit: 'Nahverkehr', homes: 'Wohnen', income: 'Einkommen', route: 'Deine Strecke' },
-  cardSteep: 'Straßen und Wege nach Steigung eingefärbt, überall. Suche oben einen Ort oder probier einen aus:',
-  cardTraffic: 'Autos und Fahrräder, jede Stunde an Hunderten Stellen gezählt, als rote Straßen, die mit dem Verkehr wachsen. Bisher nur in Hamburg. Probier:',
+  cardSteep: 'Straßen und Wege nach Steigung eingefärbt, überall. Such oben einen Ort, um sie zu sehen.',
+  cardTraffic: 'Autos und Fahrräder, jede Stunde an Hunderten Stellen gezählt, als rote Straßen, die mit dem Verkehr wachsen. Bisher nur in Hamburg.',
   routeOverLayers: 'Sie liegt über der Ebene, die du wählst.',
 
   // Verkehrszählungen (Hamburg)
@@ -220,7 +220,7 @@ export const de: Messages = {
   trafficCredit: 'Verkehrszählungen: Freie und Hansestadt Hamburg, Behörde für Verkehr und Mobilitätswende (dl-de/by-2-0), live von iot.hamburg.de.',
   trafficCentre: 'Hamburg Innenstadt',
   // Nahverkehr aus einem Fahrplan (GTFS)
-  cardTransit: 'Straßenbahnen, Busse, Züge und Fähren fahren durch das Quadrat, wie es der Fahrplan deiner Stadt vorsieht. Such deine Stadt und finde ihren Fahrplan im Panel, oder lade eine Fahrplandatei (GTFS); sie bleibt auf deinem Gerät. Oder probier:',
+  cardTransit: 'Straßenbahnen, Busse, Züge und Fähren fahren durch das Quadrat, wie es der Fahrplan deiner Stadt vorsieht. Such deine Stadt und finde ihren Fahrplan im Panel, oder lade eine Fahrplandatei (GTFS); sie bleibt auf deinem Gerät.',
   transitShort: 'Nahverkehr',
   transitLoad: 'Fahrplan laden (GTFS)',
   transitWhere: 'Nicht dabei? Verkehrsbetriebe veröffentlichen ihre Fahrpläne als GTFS-Dateien (ZIP), oft auf ihrer Website oder in einem Open-Data-Portal.',
@@ -278,8 +278,8 @@ export const de: Messages = {
   transitDownloadFailed: 'Der Fahrplan konnte nicht heruntergeladen werden.',
   transitRemove: 'Fahrplan entfernen',
   transitSummary: (trips, day, most, hour) => `Nahverkehr: ${trips} Fahrten durch das Quadrat am ${day}, die meisten (${most}) zwischen ${hour}.`,
-  cardHomes: 'Was Wohnen kostet, als Farbe der Gebäude: Miete pro m² oder Immobilienwerte, je Viertel oder 100-m-Quadrat. Finde offene Daten für deinen Ort im Panel, oder lade eine Datei; sie bleibt auf deinem Gerät. Oder probier:',
-  cardIncome: 'Was Menschen verdienen, als Farbe der Gebäude, je Viertel oder Stadtteil, wo Statistikämter es veröffentlichen. Finde offene Daten für deinen Ort im Panel, oder lade eine Datei. Oder probier:',
+  cardHomes: 'Was Wohnen kostet, als Farbe der Gebäude: Miete pro m² oder Immobilienwerte, je Viertel oder 100-m-Quadrat. Finde offene Daten für deinen Ort im Panel, oder lade eine Datei; sie bleibt auf deinem Gerät.',
+  cardIncome: 'Was Menschen verdienen, als Farbe der Gebäude, je Viertel oder Stadtteil, wo Statistikämter es veröffentlichen. Finde offene Daten für deinen Ort im Panel, oder lade eine Datei.',
   areaIntro: {
     homes: 'Färbe die Gebäude danach, was Wohnen hier kostet. Hol dir die Daten aus einer offenen Quelle unten, oder lade eine eigene Datei.',
     income: 'Färbe die Gebäude danach, was Menschen hier verdienen. Hol dir die Daten aus einer offenen Quelle unten, oder lade eine eigene Datei.',

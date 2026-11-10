@@ -183,7 +183,7 @@ export const en = {
   dataHomeTitle: 'Your Place · Data · open data about your city in 3D',
   dataDocTitle: (place: string) => `${place} · Your Place Data`,
   dataWelcomeTitle: 'Your city, through data',
-  dataWelcomeLede: 'Open data about a city on a 3D model: how steep its streets are, how busy, how its trams and buses run, what homes cost and what people earn. Pick a layer and a place.',
+  dataWelcomeLede: 'Open data about a city on a 3D model: how steep its streets are, how busy, how its trams and buses run, what homes cost and what people earn. Search a place, then pick a layer.',
   dataLayer: 'Data layer',
   dataSharedInvite: 'This view was shared with you. See your own city: search a place and pick a layer.',
   dataSearchPlace: 'Search a place',
@@ -197,8 +197,8 @@ export const en = {
   dataImageSaved: 'Image saved',
   dataImageFailed: 'Couldn’t render the image on this device.',
   dataLayers: { steep: 'Steepness', traffic: 'Traffic', transit: 'Public transport', homes: 'Homes', income: 'Income', route: 'Your route' },
-  cardSteep: 'Roads and paths coloured by how steep they are, anywhere. Search a place above, or try one:',
-  cardTraffic: 'Cars and bikes counted every hour at hundreds of points, as red streets that rise with the traffic. Only in Hamburg so far. Try:',
+  cardSteep: 'Roads and paths coloured by how steep they are, anywhere. Search a place above to see it.',
+  cardTraffic: 'Cars and bikes counted every hour at hundreds of points, as red streets that rise with the traffic. Only in Hamburg so far.',
   routeOverLayers: 'It shows over the layer you pick.',
 
   // traffic counts (Hamburg)
@@ -226,7 +226,7 @@ export const en = {
   trafficCentre: 'Hamburg city centre',
 
   // public transport from a timetable (GTFS)
-  cardTransit: 'Trams, buses, trains and ferries moving through the square as your city’s timetable has them. Search your city, then find its timetable in the panel, or load a timetable file (GTFS); it stays on your device. Or try:',
+  cardTransit: 'Trams, buses, trains and ferries moving through the square as your city’s timetable has them. Search your city, then find its timetable in the panel, or load a timetable file (GTFS); it stays on your device.',
   transitShort: 'Transport',
   transitLoad: 'Load a timetable (GTFS)',
   transitWhere: 'Not listed? Transit operators publish their timetables as GTFS files (ZIP), often on their website or an open data portal.',
@@ -286,8 +286,8 @@ export const en = {
   transitSummary: (trips: string, day: string, most: string, hour: string) => `Public transport: ${trips} trips through the square on ${day}, the most (${most}) between ${hour}.`,
 
   // homes and income: values per area, from open data the user loads
-  cardHomes: 'What homes cost, as building colours: rent per m² or home values, per neighbourhood or 100 m square. Find open data for your place in the panel, or load a file; it stays on your device. Or try:',
-  cardIncome: 'What people earn, as building colours, per neighbourhood or district where statistics offices publish it. Find open data for your place in the panel, or load a file. Or try:',
+  cardHomes: 'What homes cost, as building colours: rent per m² or home values, per neighbourhood or 100 m square. Find open data for your place in the panel, or load a file; it stays on your device.',
+  cardIncome: 'What people earn, as building colours, per neighbourhood or district where statistics offices publish it. Find open data for your place in the panel, or load a file.',
   areaIntro: {
     homes: 'Colour the buildings by what homes cost here. Get the data from an open source below, or load a file of your own.',
     income: 'Colour the buildings by what people earn here. Get the data from an open source below, or load a file of your own.',

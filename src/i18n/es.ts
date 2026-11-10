@@ -178,7 +178,7 @@ export const es: Messages = {
   dataHomeTitle: 'Your Place · Data · datos abiertos de tu ciudad en 3D',
   dataDocTitle: (place) => `${place} · Your Place Data`,
   dataWelcomeTitle: 'Tu ciudad, a través de los datos',
-  dataWelcomeLede: 'Datos abiertos sobre una ciudad en un modelo 3D: qué tan empinadas son sus calles, cuánto tráfico hay, cómo circulan sus tranvías y autobuses, cuánto cuesta la vivienda y cuánto gana la gente. Elige una capa y un lugar.',
+  dataWelcomeLede: 'Datos abiertos sobre una ciudad en un modelo 3D: qué tan empinadas son sus calles, cuánto tráfico hay, cómo circulan sus tranvías y autobuses, cuánto cuesta la vivienda y cuánto gana la gente. Busca un lugar y luego elige una capa.',
   dataLayer: 'Capa de datos',
   dataSharedInvite: 'Te compartieron esta vista. Mira tu propia ciudad: busca un lugar y elige una capa.',
   dataSearchPlace: 'Buscar un lugar',
@@ -192,8 +192,8 @@ export const es: Messages = {
   dataImageSaved: 'Imagen guardada',
   dataImageFailed: 'No se pudo crear la imagen en este dispositivo.',
   dataLayers: { steep: 'Pendiente', traffic: 'Tráfico', transit: 'Transporte público', homes: 'Vivienda', income: 'Ingresos', route: 'Tu ruta' },
-  cardSteep: 'Calles y caminos coloreados según su pendiente, en cualquier lugar. Busca un lugar arriba o prueba uno:',
-  cardTraffic: 'Coches y bicis contados cada hora en cientos de puntos, como calles rojas que suben con el tráfico. Por ahora solo en Hamburgo. Prueba:',
+  cardSteep: 'Calles y caminos coloreados según su pendiente, en cualquier lugar. Busca un lugar arriba para verlo.',
+  cardTraffic: 'Coches y bicis contados cada hora en cientos de puntos, como calles rojas que suben con el tráfico. Por ahora solo en Hamburgo.',
   routeOverLayers: 'Se ve sobre la capa que elijas.',
 
   // conteos de tráfico (Hamburgo)
@@ -220,7 +220,7 @@ export const es: Messages = {
   trafficCredit: 'Conteos de tráfico: Freie und Hansestadt Hamburg, Behörde für Verkehr und Mobilitätswende (dl-de/by-2-0), en directo desde iot.hamburg.de.',
   trafficCentre: 'Centro de Hamburgo',
   // transporte público desde un horario (GTFS)
-  cardTransit: 'Tranvías, autobuses, trenes y ferris recorriendo el cuadrado según el horario de tu ciudad. Busca tu ciudad y encuentra su horario en el panel, o carga un archivo de horarios (GTFS); se queda en tu dispositivo. O prueba:',
+  cardTransit: 'Tranvías, autobuses, trenes y ferris recorriendo el cuadrado según el horario de tu ciudad. Busca tu ciudad y encuentra su horario en el panel, o carga un archivo de horarios (GTFS); se queda en tu dispositivo.',
   transitShort: 'Transporte',
   transitLoad: 'Cargar un horario (GTFS)',
   transitWhere: '¿No aparece? Las empresas de transporte publican sus horarios como archivos GTFS (ZIP), a menudo en su sitio web o en un portal de datos abiertos.',
@@ -278,8 +278,8 @@ export const es: Messages = {
   transitDownloadFailed: 'No se pudo descargar el horario.',
   transitRemove: 'Quitar el horario',
   transitSummary: (trips, day, most, hour) => `Transporte público: ${trips} viajes por el cuadrado el ${day}, la mayoría (${most}) entre las ${hour}.`,
-  cardHomes: 'Lo que cuesta la vivienda, como color de los edificios: alquiler por m² o valor de las viviendas, por barrio o cuadrado de 100 m. Encuentra datos abiertos de tu lugar en el panel, o carga un archivo; se queda en tu dispositivo. O prueba:',
-  cardIncome: 'Lo que gana la gente, como color de los edificios, por barrio o distrito donde las oficinas de estadística lo publican. Encuentra datos abiertos de tu lugar en el panel, o carga un archivo. O prueba:',
+  cardHomes: 'Lo que cuesta la vivienda, como color de los edificios: alquiler por m² o valor de las viviendas, por barrio o cuadrado de 100 m. Encuentra datos abiertos de tu lugar en el panel, o carga un archivo; se queda en tu dispositivo.',
+  cardIncome: 'Lo que gana la gente, como color de los edificios, por barrio o distrito donde las oficinas de estadística lo publican. Encuentra datos abiertos de tu lugar en el panel, o carga un archivo.',
   areaIntro: {
     homes: 'Colorea los edificios según lo que cuesta la vivienda aquí. Obtén los datos de una fuente abierta de abajo, o carga un archivo propio.',
     income: 'Colorea los edificios según lo que gana la gente aquí. Obtén los datos de una fuente abierta de abajo, o carga un archivo propio.',
