@@ -277,7 +277,8 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   // the spread: further, and into the link
   const narrower = (await traffic()).streets.samples;
   await page.locator('#traffic-spread').fill('500');
-  await page.waitForFunction(() => window.__yourPlace.traffic().streets?.samples && window.__yourPlace.traffic().spread === 500, null, { timeout: 5000 }).catch(() => undefined);
+  // the streets are built again on the next frame: wait for them, not only for the setting
+  await page.waitForFunction((n) => window.__yourPlace.traffic().spread === 500 && window.__yourPlace.traffic().streets?.samples > n, narrower, { timeout: 15000 }).catch(() => undefined);
   tr = await traffic();
   expect(tr.spread === 500 && tr.streets.samples > narrower && /sp=500/.test(await page.evaluate(() => location.hash)) && (await page.textContent('#traffic-spread-out')) === '500 m', `a wider spread reaches more of the streets (${narrower} → ${tr.streets.samples} street points) and goes into the link`);
   await page.locator('#traffic-spread').fill('300');
