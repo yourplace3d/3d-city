@@ -126,6 +126,7 @@ export async function transitChecks({ browser, base, routeAll, expect, watchCons
   expect(!x.playing && x.labels > 0 && !x.trails, 'pausing stops it, the trails go and the lines’ names come back');
 
   // the play button in the panel's bar: it plays with the panel closed
+  if (await page.isVisible('#notice')) await page.click('#notice-close');
   if ((await page.getAttribute('#sheet', 'data-open')) === 'true') await page.click('#sheet-toggle');
   const quickClock = (await page.textContent('#quick-clock')).trim();
   expect((await page.isVisible('#quick-play')) && quickClock === (await page.textContent('#transit-readout')).match(/\d\d:\d\d/)?.[0], `with the panel closed, a play button stays on screen, with the time (${quickClock})`);
