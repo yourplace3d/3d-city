@@ -497,7 +497,10 @@ try {
   watchConsole(mp, 'phone');
   await mp.goto(base);
   await shot(mp, '08-landing-phone');
-  await mp.click('#steep-presets .chip >> text=Lisbon');
+  // the start page scrolls under the fixed search bar: bring the example to the middle first
+  const lisbon = mp.locator('#steep-presets .chip', { hasText: 'Lisbon' });
+  await lisbon.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+  await lisbon.click();
   const t4 = await waitStage(mp, ['ready', 'error']);
   expect(t4.stage === 'ready', 'phone: an example place builds');
   const overflow = await mp.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);

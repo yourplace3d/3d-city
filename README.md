@@ -4,7 +4,7 @@
 run, what homes cost and what people earn. Search any place, pick a layer. Free, no account, works on
 your phone.**
 
-**[Open Your Place · Data →](https://yourplace3d.github.io/3d-city-test/)** · [How it works](https://yourplace3d.github.io/3d-city-test/about/) · [Changelog](CHANGELOG.md)
+**[Open Your Place · Data →](https://yourplace3d.github.io/3dcitydata/)** · [How it works](https://yourplace3d.github.io/3dcitydata/about/) · [Changelog](CHANGELOG.md)
 
 <p>
   <img src="public/screenshot.jpg" alt="Freiburg as a 3D model, its buildings coloured by the rent per m² of the 100 m square they stand in, with the panel showing the legend" width="100%" />
@@ -99,8 +99,8 @@ It is a static TypeScript app on three.js with no server and no API keys: the br
 tiles, terrain and address search straight from free public services.
 
 **Where it's published.** The built files (`dist/`) go to the `main` branch of
-[yourplace3d/3d-city-test](https://github.com/yourplace3d/3d-city-test), whose GitHub Pages serve them at
-`https://yourplace3d.github.io/3d-city-test/`. That address is `SITE_URL` in `vite.config.ts` (or the
+[yourplace3d/3dcitydata](https://github.com/yourplace3d/3dcitydata), whose GitHub Pages serve them at
+`https://yourplace3d.github.io/3dcitydata/`. That address is `SITE_URL` in `vite.config.ts` (or the
 `SITE_URL` environment variable in the build), so canonical links, preview images and the sitemap use it;
 change it when the app moves. `tools/og/render.mjs` renders the link preview (`public/og.jpg`) and the
 about page's screenshot from the build, `tools/video/data.mjs` a video of the layers.

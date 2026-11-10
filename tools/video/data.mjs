@@ -26,7 +26,7 @@ const args = process.argv.slice(2);
 const PREVIEW = args.includes('--preview');
 const ONLY = args.find((a) => a.startsWith('--only='))?.slice(7).split(',') ?? null;
 
-const SITE = process.env.SITE ?? 'yourplace3d.github.io/3d-city-test';
+const SITE = process.env.SITE ?? 'yourplace3d.github.io/3dcitydata';
 const FPS = 30;
 const WIDTH = 1920;
 const HEIGHT = 1080;

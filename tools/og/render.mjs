@@ -2,7 +2,7 @@
 // (public/screenshot.jpg, 1600 × 1000) from the built app with live data: Freiburg's rents, the
 // example the app hosts. Run after `npm run build`:
 //
-//   node tools/og/render.mjs                    SITE=yourplace3d.github.io/3d-city-test by default
+//   node tools/og/render.mjs                    SITE=yourplace3d.github.io/3dcitydata by default
 //
 // Needs the map services and Google Fonts (for the preview's text; it falls back without them).
 import { createRequire } from 'node:module';
@@ -13,7 +13,7 @@ import { extname, join } from 'node:path';
 const { chromium } = createRequire(import.meta.url)('playwright');
 const root = join(import.meta.dirname, '..', '..');
 const dist = join(root, 'dist');
-const SITE = process.env.SITE ?? 'yourplace3d.github.io/3d-city-test';
+const SITE = process.env.SITE ?? 'yourplace3d.github.io/3dcitydata';
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.geojson': 'application/geo+json', '.csv': 'text/csv', '.zip': 'application/zip', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.jpg': 'image/jpeg' };
 const server = createServer((req, res) => {
