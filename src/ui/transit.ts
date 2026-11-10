@@ -958,7 +958,7 @@ export class TransitController {
         strong.textContent = f.provider;
         const size = found.sizes.get(f.url);
         const small = document.createElement('small');
-        small.textContent = [f.name, f.place, size ? t.transitFeedSize(num(size / 1048576, size < 10 * 1048576 ? 1 : 0)) : ''].filter(Boolean).join(' · ');
+        small.textContent = [f.name, f.place, size ? t.transitFeedSize(num(Math.max(0.1, size / 1048576), size < 10 * 1048576 ? 1 : 0)) : ''].filter(Boolean).join(' · ');
         text.append(strong, small);
         const b = document.createElement('button');
         b.type = 'button';
