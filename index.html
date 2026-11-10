@@ -101,45 +101,47 @@
       </header>
 
       <section class="welcome" id="welcome" aria-labelledby="welcome-title">
-        <p class="eyebrow">Your Place · Data</p>
-        <h1 id="welcome-title" data-t="dataWelcomeTitle">Your city, through data</h1>
-        <p class="lede" data-t="dataWelcomeLede">Open data about a city on a 3D model: how steep its streets are, how busy, how its trams and buses run, what homes cost and what people earn. Pick a layer and a place.</p>
-        <div class="layer-cards">
-          <section class="layer-card" aria-labelledby="card-steep-title">
-            <h2 id="card-steep-title"><i class="swatch swatch-steep" aria-hidden="true"></i><span data-t="dataLayers.steep">Steepness</span></h2>
-            <p data-t="cardSteep">Roads and paths coloured by how steep they are, anywhere. Search a place above, or try one:</p>
-            <div class="card-presets" id="steep-presets"></div>
+        <div class="welcome-inner">
+          <p class="eyebrow">Your Place · Data</p>
+          <h1 id="welcome-title" data-t="dataWelcomeTitle">Your city, through data</h1>
+          <p class="lede" data-t="dataWelcomeLede">Open data about a city on a 3D model: how steep its streets are, how busy, how its trams and buses run, what homes cost and what people earn. Pick a layer and a place.</p>
+          <div class="layer-cards">
+            <section class="layer-card" aria-labelledby="card-steep-title">
+              <h2 id="card-steep-title"><i class="swatch swatch-steep" aria-hidden="true"></i><span data-t="dataLayers.steep">Steepness</span></h2>
+              <p data-t="cardSteep">Roads and paths coloured by how steep they are, anywhere. Search a place above, or try one:</p>
+              <div class="card-presets" id="steep-presets"></div>
+            </section>
+            <section class="layer-card" aria-labelledby="card-traffic-title">
+              <h2 id="card-traffic-title"><i class="swatch swatch-traffic" aria-hidden="true"></i><span data-t="dataLayers.traffic">Traffic</span></h2>
+              <p data-t="cardTraffic">Cars and bikes counted every hour at hundreds of points, as red streets that rise with the traffic. Only in Hamburg so far. Try:</p>
+              <div class="card-presets" id="traffic-presets"></div>
+            </section>
+            <section class="layer-card" aria-labelledby="card-transit-title">
+              <h2 id="card-transit-title"><i class="swatch swatch-transit" aria-hidden="true"></i><span data-t="dataLayers.transit">Public transport</span></h2>
+              <p data-t="cardTransit">Trams, buses, trains and ferries moving through the square as your city’s timetable has them. Search your city, then find its timetable in the panel, or load a timetable file (GTFS); it stays on your device. Or try:</p>
+              <div class="card-presets" id="transit-presets"></div>
+              <button type="button" class="btn" id="transit-landing-btn" data-t="transitLoad">Load a timetable (GTFS)</button>
+            </section>
+            <section class="layer-card" aria-labelledby="card-homes-title">
+              <h2 id="card-homes-title"><i class="swatch swatch-homes" aria-hidden="true"></i><span data-t="dataLayers.homes">Homes</span></h2>
+              <p data-t="cardHomes">What homes cost, as building colours: rent per m² or home values, per neighbourhood or 100 m square. Find open data for your place in the panel, or load a file; it stays on your device. Or try:</p>
+              <div class="card-presets" id="homes-presets"></div>
+            </section>
+            <section class="layer-card" aria-labelledby="card-income-title">
+              <h2 id="card-income-title"><i class="swatch swatch-income" aria-hidden="true"></i><span data-t="dataLayers.income">Income</span></h2>
+              <p data-t="cardIncome">What people earn, as building colours, per neighbourhood or district where statistics offices publish it. Find open data for your place in the panel, or load a file. Or try:</p>
+              <div class="card-presets" id="income-presets"></div>
+            </section>
+          </div>
+          <section class="layer-card route-card" aria-labelledby="card-route-title">
+            <h2 id="card-route-title"><i class="swatch swatch-route" aria-hidden="true"></i><span data-t="dataLayers.route">Your route</span></h2>
+            <p data-t="cardRoute">Load a run, a ride or a race (GPX or TCX) and see it over any layer, with its height profile and steepest climbs. The file stays on your device.</p>
+            <button type="button" class="btn" id="route-landing-btn" data-t="routeLoad">Load a GPX or TCX file</button>
           </section>
-          <section class="layer-card" aria-labelledby="card-traffic-title">
-            <h2 id="card-traffic-title"><i class="swatch swatch-traffic" aria-hidden="true"></i><span data-t="dataLayers.traffic">Traffic</span></h2>
-            <p data-t="cardTraffic">Cars and bikes counted every hour at hundreds of points, as red streets that rise with the traffic. Only in Hamburg so far. Try:</p>
-            <div class="card-presets" id="traffic-presets"></div>
-          </section>
-          <section class="layer-card" aria-labelledby="card-transit-title">
-            <h2 id="card-transit-title"><i class="swatch swatch-transit" aria-hidden="true"></i><span data-t="dataLayers.transit">Public transport</span></h2>
-            <p data-t="cardTransit">Trams, buses, trains and ferries moving through the square as your city’s timetable has them. Search your city, then find its timetable in the panel, or load a timetable file (GTFS); it stays on your device. Or try:</p>
-            <div class="card-presets" id="transit-presets"></div>
-            <button type="button" class="btn" id="transit-landing-btn" data-t="transitLoad">Load a timetable (GTFS)</button>
-          </section>
-          <section class="layer-card" aria-labelledby="card-homes-title">
-            <h2 id="card-homes-title"><i class="swatch swatch-homes" aria-hidden="true"></i><span data-t="dataLayers.homes">Homes</span></h2>
-            <p data-t="cardHomes">What homes cost, as building colours: rent per m² or home values, per neighbourhood or 100 m square. Find open data for your place in the panel, or load a file; it stays on your device. Or try:</p>
-            <div class="card-presets" id="homes-presets"></div>
-          </section>
-          <section class="layer-card" aria-labelledby="card-income-title">
-            <h2 id="card-income-title"><i class="swatch swatch-income" aria-hidden="true"></i><span data-t="dataLayers.income">Income</span></h2>
-            <p data-t="cardIncome">What people earn, as building colours, per neighbourhood or district where statistics offices publish it. Find open data for your place in the panel, or load a file. Or try:</p>
-            <div class="card-presets" id="income-presets"></div>
-          </section>
+          <p class="layers-more" data-t="moreLayers">More layers are on the way: water, energy.</p>
+          <p class="welcome-more"><a href="./about/" data-t="dataAboutLink">How it works and where the data comes from</a></p>
+          <label class="lang"><span data-t="language">Language</span> <select class="lang-select"></select></label>
         </div>
-        <section class="layer-card route-card" aria-labelledby="card-route-title">
-          <h2 id="card-route-title"><i class="swatch swatch-route" aria-hidden="true"></i><span data-t="dataLayers.route">Your route</span></h2>
-          <p data-t="cardRoute">Load a run, a ride or a race (GPX or TCX) and see it over any layer, with its height profile and steepest climbs. The file stays on your device.</p>
-          <button type="button" class="btn" id="route-landing-btn" data-t="routeLoad">Load a GPX or TCX file</button>
-        </section>
-        <p class="layers-more" data-t="moreLayers">More layers are on the way: water, energy.</p>
-        <p class="welcome-more"><a href="./about/" data-t="dataAboutLink">How it works and where the data comes from</a></p>
-        <label class="lang"><span data-t="language">Language</span> <select class="lang-select"></select></label>
       </section>
 
       <div class="fabs" id="fabs">

@@ -398,15 +398,22 @@ a {
 
 /* ------------------------------------------------------------------ welcome */
 
+/* its own scrolling layer under the search bar: the layer cards are taller than a phone, and taller
+   than many laptop screens; centred when it fits (auto margins never push it above the top) */
 .welcome {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -46%);
-  width: min(560px, calc(100% - 2 * var(--gutter)));
-  padding: 4px 0;
-  text-align: center;
+  inset: 0;
   z-index: 5;
+  display: flex;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: calc(var(--safe-top) + 12px + 50px + 20px) var(--gutter) calc(var(--safe-bottom) + 28px);
+  text-align: center;
+}
+
+.welcome-inner {
+  width: min(560px, 100%);
+  margin: auto;
 }
 
 .eyebrow {

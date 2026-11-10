@@ -193,6 +193,20 @@ async function findBuilding(page) {
     return null;
   });
 }
+/** The start page: its title below the search bar, and its last line reachable by scrolling. */
+async function landingFits(page) {
+  return page.evaluate(async () => {
+    const w = document.getElementById('welcome');
+    const bar = document.querySelector('.topbar').getBoundingClientRect().bottom;
+    const title = document.getElementById('welcome-title').getBoundingClientRect().top;
+    w.scrollTop = w.scrollHeight;
+    await new Promise((r) => requestAnimationFrame(r));
+    const last = document.querySelector('.welcome .lang').getBoundingClientRect();
+    const reached = last.top >= 0 && last.bottom <= innerHeight;
+    w.scrollTop = 0;
+    return { ok: title >= bar && reached, title: Math.round(title), bar: Math.round(bar), reached };
+  });
+}
 const settle = (page, ms = 600) => page.waitForTimeout(ms);
 /** Wait until the camera stops gliding: damping decays per frame, and software rendering draws few frames. */
 async function still(page, ms = 20000) {
@@ -212,6 +226,8 @@ try {
   await page.goto(base);
   await page.waitForSelector('#welcome', { state: 'visible' });
   expect(/through data/.test(await page.textContent('#welcome-title')) && (await page.locator('.layer-card').count()) === 6, 'the start page is Your Place · Data’s, with its layers as cards');
+  const fitsDesktop = await landingFits(page);
+  expect(fitsDesktop.ok, `the start page shows its title below the search bar and scrolls to its end (title at ${fitsDesktop.title} px, bar ends at ${fitsDesktop.bar})`);
   await shot(page, '01-landing-desktop');
   const head = await page.evaluate(() => {
     const meta = (sel) => document.querySelector(sel)?.getAttribute('content') ?? '';
@@ -496,6 +512,8 @@ try {
   const mp = await phone.newPage();
   watchConsole(mp, 'phone');
   await mp.goto(base);
+  const fitsPhone = await landingFits(mp);
+  expect(fitsPhone.ok, `phone: the start page shows its title below the search bar and scrolls to its end (title at ${fitsPhone.title} px, bar ends at ${fitsPhone.bar})`);
   await shot(mp, '08-landing-phone');
   // the start page scrolls under the fixed search bar: bring the example to the middle first
   const lisbon = mp.locator('#steep-presets .chip', { hasText: 'Lisbon' });
