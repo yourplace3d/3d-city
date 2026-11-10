@@ -54,7 +54,7 @@
         <p class="lede" data-t="welcomeLede">Your first home, where you met, the town you left. Type the address and get it as a model on its real terrain, every building standing on top. Share it, hang it as a poster, or 3D print it.</p>
         <p class="presets-label" data-t="presetsLabel">Or explore a place with dramatic terrain</p>
         <div class="presets" id="presets"></div>
-        <p class="welcome-data"><a href="./data/" id="data-landing-link"><strong>Your Place · Data</strong> <span data-t="dataTeaser">New: where it gets steep, traffic in Hamburg, public transport, your race route</span> →</a></p>
+        <p class="welcome-data"><a href="./data/" id="data-landing-link"><strong>Your Place · Data</strong> <span data-t="dataTeaser">New: where it gets steep, traffic in Hamburg, public transport, rents and incomes, your race route</span> →</a></p>
         <!-- /only:place -->
         <!-- only:data -->
         <p class="eyebrow">Your Place · Data</p>
@@ -76,6 +76,16 @@
             <p data-t="cardTransit">Trams, buses, trains and ferries moving through the square as your city’s timetable has them. Search your city, then find its timetable in the panel, or load a timetable file (GTFS); it stays on your device. Or try:</p>
             <div class="card-presets" id="transit-presets"></div>
             <button type="button" class="btn" id="transit-landing-btn" data-t="transitLoad">Load a timetable (GTFS)</button>
+          </section>
+          <section class="layer-card" aria-labelledby="card-homes-title">
+            <h2 id="card-homes-title"><i class="swatch swatch-homes" aria-hidden="true"></i><span data-t="dataLayers.homes">Homes</span></h2>
+            <p data-t="cardHomes">What homes cost, as building colours: rent per m² or home values, per neighbourhood or 100 m square. Find open data for your place in the panel, or load a file; it stays on your device. Or try:</p>
+            <div class="card-presets" id="homes-presets"></div>
+          </section>
+          <section class="layer-card" aria-labelledby="card-income-title">
+            <h2 id="card-income-title"><i class="swatch swatch-income" aria-hidden="true"></i><span data-t="dataLayers.income">Income</span></h2>
+            <p data-t="cardIncome">What people earn, as building colours, per neighbourhood or district where statistics offices publish it. Find open data for your place in the panel, or load a file. Or try:</p>
+            <div class="card-presets" id="income-presets"></div>
           </section>
         </div>
         <section class="layer-card route-card" aria-labelledby="card-route-title">
@@ -135,6 +145,8 @@
               <button type="button" role="radio" data-value="steep" aria-checked="true"><i class="swatch swatch-steep" aria-hidden="true"></i><span data-t="dataLayers.steep">Steepness</span></button>
               <button type="button" role="radio" data-value="traffic" aria-checked="false" tabindex="-1"><i class="swatch swatch-traffic" aria-hidden="true"></i><span data-t="dataLayers.traffic">Traffic</span></button>
               <button type="button" role="radio" data-value="transit" aria-checked="false" tabindex="-1"><i class="swatch swatch-transit" aria-hidden="true"></i><span data-t="transitShort">Transport</span></button>
+              <button type="button" role="radio" data-value="homes" aria-checked="false" tabindex="-1"><i class="swatch swatch-homes" aria-hidden="true"></i><span data-t="dataLayers.homes">Homes</span></button>
+              <button type="button" role="radio" data-value="income" aria-checked="false" tabindex="-1"><i class="swatch swatch-income" aria-hidden="true"></i><span data-t="dataLayers.income">Income</span></button>
             </div>
             <div class="steep-legend" id="steep-legend">
               <ul class="steep-scale" id="steep-scale"></ul>
@@ -236,6 +248,8 @@
                 </div>
               </div>
             </div>
+            <div class="area-control" id="homes-control" hidden></div>
+            <div class="area-control" id="income-control" hidden></div>
           </div>
           <div class="control route-control" id="route-control">
             <div class="control-label">

@@ -23,3 +23,14 @@ declare module '*/fixtures/transit.mjs' {
   export function gtfsZip(center: { lat: number; lon: number }, opts?: { deflate?: boolean; folder?: string; tag?: string }): Uint8Array;
   export function catalogCsv(feeds: Array<Record<string, string | number>>): string;
 }
+// The made-up values per area shared with the end-to-end test.
+declare module '*/fixtures/areas.mjs' {
+  type C = { lat: number; lon: number };
+  export function laea(lon: number, lat: number): [number, number];
+  export function rentAt(i: number, j: number, n: number): number;
+  export function gridCsv(center: C, opts?: { cellM?: number; halfM?: number }): string;
+  export function censusZip(center: C): Uint8Array;
+  export const QUARTERS: Array<{ name: string; e: [number, number]; n: [number, number]; value: number; income: number; people: number }>;
+  export function areasGeoJson(center: C, opts?: { tag?: string }): { type: string; features: Array<{ type: string; properties: Record<string, unknown>; geometry: { type: string; coordinates: number[][][] } }> };
+  export function pointsCsv(center: C): string;
+}

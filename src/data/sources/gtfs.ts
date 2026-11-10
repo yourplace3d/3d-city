@@ -136,8 +136,8 @@ export function runsOn(s: GtfsService, day: number): boolean {
   return day >= s.start && day <= s.end && ((s.week >> weekday(day)) & 1) === 1;
 }
 
-/** One CSV line into fields (quotes, doubled quotes); returns how many. `out` is reused. */
-export function splitCsv(line: string, out: string[]): number {
+/** One CSV line into fields (quotes, doubled quotes); returns how many. `out` is reused. `sep` is the separator (`,` or `;` or a tab). */
+export function splitCsv(line: string, out: string[], sep = ','): number {
   let n = 0;
   let i = 0;
   const len = line.length;
@@ -158,13 +158,13 @@ export function splitCsv(line: string, out: string[]): number {
           continue;
         }
         s += line.slice(j, q);
-        const c = line.indexOf(',', q + 1);
+        const c = line.indexOf(sep, q + 1);
         i = c < 0 ? len + 1 : c + 1;
         break;
       }
       out[n++] = s;
     } else {
-      const c = line.indexOf(',', i);
+      const c = line.indexOf(sep, i);
       if (c < 0) {
         out[n++] = line.slice(i);
         break;

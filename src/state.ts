@@ -26,7 +26,7 @@ export interface Layers {
 }
 
 /** The data layers of Your Place · Data; one is shown at a time (a route of your own shows over any). */
-export const DATA_LAYERS = ['steep', 'traffic', 'transit'] as const;
+export const DATA_LAYERS = ['steep', 'traffic', 'transit', 'homes', 'income'] as const;
 export type DataLayerId = (typeof DATA_LAYERS)[number];
 /** What the traffic layer counts. */
 export const TRAFFIC_KINDS = ['cars', 'bikes'] as const;

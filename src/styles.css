@@ -1986,3 +1986,110 @@ a.fab {
 .transit-sources {
   margin-bottom: 4px;
 }
+
+/* ------------------------------------------------------------------ homes and income: buildings coloured by values per area */
+
+.data-layer .segmented {
+  flex-wrap: wrap;
+}
+
+.data-layer .segmented button {
+  flex: 1 1 auto;
+}
+
+.swatch-homes,
+.swatch-income {
+  background: linear-gradient(90deg, #6da7ec 0 33%, #256abf 33% 66%, #0d366b 66%);
+}
+
+.area-control:not([hidden]),
+.area-empty:not([hidden]),
+.area-loaded:not([hidden]) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+}
+
+.area-intro {
+  margin: 0;
+}
+
+.area-sub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.area-providers .area-provider {
+  align-items: flex-start;
+}
+
+.area-provider > div {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  font-size: 13.5px;
+}
+
+.area-provider .route-note {
+  margin: 0;
+}
+
+.area-column {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+}
+
+.area-select {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-solid);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.area-measure {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.area-legend {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.area-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.area-swatch {
+  flex: none;
+  width: 18px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.area-pin {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  font-weight: 560;
+}

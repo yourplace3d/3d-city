@@ -19,6 +19,7 @@ import {
   buildingsAt,
   paintBuildings,
   setBuildingsExaggeration,
+  tintBuildings,
   type BuildingSpec,
   type BuildingsBuild,
 } from './buildingsMesh';
@@ -79,6 +80,8 @@ export class CityModel implements ModelSurface {
   private layers: Layers = { roads: true, water: true, green: true };
   /** data layers on the model (a route): ground paint and 3D objects */
   private readonly overlays: ModelOverlay[] = [];
+  /** a data layer colouring the buildings (values per area), or null */
+  private tint: ((e: number, n: number) => Color | null) | null = null;
 
   constructor(
     readonly grid: HeightGrid,
@@ -281,6 +284,7 @@ export class CityModel implements ModelSurface {
   private paint(): void {
     if (!this.buildings) return;
     applyBuildingStyle(this.buildings.build, this.style);
+    if (this.tint) tintBuildings(this.buildings.build, this.tint);
     if (this.markPinned && this.pinned.length) paintBuildings(this.buildings.build, this.pinned, this.accent);
   }
 
@@ -349,6 +353,20 @@ export class CityModel implements ModelSurface {
     g.max = max;
     this.uniforms.uInterval.value = contourInterval(max - min);
     this.setExaggeration(this.exaggeration);
+  }
+
+  /**
+   * Colour the buildings by a data layer: `colourAt` gets the middle of each footprint (metres E,
+   * N) and gives its colour, or null to keep the style's. null takes the layer off.
+   */
+  setBuildingTint(colourAt: ((e: number, n: number) => Color | null) | null): void {
+    this.tint = colourAt;
+    this.paint();
+  }
+
+  /** Whether a data layer colours the buildings (for tests and tools). */
+  get tinted(): boolean {
+    return this.tint !== null;
   }
 
   setStyle(style: BuildingStyle): void {

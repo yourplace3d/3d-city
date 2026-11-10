@@ -266,3 +266,22 @@ export function paintBuildings(b: BuildingsBuild, indices: number[], color: Colo
   }
   col.needsUpdate = true;
 }
+
+/**
+ * Colour each building by a data layer: `colourAt` gets the middle of its footprint (metres E, N)
+ * and gives a colour, or null to keep the style's.
+ */
+export function tintBuildings(b: BuildingsBuild, colourAt: (e: number, n: number) => Color | null): void {
+  const col = b.geometry.getAttribute('color') as BufferAttribute;
+  const arr = col.array as Float32Array;
+  for (let i = 0; i < b.count; i++) {
+    const c = colourAt((b.bounds[i * 4] + b.bounds[i * 4 + 2]) / 2, (b.bounds[i * 4 + 1] + b.bounds[i * 4 + 3]) / 2);
+    if (!c) continue;
+    for (let v = b.starts[i]; v < b.starts[i + 1]; v++) {
+      arr[v * 3] = c.r;
+      arr[v * 3 + 1] = c.g;
+      arr[v * 3 + 2] = c.b;
+    }
+  }
+  col.needsUpdate = true;
+}

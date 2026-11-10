@@ -26,6 +26,8 @@ import { SteepController } from './ui/steepness';
 import { TrafficController, TRAFFIC_PRESETS } from './ui/traffic';
 import { TRAFFIC_ATTRIBUTION } from './data/sources/hamburgTraffic';
 import { TransitController } from './ui/transit';
+import { AreaController } from './ui/areas';
+import type { AreaLayer } from './data/sources/areaProviders';
 import { TRANSIT_PRINT_MM } from './export/transit';
 import { area, direction, distance, num, scale as localScale, t, translatePage } from './i18n';
 
@@ -106,6 +108,8 @@ const debug = {
   transit: () => transit?.debugInfo() ?? null,
   /** show the timetable at a moment (s after midnight), with trails that long (s), for tools/video */
   transitAt: (s: number, trail = 0) => transit?.frameAt(s, trail),
+  /** the Homes and Income layers */
+  areas: (layer: AreaLayer) => (layer === 'homes' ? homes : income)?.debugInfo() ?? null,
 };
 (window as unknown as { __yourPlace: typeof debug }).__yourPlace = debug;
 
@@ -187,6 +191,32 @@ const transit: TransitController | null = APP === 'data' ? new TransitController
   demoUrl: `${ROOT}timetables/freiburg-2026.zip`,
   say: (message, ms) => toast(message, ms),
 }) : null;
+
+/** Homes and Income: buildings coloured by values per area, from open data the user loads. */
+const makeAreas = (layer: AreaLayer): AreaController =>
+  new AreaController(layer, {
+    viewer,
+    model: () => model,
+    open: (center, size, label) => {
+      $<HTMLInputElement>('search-input').value = label;
+      if (state.data !== layer) setDataLayer(layer);
+      void openPlace({ label, detail: t.dataLayers[layer], center }, { size });
+    },
+    select: () => setDataLayer(layer),
+    changed: () => {
+      describe();
+      if (model) applyPin(model);
+    },
+    root: ROOT,
+    accent,
+    pin: () => {
+      const p = model?.pinInfo();
+      return p ? [p.e, p.n] : null;
+    },
+    say: (message, ms) => toast(message, ms),
+  });
+const homes: AreaController | null = APP === 'data' ? makeAreas('homes') : null;
+const income: AreaController | null = APP === 'data' ? makeAreas('income') : null;
 
 if (APP === 'place') renderPresets();
 else renderDataPresets();
@@ -468,6 +498,8 @@ async function loadPlace(center: LngLat, opts: { label?: string; detail?: string
   // after the camera: the traffic layer writes the link when its counts start loading
   traffic?.attach(next, center);
   transit?.attach(next, center);
+  homes?.attach(next, center);
+  income?.attach(next, center);
   updateContourNote();
   status.set('terrain', 'done');
   debug.stage = 'terrain';
@@ -555,6 +587,8 @@ function setDataLayer(layer: DataLayerId): void {
   traffic.set(layer === 'traffic');
   $('transit-control').hidden = layer !== 'transit';
   transit.set(layer === 'transit');
+  homes?.set(layer === 'homes');
+  income?.set(layer === 'income');
   syncSteep();
   // the route wears the steepness colours only on the steepness layer
   if (switched && route.visible) route.refresh();
@@ -615,6 +649,13 @@ function offerOwnPlace(): void {
 
 /** Put the pin where the state says (e.g. from a shared link), or back on the searched point. */
 function applyPin(m: CityModel): void {
+  placePin(m);
+  // the Homes and Income panels say what the pin stands in
+  homes?.pinMoved();
+  income?.pinMoved();
+}
+
+function placePin(m: CityModel): void {
   if (state.pin && state.center) {
     const [e, n] = makeProjector(state.center).toLocal(state.pin.lon, state.pin.lat);
     const h = state.size / 2;
@@ -641,6 +682,8 @@ function movePinTo(x: number, y: number): void {
   model.setPin(hit.e, hit.n, true);
   model.showPin(true);
   state.pin = makeProjector(state.center).toLngLat(hit.e, hit.n);
+  homes?.pinMoved();
+  income?.pinMoved();
   viewer.requestRender();
   writeHash();
   notice.show(hit.building ? t.pinOnBuilding : t.pinOnSpot, [
@@ -916,6 +959,18 @@ function renderDataPresets(): void {
     void transit?.loadDemo();
   });
   $('transit-presets').append(demo);
+  // the examples for Homes and Income, which we host
+  for (const [layer, ctl] of [['homes', homes], ['income', income]] as const) {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip';
+    chip.textContent = t.areaDemoPlace[layer];
+    chip.addEventListener('click', () => {
+      setDataLayer(layer);
+      void ctl?.loadDemo();
+    });
+    $(`${layer}-presets`).append(chip);
+  }
 }
 
 function renderLegend(): void {
@@ -955,6 +1010,10 @@ function describe(): void {
   if (trafficLine) lines.push(trafficLine);
   const transitLine = transit?.describe();
   if (transitLine) lines.push(transitLine);
+  for (const a of [homes, income]) {
+    const line = a?.describe();
+    if (line) lines.push(line);
+  }
   const routeLine = route?.describe();
   if (routeLine) lines.push(routeLine);
   $('describe').textContent = lines.join(' ');
@@ -1138,7 +1197,7 @@ function bindShare(): void {
     msg.textContent = t.renderingPoster;
     try {
       // third-party data on the model is credited on the poster too
-      const credit = traffic?.describe() ? TRAFFIC_ATTRIBUTION.text : (transit?.credit() ?? undefined);
+      const credit = traffic?.describe() ? TRAFFIC_ATTRIBUTION.text : (transit?.credit() ?? homes?.credit() ?? income?.credit() ?? undefined);
       const blob = await makePoster(viewer, { title: title(), subtitle: subtitle(), center: state.center, sizeM: state.size, exaggeration: state.exaggeration, credit });
       saveBlob(blob, posterFileName(title(), state.size));
       msg.textContent = '';
