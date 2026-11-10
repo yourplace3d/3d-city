@@ -171,7 +171,8 @@ async function waitStage(page, stages, timeout = 180000) {
   return page.evaluate(() => ({ stage: window.__yourPlace.stage, timings: window.__yourPlace.timings, stats: window.__yourPlace.stats() }));
 }
 
-const shot = (page, name) => page.screenshot({ path: join(out, `${name}.png`) });
+// software rendering can take a while to finish frames a replay queued: give a picture up to 2 minutes
+const shot = (page, name) => page.screenshot({ path: join(out, `${name}.png`), timeout: 120000 });
 
 /** Screen point over a building, away from the centre (searching outwards from the middle of the view). */
 async function findBuilding(page) {

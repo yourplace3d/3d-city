@@ -93,7 +93,7 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   expect(r.playing && r.runner && /^\d+(\.\d)? km · \d+:\d\d(:\d\d)?$/.test(clock), `replay moves a runner along the stretch with the race clock (“${clock}”)`);
   expect((await page.textContent('#route-play')) === 'Pause', 'the replay button turns into Pause');
   await settle(page, 600);
-  // paused for the picture (the runner stays): software rendering takes over 20 s to grab a 4 km model in motion
+  // paused for the picture (the runner stays where it was)
   await page.click('#route-play');
   expect(!(await route()).playing, 'replay pauses');
   await shot(page, 'r2-route-replay');
