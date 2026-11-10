@@ -26,7 +26,7 @@ const args = process.argv.slice(2);
 const PREVIEW = args.includes('--preview');
 const ONLY = args.find((a) => a.startsWith('--only='))?.slice(7).split(',') ?? null;
 
-const SITE = 'yourplace3d.github.io/3d-city/data';
+const SITE = process.env.SITE ?? 'yourplace3d.github.io/3d-city-test';
 const FPS = 30;
 const WIDTH = 1920;
 const HEIGHT = 1080;
@@ -136,7 +136,7 @@ const server = createServer((req, res) => {
   res.end(readFileSync(f));
 });
 await new Promise((r) => server.listen(4323, '127.0.0.1', r));
-const base = 'http://127.0.0.1:4323/data/';
+const base = 'http://127.0.0.1:4323/';
 
 // ------------------------------------------------------------------ the run, along the model's streets
 
@@ -353,7 +353,7 @@ async function loadRun(page) {
 
 // ------------------------------------------------------------------ the captions drawn over the app
 
-const icon = readFileSync(join(root, 'public', 'data', 'icon.svg'), 'utf8');
+const icon = readFileSync(join(root, 'public', 'icon.svg'), 'utf8');
 const OVERLAY_CSS = `
   .toast, .notice, .status, .welcome, .mouse-hint { display: none !important; }
   #promo { position: fixed; inset: 0; z-index: 100; pointer-events: none; color: #1e1c19; }

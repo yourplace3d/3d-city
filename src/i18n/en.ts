@@ -8,12 +8,10 @@
 
 export const en = {
   // the page
-  homeTitle: 'Your Place · 3D city model of any address, free STL export',
-  docTitle: (place: string) => `${place} in 3D · Your Place`,
   language: 'Language',
   canvasLabel: '3D model of the selected area. Arrow keys orbit and tilt, plus and minus zoom, N faces north, 0 resets the view.',
   unsupportedTitle: 'This browser can’t show the 3D model',
-  unsupportedText: 'Your Place needs WebGL 2. Try a current version of Safari, Chrome, Firefox or Edge, or turn on hardware acceleration in your browser settings.',
+  unsupportedText: 'Your Place · Data needs WebGL 2. Try a current version of Safari, Chrome, Firefox or Edge, or turn on hardware acceleration in your browser settings.',
 
   // search
   searchPlaceholder: 'Search an address or place',
@@ -57,20 +55,6 @@ export const en = {
     poi: 'place',
   },
 
-  // the landing page
-  welcomeTitle: 'The street you grew up on, in 3D',
-  welcomeLede: 'Your first home, where you met, the town you left. Type the address and get it as a model on its real terrain, every building standing on top. Share it, hang it as a poster, or 3D print it.',
-  presetsLabel: 'Or explore a place with dramatic terrain',
-  aboutLink: 'How it works, 3D printing tips and data sources',
-  presets: {
-    stuttgart: 'City in a valley basin',
-    heidelberg: 'Old town on the Neckar',
-    edinburgh: 'Castle Rock & Arthur’s Seat',
-    lisbon: 'Seven hills on the Tagus',
-    sanFrancisco: 'Nob Hill to the Bay',
-    hongKong: 'Central under the Peak',
-  },
-
   // buttons on the model
   faceNorth: 'Face north',
   faceNorthKey: 'Face north (N)',
@@ -111,8 +95,6 @@ export const en = {
   near: (place: string) => `Near ${place}`,
 
   // a shared model, the pin
-  sharedInvite: 'This place was shared with you. Make one of your own: your street, your first home, where you met.',
-  makeMyPlace: 'Make my place',
   pinOnBuilding: 'Pin moved to this building. Share links now show it.',
   pinOnSpot: 'Pin moved here. Share links now show this spot.',
   centreHere: 'Centre here',
@@ -146,76 +128,17 @@ export const en = {
     `3D model. ${summary} Arrow keys orbit and tilt, Shift and arrow keys slide, plus and minus zoom, N faces north, 0 resets the view. Click a building to move the pin there.`,
 
   // the share dialog
-  shareTitle: 'Share this model',
   shareNote: 'The link holds the coordinates, your view and the pin, never the address you typed. With a pin, it shows exactly that building.',
   shareLink: 'Share link',
   copyLink: 'Copy link',
   shareNative: 'Share…',
   linkCopied: 'Link copied.',
   selectLink: 'Select the link above and copy it.',
-  shareInApp: (place: string) => `${place} in 3D`,
-  shareText: (place: string) => `${place} in 3D. Make one of your own place:`,
   thisPlace: 'This place',
-  titleField: 'Title on the poster and print',
   secondLine: 'Second line',
   optional: 'optional',
-  secondLineExample: 'Where we met · June 2019',
-  posterButton: 'Download poster (PNG)',
-  renderingPoster: 'Rendering poster…',
-  posterSaved: 'Poster saved',
-  posterFailed: 'Couldn’t render the poster on this device.',
-
-  // 3D printing
-  printSize: '3D print size',
-  tileSize: 'Size of each tile',
-  tilesNote: (count: string, totalCm: string, scale: string) => `${count} tiles, ${totalCm} × ${totalCm} cm in all · ${scale}`,
-  tilesLabel: 'Split into tiles that fit your print bed',
-  onePiece: 'One piece',
-  tilesOut: (n: number) => `${n} × ${n} tiles`,
-  titleStrip: 'Add the title in raised letters on a strip in front',
-  paintEdges: 'Edges to paint along',
-  sinkWater: 'Sink water 1 mm',
-  raiseRoads: 'Raise roads 0.4 mm',
-  raiseGreen: 'Raise parks and woods 0.6 mm',
-  raiseRoute: 'Raise the route 0.8 mm',
-  raiseTraffic: 'Raise traffic streets 0.5–2 mm, by traffic',
-  raiseTransit: 'Raise transit lines 0.4–1.2 mm, by trips',
-  stlButton: 'Download 3D print file (STL)',
-  stlTilesButton: 'Download 3D print tiles (ZIP of STL files)',
-  stillLoading: 'Still loading the buildings — try again in a moment.',
-  buildingPrint: 'Building the 3D print file…',
-  printFailed: 'Couldn’t build the 3D print file on this device.',
-  printSquare: (cm: string) => `${cm} × ${cm} cm`,
-  printWithStrip: (cm: string, deepCm: string) => `${cm} × ${deepCm} cm with the title strip`,
-  saved: (size: string, scale: string, triangles: string, mb: string) => `Saved: ${size} at ${scale}, ${triangles} triangles (${mb} MB).`,
-  savedTiles: (count: string, tileCm: string, totalCm: string, strip: boolean, scale: string, triangles: string, mb: string) =>
-    `Saved: ${count} tiles of ${tileCm} cm, ${totalCm} × ${totalCm} cm in all${strip ? ', and the title strip as its own piece' : ''}, at ${scale}, ${triangles} triangles (${mb} MB).`,
-  waterSunk: (mm: string) => ` Water sunk ${mm} mm.`,
-  greenRaised: (mm: string) => ` Parks and woods raised ${mm} mm.`,
-  roadsRaised: (mm: string) => ` Roads raised ${mm} mm.`,
-  routeRaised: (mm: string) => ` Route raised ${mm} mm.`,
-  trafficRaised: (from: string, to: string) => ` Traffic streets raised ${from}–${to} mm.`,
-  transitRaised: (from: string, to: string) => ` Transit lines raised ${from}–${to} mm.`,
-  brokenLeftOut: (n: string, count: number) => ` ${n} building${count === 1 ? '' : 's'} with a broken outline in the map data left out.`,
-  brokenInTile: ' A building with a broken outline in the map data was left out.',
-  fontMissing: (chars: string, count: number) => ` The font has no ${chars}, so ${count === 1 ? 'it was' : 'they were'} left off the title.`,
-
-  // the note in the tiles' ZIP
-  readmeSize: (area: string, count: string, n: number, tileCm: string, totalCm: string, scale: string, ex: string) =>
-    `${area}, ${count} tiles (${n} x ${n}) of ${tileCm} cm, ${totalCm} x ${totalCm} cm in all, ${scale}, terrain x${ex}.`,
-  readmeGrid: 'Tiles are named by row and column like a map grid: row A is the north edge (the back), column 1 the west (left).',
-  readmeCorners: (last: string) => `A1 is the north-west corner, ${last} the south-east. Print each tile flat, base down, at 100%; they fit edge to edge.`,
-  readmeStrip: 'title.stl is the title strip: put it in front of the bottom row, in the middle.',
-  readmeWater: (mm: string) => `Water (lakes, rivers mapped as areas, the sea) sits ${mm} mm below the land, with an edge to paint along.`,
-  readmeGreen: (mm: string) => `Parks, gardens and woods stand ${mm} mm above the land.`,
-  readmeRoads: (mm: string) => `Roads, paths and railways stand ${mm} mm above the ground, with sharp edges.`,
-  readmeRoute: (mm: string) => `The route stands ${mm} mm above the ground, higher than the roads, and runs level across bridges.`,
-  readmeTraffic: (from: string, to: string) => `The traffic streets stand ${from} to ${to} mm above the ground: the more traffic in the hour shown, the higher. Where the route meets them, it stands 0.4 mm above them.`,
-  readmeTransit: (from: string, to: string) => `The transit lines stand ${from} to ${to} mm above the ground: the more trips on the day shown, the higher. Where the route meets them, it stands 0.4 mm above them.`,
-  readmeCredit: 'Map data © OpenStreetMap contributors (ODbL). Terrain: Mapzen terrain tiles on AWS Open Data.',
 
   // a route from a GPX or TCX file
-  route: 'Route',
   routeHint: 'GPX or TCX',
   routeLoad: 'Load a GPX or TCX file',
   routeLocal: 'The file stays on this device. It’s never uploaded.',
@@ -267,13 +190,12 @@ export const en = {
   dataAboutLink: 'How it works and where the data comes from',
   dataShareTitle: 'Share this view',
   dataShareText: (place: string) => `${place}: open data on a 3D model. See your own city:`,
-  dataTitleField: 'Title on the image and the print',
+  dataTitleField: 'Title on the image',
   dataSecondLineExample: 'Rent per m² · 2022 census',
   dataImageButton: 'Download image (PNG)',
   dataRenderingImage: 'Rendering the image…',
   dataImageSaved: 'Image saved',
   dataImageFailed: 'Couldn’t render the image on this device.',
-  dataPrintSection: '3D print',
   dataLayers: { steep: 'Steepness', traffic: 'Traffic', transit: 'Public transport', homes: 'Homes', income: 'Income', route: 'Your route' },
   cardSteep: 'Roads and paths coloured by how steep they are, anywhere. Search a place above, or try one:',
   cardTraffic: 'Cars and bikes counted every hour at hundreds of points, as red streets that rise with the traffic. Only in Hamburg so far. Try:',
@@ -434,13 +356,6 @@ export const en = {
   areaDescribe: (measure: string, lo: string, hi: string, at: string | null) => `${measure}: ${lo} to ${hi} in this square${at ? `, ${at} at the pin` : ''}.`,
   cardRoute: 'Load a run, a ride or a race (GPX or TCX) and see it over any layer, with its height profile and steepest climbs. The file stays on your device.',
   moreLayers: 'More layers are on the way: water, energy.',
-  partOf: 'Part of Your Place: any address as a 3D model, to share, hang or print',
-  partOfShort: 'Part of Your Place →',
-  dataTeaser: 'New: where it gets steep, traffic in Hamburg, public transport, rents and incomes, your race route',
-  openData: 'Data layers for this place',
-  openDataTitle: 'Data layers for this place: steepness, traffic, public transport, your route',
-  openPlace: 'Open in Your Place',
-  openPlaceTitle: 'Open this place in Your Place: poster and 3D print',
 };
 
 export type Messages = typeof en;

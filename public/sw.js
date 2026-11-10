@@ -1,7 +1,7 @@
-/* Your Place service worker: caches the app shell so the PWA opens offline.
+/* Your Place · Data service worker: caches the app shell so the PWA opens offline.
    Map data (Overpass, terrain tiles, geocoding) always goes to the network;
    Overpass responses are cached separately in IndexedDB by the app. */
-const CACHE = 'your-place-shell-v2';
+const CACHE = 'your-place-data-shell-v1';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png'])));

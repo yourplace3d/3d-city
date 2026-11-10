@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>How Your Place works · 3D city models and 3D-print maps of any address</title>
-    <meta name="description" content="How to make a 3D model of your neighbourhood from any address, save it as a poster, or 3D print it from an STL file. Scales, print tips, privacy and data sources." />
+    <title>How Your Place · Data works · open data about your city in 3D</title>
+    <meta name="description" content="How Your Place · Data shows open data on a 3D model of any place: steep streets, traffic, public transport by the timetable, rents and incomes, your own route. Privacy and data sources." />
     <link rel="canonical" href="%SITE_URL%about/" />
     <meta name="theme-color" content="#ebe7df" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#1c1b19" media="(prefers-color-scheme: dark)" />
@@ -12,9 +12,9 @@
     <link rel="icon" href="../icon-192.png" type="image/png" sizes="192x192" />
     <link rel="apple-touch-icon" href="../apple-touch-icon.png" />
     <meta property="og:type" content="article" />
-    <meta property="og:site_name" content="Your Place" />
-    <meta property="og:title" content="How Your Place works: 3D models and 3D-print maps of any address" />
-    <meta property="og:description" content="Scales, print tips, privacy and data sources for Your Place, the free 3D city model maker." />
+    <meta property="og:site_name" content="Your Place · Data" />
+    <meta property="og:title" content="How Your Place · Data works: open data about your city in 3D" />
+    <meta property="og:description" content="The layers, privacy and data sources of Your Place · Data, free in your browser." />
     <meta property="og:url" content="%SITE_URL%about/" />
     <meta property="og:image" content="%SITE_URL%og.jpg" />
     <meta property="og:image:width" content="1200" />
@@ -24,22 +24,22 @@
   </head>
   <body>
     <header class="top">
-      <a class="brand" href="../"><img src="../icon.svg" alt="" width="28" height="28" />Your Place</a>
+      <a class="brand" href="../"><img src="../icon.svg" alt="" width="28" height="28" />Your Place · Data</a>
       <a class="btn" href="../">Open the app</a>
     </header>
 
     <main>
       <section class="hero">
         <p class="eyebrow">How it works</p>
-        <h1>Your neighbourhood as a 3D model, a poster or a 3D print</h1>
+        <h1>Open data about your city, on a 3D model</h1>
         <p class="lede">
-          The street you grew up on, where you met, the town you left: type the address and Your Place builds a miniature of the square around it (300 m to 4 km) in your browser within a few seconds:
-          the real terrain underneath and every mapped building standing on top, like an architect’s model.
-          It’s free, needs no account and works on a phone.
+          How steep its streets are, how busy, how its trams and buses run, what homes cost and what people earn:
+          search a place and Your Place · Data builds the square around it (300 m to 4 km) in your browser, the real terrain
+          with every mapped building, and lays one layer of open data over it. It’s free, needs no account and works on a phone.
         </p>
-        <p><a class="btn btn-primary" href="../">Make a model of your place</a></p>
+        <p><a class="btn btn-primary" href="../">Open the app</a></p>
         <figure class="shot">
-          <img src="../screenshot.jpg" width="1600" height="1000" alt="Your Place showing Stuttgart as a 3D model with its valley terrain, with the settings panel open" />
+          <img src="../screenshot.jpg" width="1600" height="1000" alt="Freiburg as a 3D model, its buildings coloured by the rent per m² of the 100 m square they stand in, with the panel showing the legend" />
         </figure>
       </section>
 
@@ -47,108 +47,82 @@
         <h2>Three steps</h2>
         <ol class="steps">
           <li>
-            <strong>Search a place.</strong> An address, a street, a village, a postcode or raw coordinates such as
-            <code>48.7765, 9.1772</code>. Or tap “use my location”.
+            <strong>Pick a layer and a place.</strong> An address, a street, a village, a postcode or raw coordinates such as
+            <code>48.7765, 9.1772</code>, or one of the examples on the start page.
           </li>
           <li>
             <strong>Look around.</strong> Drag to turn and tilt, pinch or scroll to zoom, two fingers (or Shift-drag) to slide.
-            Tap a building to put the pin on it, “this one is ours”. Double-tap or double-click a spot to load the area around it.
+            Tap a building to put the pin on it and see its area’s value. Double-tap or double-click a spot to load the area around it.
           </li>
           <li>
-            <strong>Keep it.</strong> Share a link that opens the same view with the same house pinned, download a poster
-            image, or download an STL file to 3D print.
+            <strong>Share it.</strong> A link opens the same view, layer and pin; or download it as an image, with your own title.
           </li>
         </ol>
       </section>
 
       <section>
-        <h2>What’s in the model</h2>
+        <h2>The layers</h2>
+        <ul>
+          <li><strong>Steepness:</strong> roads and paths coloured by how steep they are, anywhere, from golden yellow (3–6 %) to dark red (over 15 %),
+            measured on the terrain over 60 m at a time. The terrain data has points 10–30 m apart, so it’s an estimate: short ramps and stairs can be missed, and bridges are left out.</li>
+          <li><strong>Traffic:</strong> the cars or bikes Hamburg counted in each of the last 24 hours, as red streets that rise with the traffic, with a bar chart of the day.
+            Each count spreads along the streets around its counting point; in between it’s an estimate. Only Hamburg so far.</li>
+          <li><strong>Public transport:</strong> trams, buses, trains and ferries moving through the square as your city’s timetable has them,
+            with the trips per hour and a replay of the day. Find your city’s timetable in the panel (from the Mobility Database), or load a GTFS file from your transit operator.
+            The timetable is the plan, not live: delays and cancellations don’t show.</li>
+          <li><strong>Homes and Income:</strong> the buildings coloured by what homes cost or what people earn in the area they stand in.
+            The panel lists the open sources known for your place (Germany’s 2022 census rents, CBS for the Netherlands, the US census via Census Reporter);
+            any GeoJSON or CSV file with values per area works too. Five colours each hold a fifth of the areas in the square.
+            Single points, such as sales, show only as medians of 100 m squares with at least five.</li>
+          <li><strong>Your route,</strong> over any layer: a run, a ride or a race from a GPX or TCX file, with its steepest climbs, a height profile and a replay at the recorded pace.</li>
+        </ul>
+        <h3>The model under the data</h3>
         <ul>
           <li><strong>Terrain</strong> from open elevation data. Hills can be exaggerated from 1× to 5× and drawn with contour lines.</li>
           <li><strong>Buildings</strong> at the height recorded in OpenStreetMap, or its number of floors × 3 m. Where neither is mapped,
-            the height is estimated from the neighbourhood, and the app says what share of buildings that is.
-            Show them in white, grey, sand or dark, or coloured by height.</li>
+            the height is estimated from the neighbourhood, and the app says what share of buildings that is.</li>
+          <li><strong>Roads, water and green areas</strong> on the ground, each of which you can switch off; the sea from OpenStreetMap’s coastline.</li>
           <li><strong>In English, Spanish, Portuguese (Brazil) or German</strong>, following your browser’s language, or picked in the settings. This page is in English only for now.</li>
-          <li><strong>Roads, water and green areas</strong> painted on the ground, each of which you can switch off.</li>
-          <li><strong>Sea</strong> drawn from OpenStreetMap’s coastline, so harbours and bays sit at sea level.</li>
-          <li><strong><a href="../data/">Your Place · Data</a></strong>, a second app for open data on the model, one layer at a time:
-            <strong>steepness</strong> of roads and paths, from golden yellow (3–6 %) to dark red (over 15 %), measured on the terrain over 60 m at a time
-            (the terrain data has points 10–30 m apart, so it’s an estimate: short ramps and stairs can be missed, and bridges are left out);
-            <strong>traffic</strong> in Hamburg, the cars or bikes the city counted in each of the last 24 hours, as red streets that rise with the traffic, with a bar chart of the day;
-            <strong>public transport</strong> from your city’s timetable (a GTFS file from your transit operator), with trams, buses, trains and ferries moving through the square as the timetable has them;
-            <strong>homes</strong> and <strong>income</strong>, the buildings coloured by what homes cost or what people earn in the area they stand in, from open data you load (the panel lists the sources known for your place);
-            and, over any of them, <strong>your route</strong> from a GPX or TCX file (a run, a ride, a race), with its steepest climbs, a height profile and a replay.</li>
-        </ul>
-      </section>
-
-      <section id="3d-print">
-        <h2>3D printing your place</h2>
-        <p>
-          Open the share menu, pick a print size and download the STL. The file is a single solid in millimetres:
-          the terrain as a block on a 3 mm base, with every building standing on it. It is checked to be watertight,
-          so slicers such as PrusaSlicer, Bambu Studio, OrcaSlicer and Cura shouldn’t need to repair it.
-          North is at the back of the print.
-        </p>
-        <div class="table-wrap">
-          <table>
-            <caption>Scale, and the printed height of a 10 m building</caption>
-            <thead>
-              <tr><th scope="col">Area</th><th scope="col">10 cm print</th><th scope="col">15 cm print</th><th scope="col">20 cm print</th></tr>
-            </thead>
-            <tbody>
-              <tr><th scope="row">1 km</th><td>1:10,000 · 1 mm</td><td>1:6,670 · 1.5 mm</td><td>1:5,000 · 2 mm</td></tr>
-              <tr><th scope="row">2 km</th><td>1:20,000 · 0.5 mm</td><td>1:13,300 · 0.75 mm</td><td>1:10,000 · 1 mm</td></tr>
-              <tr><th scope="row">4 km</th><td>1:40,000 · 0.25 mm</td><td>1:26,700 · 0.4 mm</td><td>1:20,000 · 0.5 mm</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <h3>Tips</h3>
-        <ul>
-          <li><strong>Choose a small area for a big print.</strong> Houses are tiny at true scale; 300 m to 2 km on 15–20 cm shows streets and houses best.</li>
-          <li><strong>Print big in tiles.</strong> Split the print into up to 8 × 8 tiles of the print size you pick: 64 tiles of 20 cm make a 1.6 m model. You get a ZIP with one STL per tile (A1 is the north-west corner), the title ledge as its own piece, and a note on how they fit together.</li>
-          <li><strong>Water sits 1 mm lower</strong> than the land in the print, so rivers, lakes and the sea stand out and are easy to paint. Untick it in the share menu to keep the water level.</li>
-          <li><strong>Raise the roads and parks</strong> for painting: roads, paths and railways can stand 0.4 mm above the ground with sharp edges, and parks and woods 0.6 mm. Both are off by default; tick them in the share menu.</li>
-          <li><strong>Your route in the print:</strong> in <a href="../data/">Your Place · Data</a>, a loaded route stands as a raised line, 1.2 mm wide and 0.8 mm high (twice the roads), level across bridges: easy to paint, next to the medal. On by default when a route is shown.</li>
-          <li><strong>Exaggerate the terrain</strong> before you export: the print uses the same setting as the screen. 2–3× makes gentle hills readable.</li>
-          <li><strong>No supports needed.</strong> The model sits flat on its base. A 0.4 mm nozzle and 0.12–0.16 mm layers keep small buildings crisp.</li>
-          <li><strong>Large areas make large files.</strong> A 2 km city centre is about 10–15 MB, a 4 km one up to about 40 MB.</li>
-          <li>If a building’s outline in the map data is broken beyond repair, it is left out and the app tells you how many.</li>
         </ul>
       </section>
 
       <section>
         <h2>Privacy</h2>
         <ul>
-          <li>No account, no cookies, no analytics. Your Place has no server of its own: the app runs in your browser.</li>
+          <li>No account, no cookies, no analytics. Your Place · Data has no server of its own: the app runs in your browser.</li>
           <li>What you type in the search box goes from your browser to the address search services
             <a href="https://photon.komoot.io/">Photon</a> (by komoot) and, if needed,
             <a href="https://nominatim.openstreetmap.org/">Nominatim</a> (OpenStreetMap), which return its coordinates.</li>
-          <li>Share links hold only coordinates and the view, never the address you typed. A shared model is named after its neighbourhood, not a street address.</li>
+          <li>Share links hold only coordinates, the view and the layer, never the address you typed or a file you loaded.</li>
           <li>Map data you have loaded is cached on your device so it opens faster next time.</li>
-          <li>A route file (GPX, TCX) is read in your browser and never uploaded or stored; reloading the page forgets it.
-            Share links include the route only if you tick that, and then only the stretch shown, without times or a name.</li>
+          <li>Files you load (a route, a timetable, values per area) are read in your browser and never uploaded or stored; reloading the page forgets them.
+            Share links include a route only if you tick that, and then only the stretch shown, without times or a name.</li>
           <li>With the traffic layer on in Hamburg, the corners of the square you’re looking at go to the City of Hamburg’s traffic server, which returns its counts.</li>
-          <li>A timetable file (GTFS) is read in your browser and never uploaded or stored; reloading the page forgets it.
-            “Find timetables for this place” downloads the <a href="https://mobilitydatabase.org/">Mobility Database</a>’s whole list of timetables, the same for everyone, and picks those for your place on your device; loading one downloads it from the Mobility Database, which so learns which timetable you chose, not where you’re looking.</li>
-          <li>A file of values for Homes or Income is read in your browser and never uploaded or stored; share links carry the layer, not the file.
-            “Load for this square” asks the Dutch statistics office’s map server (PDOK) for the corners of the square shown; the other sources are links you open yourself.</li>
+          <li>“Find timetables for this place” downloads the <a href="https://mobilitydatabase.org/">Mobility Database</a>’s whole list of timetables, the same for everyone, and picks those for your place on your device;
+            loading one downloads it from the Mobility Database, which so learns which timetable you chose, not where you’re looking.</li>
+          <li>“Load for this square” (Homes and Income in the Netherlands) asks the Dutch statistics office’s map server (PDOK) for the corners of the square shown; the other sources are links you open yourself.</li>
         </ul>
       </section>
 
       <section>
         <h2>Questions</h2>
-        <h3>My house is missing, or flat</h3>
+        <h3>A building is missing, or flat</h3>
         <p>
           Buildings come from <a href="https://www.openstreetmap.org/">OpenStreetMap</a>, which volunteers map by hand.
           Cities are well covered; some villages have few buildings, and many have no height recorded.
-          You can add your house, or its number of floors, yourself on openstreetmap.org, and it shows up here once the map tiles update.
+          You can add a building, or its number of floors, yourself on openstreetmap.org, and it shows up here once the map tiles update.
+        </p>
+        <h3>Why is there no data for my city?</h3>
+        <p>
+          Each layer needs open data for the place: steepness works anywhere, traffic counts are only Hamburg’s so far, and timetables and values per area
+          are published city by city and country by country. Where the panel knows no source, a file of your own works.
         </p>
         <h3>Which devices work?</h3>
         <p>Any current browser with WebGL 2: Safari, Chrome, Firefox or Edge, on a phone, tablet or computer. You can also install it as an app from the browser menu.</p>
         <h3>Can I share what I make?</h3>
         <p>
-          Yes. The map data is © OpenStreetMap contributors under the Open Database Licence, so credit
-          “© OpenStreetMap contributors” wherever you show a model, poster or print. Posters carry the credit already.
+          Yes. Credit the data where you show it: “© OpenStreetMap contributors” for the map, and the layer’s source as the panel names it.
+          Downloaded images carry the credits already.
         </p>
       </section>
 
@@ -162,20 +136,20 @@
           <li>Fallback map data: <a href="https://overpass-api.de/">Overpass API</a></li>
           <li>Traffic counts: Freie und Hansestadt Hamburg, Behörde für Verkehr und Mobilitätswende, <a href="https://www.govdata.de/dl-de/by-2-0">dl-de/by-2-0</a>, via the city’s <a href="https://iot.hamburg.de/">SensorThings API</a></li>
           <li>Timetables for a place: found through the <a href="https://mobilitydatabase.org/">Mobility Database</a> by MobilityData, each credited with its operator and licence in the panel</li>
-          <li>Freiburg’s timetable (public transport demo): Freiburger Verkehrs AG (VAG), <a href="https://www.govdata.de/dl-de/by-2-0">dl-de/by-2-0</a>, cut down to what the app uses</li>
+          <li>Freiburg’s timetable (public transport example): Freiburger Verkehrs AG (VAG), <a href="https://www.govdata.de/dl-de/by-2-0">dl-de/by-2-0</a>, cut down to what the app uses</li>
           <li>Rents (Homes): Zensus 2022, Statistische Ämter des Bundes und der Länder, <a href="https://www.govdata.de/dl-de/by-2-0">dl-de/by-2-0</a>; the Freiburg example is cut from it</li>
           <li>Home values and incomes for the Netherlands: CBS, Kerncijfers wijken en buurten, via PDOK, <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>; the Amsterdam example is cut from it</li>
           <li>Home values and incomes for the US: U.S. Census Bureau, American Community Survey, via <a href="https://censusreporter.org/">Census Reporter</a></li>
         </ul>
         <p>
-          Your Place is open source under the MIT licence:
-          <a href="https://github.com/yourplace3d/3d-city">github.com/yourplace3d/3d-city</a>. Ideas and bug reports are welcome there.
+          Your Place · Data is open source under the MIT licence:
+          <a href="https://github.com/yourplace3d/3d-city/tree/v2">github.com/yourplace3d/3d-city</a> (branch v2). Ideas and bug reports are welcome there.
         </p>
       </section>
     </main>
 
     <footer class="foot">
-      <a href="../">Open Your Place</a> · <a href="https://github.com/yourplace3d/3d-city">Source code</a> · © OpenStreetMap contributors
+      <a href="../">Open Your Place · Data</a> · <a href="https://github.com/yourplace3d/3d-city/tree/v2">Source code</a> · © OpenStreetMap contributors
     </footer>
   </body>
 </html>

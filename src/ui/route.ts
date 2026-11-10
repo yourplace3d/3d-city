@@ -37,8 +37,6 @@ import { Playback } from '../data/time/playback';
 import { bridgeTester, classRuns, climbTotals, sampleClasses, sampleLine, steepClass, steepSections, type LineSample } from '../data/match/slope';
 import { steepColour } from '../data/display/steepness';
 import { profileScale, profileSvg, sampleAtFraction, type ProfileScale } from '../data/display/profile';
-import { routeForPrint } from '../export/route';
-import type { PrintRoad } from '../export/roads';
 
 /** How much of each end "hide the ends" removes (m). */
 export const TRIM_M = 500;
@@ -235,16 +233,6 @@ export class RouteController {
     });
     this.linkCache = { key, code };
     return code;
-  }
-
-  /** The stretch for the 3D print at `mmPerM`, as raised pieces; none unless the route is shown. */
-  printPieces(mmPerM: number): PrintRoad[] {
-    const r = this.route;
-    const d = this.display;
-    if (!r || !d || !this.shown || d.model !== this.host.model()) return [];
-    const pts = toLocal(stretchOf(r, this.fromM, this.toM), d.center);
-    const bridges = (d.model.featureSet?.lines ?? []).filter((l) => l.bridge).map((l) => l.pts);
-    return routeForPrint(pts, mmPerM, bridgeTester(bridges));
   }
 
   /** A sentence for the model's description, or null without a route. */

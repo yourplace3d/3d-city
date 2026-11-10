@@ -22,9 +22,9 @@ function texts(m: Messages): Map<string, string> {
 
 /** Texts that are rightly the same as in English (names, units, words the languages share). */
 const SAME: Record<string, string[]> = {
-  es: ['legendTop', 'legendTop#1', 'printSquare', 'printSquare#1', 'dataDocTitle', 'dataDocTitle#1', 'trafficHour', 'trafficHour#1', 'transitSpeeds[0]', 'transitSpeeds[1]', 'transitSpeeds[2]', 'transitFeedSize', 'transitFeedSize#1'],
-  pt: ['legendTop', 'legendTop#1', 'printSquare', 'printSquare#1', 'steepRange', 'steepRange#1', 'climbLabel', 'climbLabel#1', 'profileAt', 'profileAt#1', 'dataDocTitle', 'dataDocTitle#1', 'transitSpeeds[0]', 'transitSpeeds[1]', 'transitSpeeds[2]', 'transitFeedSize', 'transitFeedSize#1'],
-  de: ['legendTop', 'legendTop#1', 'printSquare', 'printSquare#1', 'docTitle', 'docTitle#1', 'shareInApp', 'shareInApp#1', 'optional', 'style.sand', 'routeStart', 'routePause', 'dataDocTitle', 'dataDocTitle#1', 'transitFreiburg', 'transitFeedSize', 'transitFeedSize#1', 'areaDemoPlace.homes', 'areaDemoPlace.income'],
+  es: ['legendTop', 'legendTop#1', 'dataDocTitle', 'dataDocTitle#1', 'trafficHour', 'trafficHour#1', 'transitSpeeds[0]', 'transitSpeeds[1]', 'transitSpeeds[2]', 'transitFeedSize', 'transitFeedSize#1'],
+  pt: ['legendTop', 'legendTop#1', 'steepRange', 'steepRange#1', 'climbLabel', 'climbLabel#1', 'profileAt', 'profileAt#1', 'dataDocTitle', 'dataDocTitle#1', 'transitSpeeds[0]', 'transitSpeeds[1]', 'transitSpeeds[2]', 'transitFeedSize', 'transitFeedSize#1'],
+  de: ['legendTop', 'legendTop#1', 'optional', 'style.sand', 'routeStart', 'routePause', 'dataDocTitle', 'dataDocTitle#1', 'transitFreiburg', 'transitFeedSize', 'transitFeedSize#1', 'areaDemoPlace.homes', 'areaDemoPlace.income'],
 };
 
 describe('languages', () => {
@@ -49,8 +49,7 @@ describe('languages', () => {
   }
 
   it('matches the pages: every marked text exists, and the pages’ English is the dictionary’s', () => {
-    // both apps' pages and the body they share
-    const html = ['index.html', 'data/index.html', 'src/app-body.html'].map((f) => readFileSync(f, 'utf8')).join('\n');
+    const html = readFileSync('index.html', 'utf8');
     const texts = [...html.matchAll(/<\w+[^>]*\sdata-t="([^"]+)"[^>]*>([^<]*)</g)];
     expect(texts.length).toBeGreaterThan(40);
     for (const [, key, text] of texts) expect(lookup(key, en), key).toBe(text);

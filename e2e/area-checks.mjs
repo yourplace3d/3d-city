@@ -16,7 +16,7 @@ const STUTTGART = { lat: 48.7765, lon: 9.1772 };
 const HAMBURG = { lat: 53.5511, lon: 9.9937 };
 
 export async function areaChecks({ browser, base, routeAll, expect, watchConsole, waitStage, settle, shot }) {
-  const dataBase = `${base}data/`;
+  const dataBase = base;
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 }, deviceScaleFactor: 1 });
   await routeAll(ctx);
   // CBS's neighbourhood figures, answered from made-up neighbourhoods around Amsterdam
@@ -157,8 +157,8 @@ export async function areaChecks({ browser, base, routeAll, expect, watchConsole
   // the data app speaks of data: its share dialog
   await page.click('#share-btn');
   expect(
-    (await text('#share-title')) === 'Share this view' && (await text('#poster-btn')) === 'Download image (PNG)' && /Rent per m²/.test((await page.getAttribute('#print-subtitle', 'placeholder')) ?? '') && !(await page.isVisible('#stl-btn')) && (await page.isVisible('#print-details > summary')),
-    'its share dialog offers the link and an image first; the 3D print is folded away',
+    (await text('#share-title')) === 'Share this view' && (await text('#poster-btn')) === 'Download image (PNG)' && /Rent per m²/.test((await page.getAttribute('#image-subtitle', 'placeholder')) ?? '') && !(await page.$('#stl-btn, #print-details')),
+    'its share dialog offers the link and an image, and nothing to print',
   );
   await page.keyboard.press('Escape');
   await settle(page, 1000);

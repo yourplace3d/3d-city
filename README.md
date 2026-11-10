@@ -1,39 +1,22 @@
-# Your Place
+# Your Place · Data
 
-**Type any address and get the area around it as a 3D architect’s model: the real terrain underneath,
-every building standing on top. Save a poster or a watertight STL to 3D print it. Free, no account,
-works on your phone.**
+**Open data about your city on a 3D model: how steep its streets are, how busy, how its trams and buses
+run, what homes cost and what people earn. Search any place, pick a layer. Free, no account, works on
+your phone.**
 
-**[Open Your Place →](https://yourplace3d.github.io/3d-city/)** · [How it works](https://yourplace3d.github.io/3d-city/about/) · [Changelog](CHANGELOG.md)
+**[Open Your Place · Data →](https://yourplace3d.github.io/3d-city-test/)** · [How it works](https://yourplace3d.github.io/3d-city-test/about/) · [Changelog](CHANGELOG.md)
 
 <p>
-  <img src="public/screenshot.jpg" alt="Your Place showing Stuttgart as a 3D model on its valley terrain, with the settings panel open" width="73%" />
-  <img src="public/screenshot-phone.jpg" alt="Your Place on a phone, showing Lisbon’s hills and the river Tagus" width="24%" />
+  <img src="public/screenshot.jpg" alt="Freiburg as a 3D model, its buildings coloured by the rent per m² of the 100 m square they stand in, with the panel showing the legend" width="100%" />
 </p>
 
-## What you can do
+A standalone app on this branch (`v2`). The `main` branch of this repository is a different app,
+[Your Place](https://yourplace3d.github.io/3d-city/) (a 3D model of any address, as a poster or a 3D
+print), and stays as it is: `v2` is never merged into it. Your Place · Data has no 3D print.
 
-- **Search anything:** an address, a street, a village, a postcode or `lat, lon`, or use your location.
-  Postcode and county results land on their village, not in a field.
-- **See it in 3D:** any square from 300 m to 4 km around it, in 100 m steps, with terrain you can exaggerate (1×–5×) and contour lines.
-  Buildings stand at their mapped height; where none is mapped the app estimates it and says how many.
-  Show them in white, grey, sand or dark, or coloured by height (yellow through magenta to indigo, never
-  green or light blue, so they don't look like parks or water).
-- **Find a house:** slide the plate, tap a building to pin it, and “Centre here” to rebuild the square around it,
-  or double-tap / double-click a spot to load the area there in one go.
-- **In your language:** English, Spanish, Portuguese (Brazil) or German, from the browser's language or the picker in
-  the settings. Share links carry no language, so each visitor sees their own.
-- **Share it:** the link opens the same view with the same house pinned. It holds coordinates only, never the address you typed.
-- **Keep it:** download a poster image with the place name and coordinates, or an STL file to 3D print
-  (10, 15 or 20 cm wide; 2 km on 15 cm is 1:13,300), in one piece or in up to 8 × 8 tiles that fit your
-  print bed. For painting, water sits 1 mm below the land, and roads (0.4 mm) and parks and woods (0.6 mm)
-  can stand above it. Every exported shell is checked to be watertight.
+## The layers
 
-## Your Place · Data
-
-A second app, at [`data/`](https://yourplace3d.github.io/3d-city/data/), puts open data on the same 3D model,
-one layer at a time, so neither app gets crowded. Your Place has one button to it (the layers icon), and it
-has one back, both keeping the place you're looking at. A route of your own isn't one of the layers: it
+One layer at a time, so the model doesn't get crowded. A route of your own isn't one of the layers: it
 shows over whichever layer you pick.
 
 - **Steepness:** roads and paths coloured by how steep they are, from golden yellow (3–6 %) to dark red
@@ -47,24 +30,21 @@ shows over whichever layer you pick.
   streets it fades four times as fast, so a quiet street next to a busy one stays quiet. Where counts meet,
   as at a crossing counted on every side, they add up, so the whole crossing rises. Only the white dots are
   counted; in between it's an estimate, and the panel says so. Pick an hour in the chart, or replay the day,
-  and the streets rise and fall; tap a dot for that point's day. The chart is also a table. In the 3D print
-  the traffic streets stand 0.5 to 2 mm high by traffic, at least 0.8 mm wide: a gentle relief, no spikes.
-  Only Hamburg so far; elsewhere the panel says so and offers Hamburg.
+  and the streets rise and fall; tap a dot for that point's day. The chart is also a table. Only Hamburg so
+  far; elsewhere the panel says so and offers Hamburg.
 - **Public transport, from your city's timetable:** "Find timetables for this place" lists the open
   timetables the [Mobility Database](https://mobilitydatabase.org/) has for the square shown (about 2,600
   in use, worldwide), most local first, with their size; one tap loads one, and more can be added (a city's
-  buses and its trains often come separately). Or load a timetable file (GTFS, a ZIP) yourself. Trams, buses, trains, U-Bahn and ferries move through the square as the timetable has
-  them, with the same panel as Traffic: a bar chart of the trips into the square per hour, a clock, a
-  replay at 1 minute, 10 minutes or 1 hour a second, and the lines as chips. Tap a vehicle or a chip to see
-  one line; pick any day the timetable has. The file is read in the browser, in a background worker, and
-  never uploaded: a city's or a region's file works (Hamburg's 39 MB file opens in about 10 seconds), a
-  whole country's is too big. If the square shown has none of its lines, the app goes to where it is
-  busiest. "Try Freiburg's timetable" loads Freiburg's, which we host. Lines are painted in their mode's
-  colour (trains green, U-Bahn blue and dashed, trams red, buses grey, ferries dark yellow), vehicles are
-  blocks longer for trains than for buses; replays at 10 minutes or an hour a second leave fading trails
-  behind them. It's the plan, not live, so delays don't show. In the 3D print
-  the lines that run that day stand 0.4 to 1.2 mm high by the trips on them, adding up where lines share a
-  street.
+  buses and its trains often come separately). Or load a timetable file (GTFS, a ZIP) yourself. Trams,
+  buses, trains, U-Bahn and ferries move through the square as the timetable has them: a bar chart of the
+  trips into the square per hour, a clock, a replay at 1 minute, 10 minutes or 1 hour a second, and the
+  lines as chips. Tap a vehicle or a chip to see one line; pick any day the timetable has. The file is read
+  in the browser, in a background worker, and never uploaded: a city's or a region's file works (Hamburg's
+  39 MB file opens in about 10 seconds), a whole country's is too big. If the square shown has none of its
+  lines, the app goes to where it is busiest. "Try Freiburg's timetable" loads Freiburg's, which we host.
+  Lines are painted in their mode's colour (trains green, U-Bahn blue and dashed, trams red, buses grey,
+  ferries dark yellow); replays at 10 minutes or an hour a second leave fading trails. It's the plan, not
+  live, so delays don't show.
 - **Homes and Income:** the buildings coloured by what homes cost, or what people earn, in the area they
   stand in, from open data you load. The panel lists the open sources we know for the place: Germany's
   2022 census (average rent per m² in 100 m squares: download the 9 MB ZIP and load it as it is), CBS for
@@ -78,11 +58,21 @@ shows over whichever layer you pick.
   host. Germany publishes incomes only per town, so the Income layer has no source there yet.
 - **Your route:** load a GPX or TCX file (Strava, Garmin, a race website) and pick the stretch to show; the
   model follows it, over any layer. On Steepness the line takes the steepness colours (and only the route is
-  coloured), with start, finish, km markers and the
-  steepest climbs labelled, a replay at the recorded pace, and a height profile. In the 3D print the route
-  stands as a raised line, 1.2 mm wide and 0.8 mm high (twice the roads), level across bridges, ready to paint
-  next to the medal. The file is read in your browser and never uploaded.
+  coloured), with start, finish, km markers and the steepest climbs labelled, a replay at the recorded pace,
+  and a height profile. The file is read in your browser and never uploaded.
 - More layers are planned: water, energy.
+
+## The model under the data
+
+- **Search anything:** an address, a street, a village, a postcode or `lat, lon`, a map link, or your location.
+  Postcode and county results land on their village, not in a field.
+- **Any square from 300 m to 4 km**, in 100 m steps, with terrain you can exaggerate (1×–5×) and contour lines.
+  Buildings stand at their mapped height; where none is mapped the app estimates it and says how many.
+- **Tap a building** to pin it and see its area's value; double-tap / double-click a spot to load the area there.
+- **In your language:** English, Spanish, Portuguese (Brazil) or German, from the browser's language or the picker in
+  the settings. Share links carry no language, so each visitor sees their own.
+- **Share it:** the link opens the same view, layer and pin. It holds coordinates only, never the address you
+  typed or a file you loaded. Or download it as an image (PNG) with your own title and the data's credits.
 
 ## Controls
 
@@ -99,7 +89,7 @@ shows over whichever layer you pick.
 
 ```bash
 npm install
-npm run dev        # http://localhost:5173 (Your Place) and http://localhost:5173/data/ (Your Place · Data)
+npm run dev        # http://localhost:5173
 npm run build      # static site in dist/ — host it anywhere (relative paths)
 npm test           # unit tests (vitest)
 npm run e2e        # build + headless-browser test (needs Playwright), screenshots in e2e/out/
@@ -108,16 +98,12 @@ npm run e2e        # build + headless-browser test (needs Playwright), screensho
 It is a static TypeScript app on three.js with no server and no API keys: the browser fetches map
 tiles, terrain and address search straight from free public services.
 
-**Deploys.** `.github/workflows/pages.yml` runs the unit tests, builds, and publishes `dist/` to
-GitHub Pages on every push to `main`. One-time setup: **Settings → Pages → Build and deployment →
-Source: GitHub Actions**. To publish a release, add its section to [CHANGELOG.md](CHANGELOG.md),
-then run the **Release** workflow from the Actions tab with the version number (or push a tag such
-as `v1.0.1`). It creates the tag and a GitHub release with that version’s notes.
-
-**Own domain.** Point a DNS `CNAME` record (e.g. `3d.example.com`) at `yourplace3d.github.io`, enter the
-domain under **Settings → Pages → Custom domain**, and change `SITE_URL` in `vite.config.ts` (or set
-the `SITE_URL` environment variable in the build) so canonical links, preview images and the sitemap
-use it.
+**Where it's published.** The built files (`dist/`) go to the `main` branch of
+[yourplace3d/3d-city-test](https://github.com/yourplace3d/3d-city-test), whose GitHub Pages serve them at
+`https://yourplace3d.github.io/3d-city-test/`. That address is `SITE_URL` in `vite.config.ts` (or the
+`SITE_URL` environment variable in the build), so canonical links, preview images and the sitemap use it;
+change it when the app moves. `tools/og/render.mjs` renders the link preview (`public/og.jpg`) and the
+about page's screenshot from the build, `tools/video/data.mjs` a video of the layers.
 
 ## How it works
 
@@ -135,15 +121,13 @@ search ─▶ geocode (Photon / Nominatim)
 - `src/geo/` — data: projection, polygon utilities, terrain tiles, Overpass queries and parsing,
   the height rule, coastline sea fill, geocoding, an IndexedDB cache for Overpass responses.
 - `src/scene/` — rendering: terrain + plinth, merged building mesh, the draped map-layer texture,
-  shader patches (contour lines, contact darkening), the viewer (camera, lights, controls, export).
-- `src/data/` — the data-layer engine for overlays on the model: sources (files, links, later live APIs),
-  matching to the model's local metres, time and playback, and displays (ground paint, 3D labels). The layers so
-  far: a route from a GPX or TCX file, and steepness of roads, paths and routes (derived from the terrain).
-- `src/ui/` — search combobox, loading status, poster composition, the route and steepness panels. `src/main.ts`
-  wires it together, for whichever app the page is.
-- Two pages, one body: `index.html` (Your Place) and `data/index.html` (Your Place · Data) each have their own
-  head (title, link previews, install manifest and icon) and take their body from `src/app-body.html`; the build
-  keeps the parts marked for that app (`only:place`, `only:data`).
+  shader patches (contour lines, contact darkening), the viewer (camera, lights, controls).
+- `src/data/` — the data-layer engine for overlays on the model: sources (files, links, live APIs),
+  matching to the model's local metres, time and playback, and displays (ground paint, raised streets,
+  moving vehicles, tinted buildings, 3D labels).
+- `src/ui/` — search combobox, loading status, the image download, and a panel per layer. `src/main.ts`
+  wires it together.
+- Two pages: the app (`index.html`) and “How it works” (`about/index.html`).
 
 Design notes:
 
@@ -164,34 +148,12 @@ Design notes:
   villages. Such results are resolved to the settlement the geocoder names for them, and a square
   with fewer than 10 buildings offers the nearest village or town outside it ("Kleinfelde is 2.0 km
   north-east — Go to Kleinfelde").
-- **The print is a union of closed shells.** The STL holds a terrain block (height grid on top,
-  side walls, flat base) and one closed prism per building that starts inside the block. Slicers
-  union overlapping shells, so a building on a slope is exactly "the part above ground" without any
-  boolean geometry in the browser. Scale is the print width over the square (15 cm for 2 km is
-  1:13,300); buildings keep their real height at that scale, the terrain uses the on-screen
-  exaggeration, and the base is 3 mm under the lowest point.
-- **Every shell is closed, and no two shells touch.** Map data is messy, so each footprint is
-  cleaned (repeated points, points on straight walls, hairline spikes), checked (simple rings,
-  courtyards clear of the outer wall, a roof triangulation whose boundary is exactly the walls'
-  top edges) and repaired with a polygon union when needed. Buildings cut by tile edges are joined
-  again, and every building is inset by about 0.01 mm so terraced houses and stacked building
-  parts never share a point (slicers close gaps that small). An outline that cannot be repaired is
-  left out, and the dialog says so. Checked with trimesh on live data for Stuttgart 2 and 4 km,
-  Barcelona's Eixample, Berlin courtyards, Hong Kong and a village: 38,692 shells, all watertight
-  and outward-facing; one Barcelona building was left out.
-- **Raised roads are their own pieces, not carved into the terrain.** The height grid's points are
-  4–10 m apart, coarser than most roads, so a road in the grid would be a soft groove. Instead each
-  road is cut into short pieces wherever the ground under it bends; each piece is a closed shell whose
-  top follows the printed terrain (the same two triangles per grid cell) 0.4 mm up and whose floor is
-  buried in the block. Corners up to 90° are mitred, sharper ones get an octagon, and pieces overlap
-  slightly instead of sharing faces. Roads thinner than 0.3 mm at true scale are left out, the rest
-  are at least 0.5 mm wide, and bridges keep a level deck between their ends.
 - **Renders on demand.** Frames are drawn only while the camera moves or something changes.
 
 ## Technical choices
 
 - **Renderer:** three.js, not MapLibre — the physical-model look (plinth walls, contact shadow,
-  poster renders, STL export) needs full control of the geometry.
+  raised traffic streets, moving vehicles, tinted buildings) needs full control of the geometry.
 - **No server:** the browser fetches public services directly, behind small interfaces
   (`loadHeightGrid`, the tile loader, `overpass`, `suggest`) that an own tile server or geocoder could
   replace if traffic outgrows the free services.
@@ -203,8 +165,8 @@ Design notes:
 
 ## Data and licences
 
-- Map data © OpenStreetMap contributors, ODbL. Attribution is shown in the app, on posters and in
-  the STL file header; please keep “© OpenStreetMap contributors” next to anything you share.
+- Map data © OpenStreetMap contributors, ODbL. Attribution is shown in the app and on downloaded
+  images; please keep “© OpenStreetMap contributors” next to anything you share.
 - Vector tiles: [OpenFreeMap](https://openfreemap.org), schema © [OpenMapTiles](https://openmaptiles.org).
   Fallback map data: the [Overpass API](https://overpass-api.de).
 - Terrain: Mapzen terrain tiles on AWS Open Data — see the
@@ -212,9 +174,9 @@ Design notes:
 - Address search: [Photon](https://photon.komoot.io) by komoot (suggestions, place names for shared
   links) and [Nominatim](https://nominatim.org) (only when you press Enter before suggestions arrive,
   per its usage policy).
-- Traffic counts (Your Place · Data): Freie und Hansestadt Hamburg, Behörde für Verkehr und
+- Traffic counts: Freie und Hansestadt Hamburg, Behörde für Verkehr und
   Mobilitätswende, [Datenlizenz Deutschland – Namensnennung 2.0](https://www.govdata.de/dl-de/by-2-0),
-  from the city's open [SensorThings API](https://iot.hamburg.de/). Credited in the panel and on posters.
+  from the city's open [SensorThings API](https://iot.hamburg.de/). Credited in the panel and on images.
 - Timetables found for a place: the [Mobility Database](https://mobilitydatabase.org/) by MobilityData,
   its list and its copies of each operator's file. Each timetable is credited in the panel with its
   operator and licence, as the list gives them.
@@ -222,7 +184,7 @@ Design notes:
   [dl-de/by-2-0](https://www.govdata.de/dl-de/by-2-0), cut down to the files and columns the app reads.
   It runs until 12 December 2026; replace it with the next year's file. A timetable of your own is
   credited with the operators named in it.
-- Homes and Income sources, each credited in the panel and on posters: Zensus 2022, Statistische Ämter
+- Homes and Income sources, each credited in the panel and on images: Zensus 2022, Statistische Ämter
   des Bundes und der Länder ([dl-de/by-2-0](https://www.govdata.de/dl-de/by-2-0)); CBS, Kerncijfers wijken
   en buurten, via PDOK ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)); U.S. Census Bureau,
   American Community Survey 5-year estimates, via [Census Reporter](https://censusreporter.org/). The
@@ -260,40 +222,39 @@ corners, as the traffic layer does; the other sources are links you open yoursel
 - **Colour the blocks.** The OpenMapTiles building layer has a `colour` field (from OSM
   `building:colour` / `building:material`) where mappers recorded one, so a "real colours" style is
   cheap. Letting people paint their own house builds on the pin, which already marks one building.
+- **More layers:** water, energy, noise; and suggestions of open sources from users, stored as links and
+  checked before they're listed.
 - **Photos on the buildings.** Aerial imagery on roofs and ground is the realistic first step —
   the hard part is an imagery licence that allows it. Street-level photos on façades are a much
   bigger job (coverage, licensing, matching photos to walls).
-- **Multi-colour 3MF** (terrain, buildings, roads and water as separate parts for AMS-style printers),
-  a name engraved in the base, and **poster styles** (title layouts, colours).
 
 ## Testing
 
 `npm test` covers projection, terrain decoding/resampling, polygon clipping and ring assembly,
 OSM parsing (multipolygons, courtyards, building parts, clipping), the height rule, the sea fill,
-building-mesh winding and exaggeration, URL state, the STL export (every shell closed and
-outward-facing, volumes, binary format), routes (GPX and TCX parsing, distances, the stretch that fits
+building-mesh winding and exaggeration, URL state, the page (no print, no link to another app), routes (GPX and TCX parsing, distances, the stretch that fits
 the model, hiding the ends, the replay clock, the share-link code), steepness (grades over a window,
 classes, bridges, climbs, height totals, the profile), and traffic counts (the request, parsing, the last
 24 hours, adding up both directions of a road, the chart's scale), and timetables (ZIP reading, CSV with
 quotes, times past midnight, days and exceptions, route types, the cut to the square for trips that stop
 in it, run through it on a shape or cross it straight, positions between stops, the evening before after
-midnight, the print's heights), and values per area (map projections, numbers as statistics offices write
+midnight), and values per area (map projections, numbers as statistics offices write
 them, grid codes, the census's ZIP, GeoJSON in a projection or none named, Census Reporter's download,
 points as medians, holes, the classes, the sources for a place).
 
 `npm run e2e` serves the build, answers Overpass and geocoding from a deterministic synthetic city
 (`e2e/fixtures/synthetic-city.mjs`), uses real terrain tiles, and drives search, every control,
 keyboard camera, pinning a building (click, drag, share-link round-trip, "Centre here"),
-Shift-arrow and two-finger sliding, share link round-trip, poster download, STL download (size and
-base checked), an Overpass outage with retry, a phone
+Shift-arrow and two-finger sliding, share link round-trip, the image download with your own title, an
+Overpass outage with retry, a phone
 viewport, and dark mode with reduced motion. Routes: a GPX from the start page, the stretch picker,
 replay, the height profile, steepness on roads and on the route, hiding the ends, the opt-in route link and
 opening it, a dropped TCX file, a FIT file, a phone, and that the file never leaves the browser. Traffic
 (Hamburg's API answered from `e2e/fixtures/traffic.mjs`): outside Hamburg, a failed answer and retry, the
 traffic streets, the spread slider and its link, the chart by pointer and keyboard, a counting point of its
-own, the table, replay, bikes, the traffic streets in the 3D print, and a route riding on them. Public
+own, the table, replay, bikes, and a route riding on them. Public
 transport (a made-up timetable, `e2e/fixtures/transit.mjs`): the Freiburg demo, the day, the chart by
-pointer and keyboard, a vehicle tapped, a line's chip, replay and its speed, the table, the 3D print, a
+pointer and keyboard, a vehicle tapped, a line's chip, replay and its speed, the table, a
 file of your own that opens where it runs, a square it doesn't reach, a file that isn't one, a phone, and
 that the file never leaves the browser. Homes and Income (`e2e/fixtures/areas.mjs`): both examples, a
 place with no source known, CBS in one tap for the square's box, the census's ZIP as it comes, taps on

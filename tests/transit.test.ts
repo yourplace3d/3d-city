@@ -4,7 +4,6 @@ import { feedAreaKm2, feedsFor, licenceName, parseCatalog } from '../src/data/so
 import { findItem, listZip, openItem, ZipProblem } from '../src/data/sources/zipFile';
 import { crossesBox, cutGtfs, GtfsProblem, modeOf, parseDay, parseTime, runsOn, splitCsv, weekday, type GtfsCut } from '../src/data/sources/gtfs';
 import { cumulative, DAY_S, dayRuns, dayWithin, distanceAt, makeRuns, mergeRuns, stretchOn, projectStops, runAt, runsPerHour, spanInside, stretch, type TransitRuns, type VehicleAt } from '../src/data/match/transit';
-import { resample, transitForPrint, TRANSIT_PRINT_MM } from '../src/export/transit';
 
 const CENTRE = { lat: 53.5511, lon: 9.9937 };
 const SIZE = 2000;
@@ -255,38 +254,6 @@ describe('runs through the square', () => {
     const before = dayWithin(day('20251229'), first, last); // a Monday before the start
     expect(weekday(before)).toBe(0);
     expect(before).toBeGreaterThanOrEqual(first);
-  });
-});
-
-describe('transit lines in the 3D print', () => {
-  it('raises lines by their trips, adding up where they meet, and keeps them wide enough', async () => {
-    const r = await runs();
-    const d = dayRuns(r, MONDAY);
-    const mmPerM = 150 / SIZE;
-    const pieces = transitForPrint(d, null, mmPerM);
-    expect(pieces.length).toBeGreaterThan(3);
-    let top = { raise: 0, at: [0, 0] as [number, number] };
-    for (const p of pieces) {
-      expect(p.widthM).toBeCloseTo(TRANSIT_PRINT_MM.width / mmPerM, 6);
-      expect(p.raises!.length).toBe(p.pts.length);
-      p.raises!.forEach((h, i) => {
-        expect(h).toBeGreaterThanOrEqual(TRANSIT_PRINT_MM.low - 1e-9);
-        expect(h).toBeLessThanOrEqual(TRANSIT_PRINT_MM.high + 1e-9);
-        if (h > top.raise) top = { raise: h, at: p.pts[i] };
-      });
-      for (const [e, n] of p.pts) expect(Math.max(Math.abs(e), Math.abs(n))).toBeLessThanOrEqual(SIZE / 2 + 8);
-    }
-    // highest where the tram and the bus cross (E 200 on the tram's line)
-    expect(top.raise).toBeCloseTo(TRANSIT_PRINT_MM.high, 6);
-    expect(Math.hypot(top.at[0] - 200, top.at[1])).toBeLessThan(25);
-    // one line picked: only its trips
-    const u4 = transitForPrint(d, new Set([routeIndex(r, 'U4')]), mmPerM);
-    expect(u4.length).toBe(1);
-  });
-
-  it('samples a line evenly, ends included', () => {
-    const pts = resample([0, 0, 25, 0], 8);
-    expect(pts.map((p) => p[0])).toEqual([0, 8, 16, 25]);
   });
 });
 

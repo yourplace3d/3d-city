@@ -24,9 +24,6 @@ import {
   type BuildingsBuild,
 } from './buildingsMesh';
 import { makeElevationUniforms, patchBuildingMaterial, type ElevationUniforms } from './materials';
-import type { PrintBuilding } from '../export/stl';
-import type { PrintRoad } from '../export/roads';
-import { areaMask, waterMask } from '../export/water';
 import { Overlay } from './overlay';
 import { TerrainModel } from './terrainMesh';
 import type { ModelOverlay, ModelSurface } from '../data/types';
@@ -49,9 +46,6 @@ export interface PinHit {
   building: boolean;
 }
 
-/** Line kinds that are water, not roads. */
-const WATER_LINES = new Set(['river', 'canal', 'stream']);
-
 /** Buildings up to this size (m) get the pin in their middle; bigger ones where they were tapped. */
 const PIN_MIDDLE_MAX_M = 40;
 
@@ -66,7 +60,6 @@ export class CityModel implements ModelSurface {
   /** what removeRoofBumps found when the buildings arrived (for tools/inspect) */
   private roofBumps: RoofBumpResult | null = null;
   private features: FeatureSet | null = null;
-  private sea: SeaMask | null = null;
   private readonly pin: Group;
   private readonly accent: Color;
   /** pin position, metres from the centre (E, N) */
@@ -213,37 +206,6 @@ export class CityModel implements ModelSurface {
     return { e: this.pinAt[0], n: this.pinAt[1], buildings: this.pinned.length, marked: this.markPinned && this.pinned.length > 0, visible: this.pin.visible };
   }
 
-  /** Grid points under water (lakes, rivers drawn as areas, the sea) for sunken water in prints; null if none. */
-  printWater(): Uint8Array | null {
-    const areas = (this.features?.areas ?? []).filter((a) => a.kind === 'water').flatMap((a) => a.polys);
-    const sea = this.sea;
-    if (!areas.length && !sea) return null;
-    const mask = waterMask(this.grid, areas, sea ? (e, n) => isSea(sea, e, n) : undefined);
-    return mask.some((v) => v === 1) ? mask : null;
-  }
-
-  /** Grid points in parks, gardens, pitches and woods, but not in water, for raised green in prints; null if none. */
-  printGreen(): Uint8Array | null {
-    const areas = (this.features?.areas ?? []).filter((a) => a.kind === 'green' || a.kind === 'forest').flatMap((a) => a.polys);
-    if (!areas.length) return null;
-    const mask = areaMask(this.grid, areas);
-    const water = this.printWater();
-    if (water) for (let k = 0; k < mask.length; k++) if (water[k]) mask[k] = 0;
-    return mask.some((v) => v === 1) ? mask : null;
-  }
-
-  /** Roads, paths and railways for raised roads in prints, as on the map (tunnels are already left out). */
-  printRoads(): PrintRoad[] {
-    return (this.features?.lines ?? []).filter((l) => !WATER_LINES.has(l.kind)).map((l) => ({ pts: l.pts, widthM: l.widthM, bridge: l.bridge }));
-  }
-
-  /** Buildings for the 3D print: footprints and roof heights as shown (m above the lowest point). */
-  printBuildings(): PrintBuilding[] {
-    const b = this.buildings?.build;
-    if (!b) return [];
-    return this.specs.map((spec, i) => ({ poly: spec.poly, top: (b.buildingGround[i] - this.grid.min) * this.exaggeration + spec.height }));
-  }
-
   /** What a ray from the camera hits: a building (pin goes inside it) or open ground. */
   pick(ray: Raycaster): PinHit | null {
     const targets: Object3D[] = [this.terrain.surface];
@@ -295,7 +257,6 @@ export class CityModel implements ModelSurface {
       ? this.checkSea(seaMaskFromPolygons(features.sea, this.grid.sizeM, 1024))
       : this.seaFromCoastlines(features.coastlines);
     this.overlay.setSea(sea);
-    this.sea = sea;
     if (sea) {
       this.seaFraction = seaShare(sea);
       this.flattenSea(sea);

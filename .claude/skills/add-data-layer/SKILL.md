@@ -1,14 +1,12 @@
 ---
 name: add-data-layer
-description: Step-by-step guide to plugging a new data set (a file the user picks, a file we host, or a live API) into Your Place's data-layer engine as an overlay on the 3D model. Use when adding traffic, noise, energy, routes or any other open data on top of the model.
+description: Step-by-step guide to plugging a new data set (a file the user picks, a file we host, or a live API) into Your Place · Data's data-layer engine as an overlay on the 3D model. Use when adding traffic, noise, energy, routes or any other open data on top of the model.
 ---
 
-# Add a data layer to Your Place
+# Add a data layer to Your Place · Data
 
-Data layers live in **Your Place · Data** (`data/`), a second app built from the same code as Your Place:
-`index.html` and `data/index.html` share their body (`src/app-body.html`, parts marked `only:place` /
-`only:data`), and `src/main.ts` knows which app it runs in (`APP`). Your Place itself stays simple and only
-links across. The data app shows **one layer at a time**, so each new layer adds one choice, not a panel full
+**Your Place · Data** is a standalone app (this branch, `v2`): one page, `index.html`, wired up by
+`src/main.ts`. It has no 3D print and no link to Your Place, the separate app on `main`. It shows **one layer at a time**, so each new layer adds one choice, not a panel full
 of buttons. A route of the user's own is not a layer: it shows over whichever layer is picked, so a new layer
 must look right with a route on top (the route paints at order 10).
 
@@ -33,15 +31,14 @@ The contracts are in `src/data/types.ts`. Four worked examples:
   `match/trafficStreets.ts` (each count spread along the street network around its point, fading out over a
   distance the user sets; shares precomputed, so a moment's values are one pass), `display/traffic.ts` (the
   streets as one raised mesh whose heights and colours change per frame while replaying; counting points as
-  discs) and `display/trafficChart.ts` (the bar chart's scale), wired up by `src/ui/traffic.ts`; in the print
-  `export/traffic.ts`. The e2e fixture is `e2e/fixtures/traffic.mjs`.
+  discs) and `display/trafficChart.ts` (the bar chart's scale), wired up by `src/ui/traffic.ts`. The e2e fixture is `e2e/fixtures/traffic.mjs`.
 - **Public transport** (a big file the user brings: a city's GTFS timetable, up to a few hundred MB
   unpacked): `sources/zipFile.ts` (a ZIP read one file at a time, in pieces, with the browser's
   `DecompressionStream`), `sources/gtfs.ts` (streamed CSV, the cut to the square: one pass per file, only
   what passes through it kept, for every day), `sources/gtfs.worker.ts` and `sources/timetable.ts` (all of
   it in a worker, with progress; a new place stops the read), `match/transit.ts` (runs through the square,
   positions between stops, one day's runs), `display/transit.ts` (lines painted on the ground, vehicles as
-  instanced blocks moved per frame), wired up by `src/ui/transit.ts`; in the print `export/transit.ts`. A
+  instanced blocks moved per frame), wired up by `src/ui/transit.ts`. A
   demo file is hosted in `public/timetables/`. The e2e fixture `e2e/fixtures/transit.mjs` makes a timetable
   around any centre, also used by the unit tests.
 - **Homes and Income** (values per area the user brings, with a list of where to get them):
@@ -72,11 +69,11 @@ typed arrays (transferred, not copied). Say how far it got. Keep the `File` in m
 new place can read it again.
 
 **Point data on streets: spread it, don't spike it.** A count at a point is shown along the streets around
-it, fading out, not as a column: columns look like spikes, hide what's behind them and can't be printed.
+it, fading out, not as a column: columns look like spikes and hide what's behind them.
 Walk the street network (not as the crow flies), say plainly that it's an estimate between the points, and
-let the user set how far it spreads. Anything that stands up from the model must be printable: keep heights
-to a few millimetres at 15 cm and walls at least 0.8 mm thick, and lift a route over it (`setLift` in
-`display/route.ts`, `routeOverTraffic` in `export/traffic.ts`) so it's never buried.
+let the user set how far it spreads. Anything that stands up from the model stays a gentle relief (the traffic
+streets rise as they would on a 15 cm model: 0.5 to 2 mm), and a route is lifted over it (`setLift` in
+`display/route.ts`) so it's never buried.
 
 ## 1. Check the source first
 
@@ -132,7 +129,7 @@ size on screen; see `makeLabel` and `declutter` in `display/route.ts`. Must stay
 ## 6. Wire it into the app
 
 - Add the layer's id to `DATA_LAYERS` in `src/state.ts` (links carry it as `dl=`), a radio button in the
-  `data-layer-group` of `src/app-body.html`, a card on the data app's start page (`layer-cards`) with one
+  `data-layer-group` of `index.html`, a card on the start page (`layer-cards`) with one
   sentence on what it shows, and its case in `setDataLayer()` in `src/main.ts`, which shows one layer and hides
   the others.
 - A controller in `src/ui/<name>.ts` (see `RouteController`, `SteepController`): owns the layer's state and its
@@ -143,7 +140,7 @@ size on screen; see `makeLabel` and `declutter` in `display/route.ts`. Must stay
   `CityModel.featureSet`.
 - Panel markup in `index.html` with `data-t` keys; every text in **all four** dictionaries (`src/i18n/en.ts`,
   `es.ts`, `pt.ts`, `de.ts`). `tests/i18n.test.ts` fails if one is missing or still in English.
-- Credit third-party data in the layer's panel and on the poster (`credit` in `makePoster`, `src/ui/poster.ts`),
+- Credit third-party data in the layer's panel and on the downloaded image (`credit` in `makePoster`, `src/ui/poster.ts`),
   on the About page and in the README.
 - Charts in the panel: follow the dataviz rules (one hue for one series, bars ≤ 24 px with 2 px gaps, a
   readout on hover, keyboard steps, a table view). The traffic chart (`#traffic-chart`) is a pattern to copy.

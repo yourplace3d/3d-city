@@ -211,8 +211,7 @@ try {
   watchConsole(page, 'desktop');
   await page.goto(base);
   await page.waitForSelector('#welcome', { state: 'visible' });
-  expect((await page.locator('.preset').count()) === 6, 'landing shows 6 preset places');
-  expect((await page.getAttribute('#data-landing-link', 'href')) === './data/' && (await page.isVisible('#data-landing-link')), 'the start page leads to Your Place · Data');
+  expect(/through data/.test(await page.textContent('#welcome-title')) && (await page.locator('.layer-card').count()) === 6, 'the start page is Your Place · Data’s, with its layers as cards');
   await shot(page, '01-landing-desktop');
   const head = await page.evaluate(() => {
     const meta = (sel) => document.querySelector(sel)?.getAttribute('content') ?? '';
@@ -232,11 +231,12 @@ try {
   expect(/^https:\/\/.+\/$/.test(head.canonical) && !head.canonical.includes('%'), `canonical link is an absolute URL (${head.canonical})`);
   expect(head.ogImage === `${head.canonical}og.jpg` && head.twitterCard === 'summary_large_image', 'link previews point at the preview image');
   expect(head.ld?.['@type'] === 'WebApplication' && head.ld.url === head.canonical, 'structured data describes the app');
-  for (const f of ['og.jpg', 'sitemap.xml', 'robots.txt', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'screenshot.jpg', 'data/index.html', 'data/manifest.webmanifest', 'data/icon-192.png', 'data/icon-maskable-512.png', 'data/apple-touch-icon.png']) {
+  for (const f of ['og.jpg', 'sitemap.xml', 'robots.txt', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'screenshot.jpg', 'manifest.webmanifest', 'about/index.html', 'timetables/freiburg-2026.zip', 'areas/freiburg-rent-2022.csv', 'areas/amsterdam-income-cbs.geojson']) {
     expect(existsSync(join(dist, f)), `build includes ${f}`);
   }
   const sitemap = readFileSync(join(dist, 'sitemap.xml'), 'utf8');
-  expect(sitemap.includes(`<loc>${head.canonical}</loc>`) && sitemap.includes(`<loc>${head.canonical}data/</loc>`) && sitemap.includes(`<loc>${head.canonical}about/</loc>`), 'sitemap lists both apps and the about page');
+  expect(sitemap.includes(`<loc>${head.canonical}</loc>`) && sitemap.includes(`<loc>${head.canonical}about/</loc>`) && !sitemap.includes(`${head.canonical}data/`), 'sitemap lists the app and the about page');
+  expect(!existsSync(join(dist, 'data')), 'the build is the data app alone: no second app in it');
 
   await page.fill('#search-input', 'Stuttgart');
   await page.waitForSelector('#suggestions li[role="option"]', { timeout: 5000 });
@@ -258,13 +258,13 @@ try {
   expect(/lat=48\.7765/.test(hash) && /cam=/.test(hash), 'URL hash holds coordinates and camera');
   expect(!/stuttgart/i.test(hash), 'URL hash holds no address text');
   expect(/Stuttgart/.test(await page.textContent('#place-title')), 'sheet shows the place name');
-  expect(/^Stuttgart.* in 3D · Your Place$/.test(await page.title()), `browser tab names the place (“${await page.title()}”)`);
+  expect(/^Stuttgart.* · Your Place Data$/.test(await page.title()), `browser tab names the place (“${await page.title()}”)`);
   expect(/buildings/.test(await page.textContent('#describe')), 'text description lists buildings');
   const doors = await page.evaluate(() => ({
-    dataControls: document.querySelectorAll('#route-control, #data-layer-group, #route-file, [data-layer="steep"]').length,
-    toData: document.getElementById('other-app').getAttribute('href'),
+    dataControls: document.querySelectorAll('#route-control, #data-layer-group, #route-file').length,
+    elsewhere: document.querySelectorAll('#other-app, #stl-btn, #print-details, a[href^="../"], a[href*="/data/"]').length,
   }));
-  expect(doors.dataControls === 0 && /^\.\/data\/#lat=48\.7765/.test(doors.toData), `Your Place stays as it was, with one button to the same place in Your Place · Data (${doors.toData.slice(0, 30)}…)`);
+  expect(doors.dataControls === 3 && doors.elsewhere === 0, 'the app stands on its own: its data controls, no 3D print, no link to another app');
   await settle(page, 2200);
   await shot(page, '02-model-desktop');
 
@@ -366,128 +366,16 @@ try {
   const posterPath = join(out, '06-poster.png');
   await download.saveAs(posterPath);
   const posterSize = statSync(posterPath).size;
-  expect(posterSize > 200000, `poster PNG downloaded (${download.suggestedFilename()}, ${Math.round(posterSize / 1024)} KB)`);
+  expect(posterSize > 200000 && /^your-place-data-.+-2km\.png$/.test(download.suggestedFilename()), `the image downloads as a PNG (${download.suggestedFilename()}, ${Math.round(posterSize / 1024)} KB)`);
 
-  // 3D print file: a binary STL of the chosen size in millimetres
+  // your own title and a second line on the image, and in its file name
   await page.click('#share-btn');
   await page.waitForSelector('#share-dialog[open]');
-  await page.click('#print-size-group [data-value="100"]');
-  expect(/^1:20,000 · terrain ×3\.0$/.test(await page.textContent('#print-note')), 'print size shows its scale and exaggeration');
-  // a print file, and its size: x, y, z extents in mm
-  const stlBounds = (data) => {
-    const count = data.readUInt32LE(80);
-    const lo = [Infinity, Infinity, Infinity];
-    const hi = [-Infinity, -Infinity, -Infinity];
-    for (let k = 0; k < count; k++)
-      for (let q = 0; q < 9; q++) {
-        const v = data.readFloatLE(84 + k * 50 + 12 + q * 4);
-        lo[q % 3] = Math.min(lo[q % 3], v);
-        hi[q % 3] = Math.max(hi[q % 3], v);
-      }
-    return { count, lo, hi, size: [0, 1, 2].map((a) => hi[a] - lo[a]), whole: data.length === 84 + 50 * count };
-  };
-  const printFile = async (name) => {
-    const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.click('#stl-btn')]);
-    const path = join(out, name);
-    await dl.saveAs(path);
-    const data = readFileSync(path);
-    const count = data.readUInt32LE(80);
-    const lo = [Infinity, Infinity, Infinity];
-    const hi = [-Infinity, -Infinity, -Infinity];
-    for (let k = 0; k < count; k++)
-      for (let q = 0; q < 9; q++) {
-        const v = data.readFloatLE(84 + k * 50 + 12 + q * 4);
-        lo[q % 3] = Math.min(lo[q % 3], v);
-        hi[q % 3] = Math.max(hi[q % 3], v);
-      }
-    return { dl, data, count, lo, hi, size: [0, 1, 2].map((a) => hi[a] - lo[a]) };
-  };
-  expect((await page.inputValue('#print-title')).length > 0, 'the title field starts with the place name');
-  const plain = await printFile('06b-model.stl');
-  expect(plain.data.length === 84 + 50 * plain.count && plain.count > 50000, `STL downloaded (${plain.dl.suggestedFilename()}, ${plain.count} triangles, ${(plain.data.length / 1048576).toFixed(1)} MB)`);
-  expect(
-    /-10cm\.stl$/.test(plain.dl.suggestedFilename()) && Math.abs(plain.size[0] - 100) < 0.01 && plain.size[1] > 105 && plain.size[1] < 120 && Math.abs(plain.lo[2] + 3) < 1e-4 && plain.hi[2] > 5,
-    `STL is 100 mm wide on a 3 mm base, with the title ledge in front (${plain.size.map((v) => v.toFixed(2)).join(' × ')} mm)`,
-  );
-  expect(/^Saved: 10 × 1\d(\.\d)? cm with the title strip at 1:20,000/.test(await page.textContent('#share-msg')), 'the dialog confirms the print file and its ledge');
-  expect(/Water sunk 1 mm\./.test(await page.textContent('#share-msg')), 'the river in the test city is sunk 1 mm in the print');
-  // your own title and a second line make the ledge deeper and name the file
-  await page.fill('#print-title', 'Our first home');
-  await page.fill('#print-subtitle', 'Where we met · June 2019');
-  const titled = await printFile('06c-titled.stl');
-  expect(/^your-place-our-first-home-2km-10cm\.stl$/.test(titled.dl.suggestedFilename()) && titled.size[1] > plain.size[1] + 3, `your own title names the file and adds a second line (${titled.dl.suggestedFilename()}, ${titled.size[1].toFixed(1)} mm deep)`);
-  // without the ledge: the plain square again
-  await page.uncheck('#print-ledge');
-  await page.uncheck('#print-water');
-  const bare = await printFile('06d-no-ledge.stl');
-  expect(!/Water sunk/.test(await page.textContent('#share-msg')), 'without the tick the water stays level');
-  await page.check('#print-water');
-  expect(Math.abs(bare.size[0] - 100) < 0.01 && Math.abs(bare.size[1] - 100) < 0.01, `without the title the print is the plain square (${bare.size.map((v) => v.toFixed(2)).join(' × ')} mm)`);
-  // raised roads and parks: their own pieces on the terrain, and the dialog says so
-  await page.check('#print-roads');
-  await page.check('#print-green');
-  const painted = await printFile('06h-roads-green.stl');
-  const paintedMsg = await page.textContent('#share-msg');
-  expect(
-    /Roads raised 0\.4 mm\./.test(paintedMsg) && painted.count > bare.count + 1000 && Math.abs(painted.size[0] - 100) < 0.01 && Math.abs(painted.size[1] - 100) < 0.01,
-    `raised roads add ${painted.count - bare.count} triangles and stay inside the square (${painted.size.map((v) => v.toFixed(2)).join(' × ')} mm)`,
-  );
-  expect(/Parks and woods raised 0\.6 mm\./.test(paintedMsg), 'the park and the forest in the test city are raised');
-  await page.uncheck('#print-roads');
-  await page.uncheck('#print-green');
-  await page.check('#print-ledge');
-  // tiles: 2 × 2 pieces of 10 cm in a ZIP, with the title ledge as its own piece
-  const setTiles = (n) =>
-    page.$eval('#tiles-range', (el, v) => {
-      el.value = String(v);
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-    }, n);
-  await setTiles(8);
-  expect((await page.textContent('#tiles-out')) === '8 × 8 tiles' && /^64 tiles, 80 × 80 cm in all · 1:2,500/.test(await page.textContent('#print-note')), `tiles go up to 8 × 8 (“${await page.textContent('#print-note')}”)`);
-  await setTiles(2);
-  expect(/^4 tiles, 20 × 20 cm in all · 1:10,000 · terrain ×3\.0$/.test(await page.textContent('#print-note')), `the tile choice shows the size in all and the scale (“${await page.textContent('#print-note')}”)`);
-  const [zdl] = await Promise.all([page.waitForEvent('download', { timeout: 180000 }), page.click('#stl-btn')]);
-  const zpath = join(out, '06f-tiles.zip');
-  await zdl.saveAs(zpath);
-  const zip = readFileSync(zpath);
-  const files = {};
-  {
-    const end = zip.length - 22;
-    let p = zip.readUInt32LE(end + 16);
-    for (let k = 0; k < zip.readUInt16LE(end + 10); k++) {
-      const nameLen = zip.readUInt16LE(p + 28);
-      const size = zip.readUInt32LE(p + 24);
-      const local = zip.readUInt32LE(p + 42);
-      const start = local + 30 + zip.readUInt16LE(local + 26);
-      files[zip.subarray(p + 46, p + 46 + nameLen).toString()] = zip.subarray(start, start + size);
-      p += 46 + nameLen;
-    }
-  }
-  const names = Object.keys(files).sort();
-  expect(
-    zdl.suggestedFilename() === 'your-place-our-first-home-2km-2x2-tiles-10cm.zip' && names.join() === 'README.txt,tile-A1.stl,tile-A2.stl,tile-B1.stl,tile-B2.stl,title.stl',
-    `the tiles download as a ZIP: four tiles, the title ledge and a note (${zdl.suggestedFilename()}: ${names.join(', ')})`,
-  );
-  const tileSizes = ['A1', 'A2', 'B1', 'B2'].map((t) => stlBounds(files[`tile-${t}.stl`]));
-  expect(
-    tileSizes.every((b) => b.whole && b.count > 5000 && Math.abs(b.size[0] - 100) < 0.01 && Math.abs(b.size[1] - 100) < 0.01 && Math.abs(b.lo[2] + 3) < 1e-4),
-    `each tile is 100 × 100 mm on the same 3 mm base (${tileSizes.map((b) => b.size.map((v) => v.toFixed(1)).join('×')).join(', ')})`,
-  );
-  expect(/A1 is the north-west corner/.test(files['README.txt'].toString()) && /sits 1 mm below the land/.test(files['README.txt'].toString()), 'the note in the ZIP explains how the tiles go together and that the water is sunk');
-  expect(/^Saved: 4 tiles of 10 cm, 20 × 20 cm in all, and the title strip as its own piece, at 1:10,000/.test(await page.textContent('#share-msg')), 'the dialog confirms the tiles');
-  // the largest split, in the browser: 64 tiles in one ZIP
-  await setTiles(8);
-  const t8 = Date.now();
-  const [z8] = await Promise.all([page.waitForEvent('download', { timeout: 300000 }), page.click('#stl-btn')]);
-  const z8path = join(out, '06g-tiles-8x8.zip');
-  await z8.saveAs(z8path);
-  const zip8 = readFileSync(z8path);
-  const n8 = zip8.readUInt16LE(zip8.length - 22 + 10);
-  expect(n8 === 66 && /-8x8-tiles-10cm\.zip$/.test(z8.suggestedFilename()), `8 × 8 tiles download in ${((Date.now() - t8) / 1000).toFixed(0)} s: ${n8} files, ${(zip8.length / 1048576).toFixed(1)} MB`);
-  await setTiles(1);
-  // the poster carries the title and the second line too
+  expect((await page.inputValue('#image-title')).length > 0, 'the title field starts with the place name');
+  await page.fill('#image-title', 'Rents in Stuttgart');
+  await page.fill('#image-subtitle', '2022 census');
   const [titledPoster] = await Promise.all([page.waitForEvent('download', { timeout: 60000 }), page.click('#poster-btn')]);
-  expect(titledPoster.suggestedFilename() === 'your-place-our-first-home-2km.png', `the poster uses your own title (${titledPoster.suggestedFilename()})`);
+  expect(titledPoster.suggestedFilename() === 'your-place-data-rents-in-stuttgart-2km.png', `the image uses your own title (${titledPoster.suggestedFilename()})`);
   await titledPoster.saveAs(join(out, '06e-titled-poster.png'));
   await page.click('#share-btn');
   await page.keyboard.press('Escape');
@@ -609,9 +497,9 @@ try {
   watchConsole(mp, 'phone');
   await mp.goto(base);
   await shot(mp, '08-landing-phone');
-  await mp.click('.preset >> text=Heidelberg');
+  await mp.click('#steep-presets .chip >> text=Lisbon');
   const t4 = await waitStage(mp, ['ready', 'error']);
-  expect(t4.stage === 'ready', 'phone: preset builds');
+  expect(t4.stage === 'ready', 'phone: an example place builds');
   const overflow = await mp.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
   expect(!overflow, 'phone: no horizontal overflow');
   await settle(mp, 2000);
@@ -687,7 +575,7 @@ try {
   watchConsole(sp, 'search');
   await sp.goto(base);
   await sp.waitForSelector('#welcome', { state: 'visible' });
-  expect(/grew up/.test(await sp.textContent('#welcome-title')), 'the start screen leads with a place that matters to you');
+  expect(/through data/.test(await sp.textContent('#welcome-title')), 'the start screen says what the app shows: a city through data');
   const nomBefore = counters.nominatim ?? 0;
   await sp.fill('#search-input', 'Königstraße 28, Stuttgart');
   await sp.waitForSelector('#suggestions li[role="option"]', { timeout: 5000 });
@@ -714,10 +602,10 @@ try {
   await ip.goto(`${base}#lat=48.77650&lon=9.17720&km=1&ex=1.5`);
   await waitStage(ip, ['ready', 'error']);
   await ip.waitForFunction(() => /shared with you/.test(window.__yourPlace.notice() ?? ''), null, { timeout: 8000 }).catch(() => undefined);
-  expect(/shared with you/.test((await ip.evaluate(() => window.__yourPlace.notice())) ?? ''), 'someone opening a shared link is invited to make their own place');
+  expect(/shared with you\. See your own city/.test((await ip.evaluate(() => window.__yourPlace.notice())) ?? ''), 'someone opening a shared link is invited to look at their own city');
   await shot(ip, '13-shared-invite');
   await ip.click('#notice-actions .btn-primary');
-  expect(await ip.evaluate(() => document.activeElement?.id === 'search-input' && document.activeElement.value === ''), '“Make my place” puts the cursor in an empty search box');
+  expect(await ip.evaluate(() => document.activeElement?.id === 'search-input' && document.activeElement.value === ''), '“Search a place” puts the cursor in an empty search box');
   await ictx.close();
 
   // ---------------- the "How it works" page, on a phone
@@ -729,7 +617,7 @@ try {
   ap.on('response', (r) => { if (r.url().startsWith(base) && r.status() >= 400) broken.push(`${r.status()} ${r.url()}`); });
   await ap.goto(`${base}about/`);
   await ap.waitForLoadState('load');
-  expect(/How Your Place works/.test(await ap.title()), 'about page has its own title');
+  expect(/How Your Place · Data works/.test(await ap.title()), 'about page has its own title');
   expect((await ap.locator('h1').count()) === 1 && (await ap.locator('h2').count()) >= 5, 'about page has one h1 and its sections');
   expect(await ap.evaluate(() => document.querySelector('.shot img')?.naturalWidth > 0), 'about page screenshot loads');
   expect(broken.length === 0, `about page loads its own files (${broken.join(', ') || 'no 404s'})`);
@@ -809,7 +697,7 @@ try {
   await shot(ep, '12e-spanish');
   await esCtx.close();
 
-  // ---------------- Your Place · Data: steepness, routes (GPX, TCX)
+  // ---------------- the layers: steepness, routes (GPX, TCX), traffic, public transport, homes and income
   await dataAppChecks({ browser, base, routeAll, expect, watchConsole, waitStage, settle, shot });
   await transitChecks({ browser, base, routeAll, expect, watchConsole, waitStage, settle, shot });
   await areaChecks({ browser, base, routeAll, expect, watchConsole, waitStage, settle, shot });

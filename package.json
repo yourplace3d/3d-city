@@ -1,8 +1,8 @@
 {
-  "name": "your-place",
+  "name": "your-place-data",
   "private": true,
-  "version": "1.7.0",
-  "description": "Your Place — turn any address into a 3D miniature of the surrounding city on real terrain.",
+  "version": "0.9.0",
+  "description": "Your Place · Data — open data about a city on a 3D model of any place: steepness, traffic, public transport, rents and incomes, your own route.",
   "homepage": "https://yourplace3d.github.io/3d-city/",
   "repository": {
     "type": "git",

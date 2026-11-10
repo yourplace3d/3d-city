@@ -4,12 +4,10 @@ import type { Messages } from './en';
 
 export const de: Messages = {
   // die Seite
-  homeTitle: 'Your Place · 3D-Stadtmodell jeder Adresse, STL kostenlos',
-  docTitle: (place) => `${place} in 3D · Your Place`,
   language: 'Sprache',
   canvasLabel: '3D-Modell des gewählten Gebiets. Pfeiltasten drehen und neigen, Plus und Minus zoomen, N richtet nach Norden aus, 0 setzt die Ansicht zurück.',
   unsupportedTitle: 'Dieser Browser kann das 3D-Modell nicht anzeigen',
-  unsupportedText: 'Your Place braucht WebGL 2. Versuch es mit einer aktuellen Version von Safari, Chrome, Firefox oder Edge, oder schalte die Hardwarebeschleunigung in den Browser-Einstellungen ein.',
+  unsupportedText: 'Your Place · Data braucht WebGL 2. Versuch es mit einer aktuellen Version von Safari, Chrome, Firefox oder Edge, oder schalte die Hardwarebeschleunigung in den Browser-Einstellungen ein.',
 
   // Suche
   searchPlaceholder: 'Adresse oder Ort suchen',
@@ -52,20 +50,6 @@ export const de: Messages = {
     poi: 'Ort',
   },
 
-  // die Startseite
-  welcomeTitle: 'Die Straße, in der du aufgewachsen bist, in 3D',
-  welcomeLede: 'Dein erstes Zuhause, wo ihr euch kennengelernt habt, die Stadt, die du verlassen hast. Gib die Adresse ein und sieh sie als Modell auf dem echten Gelände, mit jedem Gebäude darauf. Teil es, häng es als Poster auf oder druck es in 3D.',
-  presetsLabel: 'Oder entdecke einen Ort mit eindrucksvollem Gelände',
-  aboutLink: 'So funktioniert es, Tipps zum 3D-Druck und Datenquellen (auf Englisch)',
-  presets: {
-    stuttgart: 'Stadt im Talkessel',
-    heidelberg: 'Altstadt am Neckar',
-    edinburgh: 'Castle Rock und Arthur’s Seat',
-    lisbon: 'Sieben Hügel am Tejo',
-    sanFrancisco: 'Von Nob Hill bis zur Bucht',
-    hongKong: 'Central unter dem Peak',
-  },
-
   // Knöpfe am Modell
   faceNorth: 'Nach Norden ausrichten',
   faceNorthKey: 'Nach Norden ausrichten (N)',
@@ -106,8 +90,6 @@ export const de: Messages = {
   near: (place) => `Bei ${place}`,
 
   // ein geteiltes Modell, die Markierung
-  sharedInvite: 'Jemand hat diesen Ort mit dir geteilt. Mach dein eigenes: deine Straße, dein erstes Zuhause, wo ihr euch kennengelernt habt.',
-  makeMyPlace: 'Meinen Ort machen',
   pinOnBuilding: 'Markierung auf diesem Gebäude. Geteilte Links zeigen es jetzt.',
   pinOnSpot: 'Markierung hier. Geteilte Links zeigen jetzt diese Stelle.',
   centreHere: 'Hier zentrieren',
@@ -141,76 +123,17 @@ export const de: Messages = {
     `3D-Modell. ${summary} Pfeiltasten drehen und neigen, Shift und Pfeiltasten verschieben, Plus und Minus zoomen, N richtet nach Norden aus, 0 setzt die Ansicht zurück. Klick auf ein Gebäude, um die Markierung dorthin zu setzen.`,
 
   // teilen
-  shareTitle: 'Dieses Modell teilen',
   shareNote: 'Der Link enthält die Koordinaten, deine Ansicht und die Markierung, nie die eingegebene Adresse. Mit Markierung zeigt er genau dieses Gebäude.',
   shareLink: 'Link zum Teilen',
   copyLink: 'Link kopieren',
   shareNative: 'Teilen…',
   linkCopied: 'Link kopiert.',
   selectLink: 'Markiere den Link oben und kopiere ihn.',
-  shareInApp: (place) => `${place} in 3D`,
-  shareText: (place) => `${place} in 3D. Mach eins von deinem eigenen Ort:`,
   thisPlace: 'Dieser Ort',
-  titleField: 'Titel auf Poster und Druck',
   secondLine: 'Zweite Zeile',
   optional: 'optional',
-  secondLineExample: 'Wo wir uns kennengelernt haben · Juni 2019',
-  posterButton: 'Poster herunterladen (PNG)',
-  renderingPoster: 'Poster wird erstellt…',
-  posterSaved: 'Poster gespeichert',
-  posterFailed: 'Das Poster konnte auf diesem Gerät nicht erstellt werden.',
-
-  // 3D-Druck
-  printSize: 'Größe des 3D-Drucks',
-  tileSize: 'Größe jeder Kachel',
-  tilesNote: (count, totalCm, scale) => `${count} Kacheln, ${totalCm} × ${totalCm} cm insgesamt · ${scale}`,
-  tilesLabel: 'In Kacheln für dein Druckbett teilen',
-  onePiece: 'Ein Stück',
-  tilesOut: (n) => `${n} × ${n} Kacheln`,
-  titleStrip: 'Titel in erhabener Schrift auf einer Leiste vorn',
-  paintEdges: 'Kanten zum Bemalen',
-  sinkWater: 'Wasser 1 mm tiefer',
-  raiseRoads: 'Straßen 0,4 mm höher',
-  raiseGreen: 'Parks und Wälder 0,6 mm höher',
-  raiseRoute: 'Strecke 0,8 mm höher',
-  raiseTraffic: 'Verkehrsstraßen 0,5–2 mm höher, je nach Verkehr',
-  raiseTransit: 'ÖPNV-Linien 0,4–1,2 mm höher, je nach Fahrten',
-  stlButton: '3D-Druckdatei herunterladen (STL)',
-  stlTilesButton: '3D-Druckkacheln herunterladen (ZIP mit STL-Dateien)',
-  stillLoading: 'Die Gebäude laden noch — versuch es gleich noch einmal.',
-  buildingPrint: '3D-Druckdatei wird erstellt…',
-  printFailed: 'Die 3D-Druckdatei konnte auf diesem Gerät nicht erstellt werden.',
-  printSquare: (cm) => `${cm} × ${cm} cm`,
-  printWithStrip: (cm, deepCm) => `${cm} × ${deepCm} cm mit der Titelleiste`,
-  saved: (size, scale, triangles, mb) => `Gespeichert: ${size} im Maßstab ${scale}, ${triangles} Dreiecke (${mb} MB).`,
-  savedTiles: (count, tileCm, totalCm, strip, scale, triangles, mb) =>
-    `Gespeichert: ${count} Kacheln à ${tileCm} cm, ${totalCm} × ${totalCm} cm insgesamt${strip ? ', dazu die Titelleiste als eigenes Teil' : ''}, im Maßstab ${scale}, ${triangles} Dreiecke (${mb} MB).`,
-  waterSunk: (mm) => ` Wasser ${mm} mm tiefer.`,
-  greenRaised: (mm) => ` Parks und Wälder ${mm} mm höher.`,
-  roadsRaised: (mm) => ` Straßen ${mm} mm höher.`,
-  routeRaised: (mm) => ` Strecke ${mm} mm höher.`,
-  trafficRaised: (from, to) => ` Verkehrsstraßen ${from}–${to} mm höher.`,
-  transitRaised: (from, to) => ` ÖPNV-Linien ${from}–${to} mm höher.`,
-  brokenLeftOut: (n, count) => (count === 1 ? ' 1 Gebäude mit fehlerhaftem Umriss in den Kartendaten wurde weggelassen.' : ` ${n} Gebäude mit fehlerhaftem Umriss in den Kartendaten wurden weggelassen.`),
-  brokenInTile: ' Ein Gebäude mit fehlerhaftem Umriss in den Kartendaten wurde weggelassen.',
-  fontMissing: (chars, count) => (count === 1 ? ` Die Schrift hat kein ${chars}, deshalb fehlt es im Titel.` : ` Die Schrift hat kein ${chars}, deshalb fehlen sie im Titel.`),
-
-  // die Notiz im ZIP der Kacheln
-  readmeSize: (area, count, n, tileCm, totalCm, scale, ex) =>
-    `${area}, ${count} Kacheln (${n} x ${n}) à ${tileCm} cm, ${totalCm} x ${totalCm} cm insgesamt, ${scale}, Gelände x${ex}.`,
-  readmeGrid: 'Die Kacheln sind nach Zeile und Spalte benannt wie ein Kartenraster: Zeile A ist der Nordrand (hinten), Spalte 1 der Westen (links).',
-  readmeCorners: (last) => `A1 ist die Nordwestecke, ${last} die Südostecke. Druck jede Kachel flach, Boden nach unten, in 100 %; sie passen Kante an Kante.`,
-  readmeStrip: 'title.stl ist die Titelleiste: leg sie mittig vor die unterste Reihe.',
-  readmeWater: (mm) => `Wasser (Seen, als Fläche kartierte Flüsse, das Meer) liegt ${mm} mm unter dem Land, mit einer Kante zum Bemalen.`,
-  readmeGreen: (mm) => `Parks, Gärten und Wälder stehen ${mm} mm über dem Land.`,
-  readmeRoads: (mm) => `Straßen, Wege und Bahnlinien stehen ${mm} mm über dem Boden, mit scharfen Kanten.`,
-  readmeRoute: (mm) => `Die Strecke steht ${mm} mm über dem Boden, höher als die Straßen, und führt eben über Brücken.`,
-  readmeTraffic: (from, to) => `Die Verkehrsstraßen stehen ${from} bis ${to} mm über dem Boden: je mehr Verkehr in der gezeigten Stunde, desto höher. Wo die Strecke sie trifft, liegt sie 0,4 mm darüber.`,
-  readmeTransit: (from, to) => `Die ÖPNV-Linien stehen ${from} bis ${to} mm über dem Boden: je mehr Fahrten am gezeigten Tag, desto höher. Wo die Strecke sie trifft, liegt sie 0,4 mm darüber.`,
-  readmeCredit: 'Kartendaten © OpenStreetMap-Mitwirkende (ODbL). Gelände: Mapzen terrain tiles auf AWS Open Data.',
 
   // eine Strecke aus einer GPX- oder TCX-Datei
-  route: 'Strecke',
   routeHint: 'GPX oder TCX',
   routeLoad: 'GPX- oder TCX-Datei laden',
   routeLocal: 'Die Datei bleibt auf diesem Gerät. Sie wird nie hochgeladen.',
@@ -262,13 +185,12 @@ export const de: Messages = {
   dataAboutLink: 'So funktioniert es, und woher die Daten kommen',
   dataShareTitle: 'Diese Ansicht teilen',
   dataShareText: (place) => `${place}: offene Daten auf einem 3D-Modell. Sieh dir deine eigene Stadt an:`,
-  dataTitleField: 'Titel auf dem Bild und dem Druck',
+  dataTitleField: 'Titel auf dem Bild',
   dataSecondLineExample: 'Miete pro m² · Zensus 2022',
   dataImageButton: 'Bild herunterladen (PNG)',
   dataRenderingImage: 'Bild wird erstellt…',
   dataImageSaved: 'Bild gespeichert',
   dataImageFailed: 'Das Bild ließ sich auf diesem Gerät nicht erstellen.',
-  dataPrintSection: '3D-Druck',
   dataLayers: { steep: 'Steigung', traffic: 'Verkehr', transit: 'Nahverkehr', homes: 'Wohnen', income: 'Einkommen', route: 'Deine Strecke' },
   cardSteep: 'Straßen und Wege nach Steigung eingefärbt, überall. Suche oben einen Ort oder probier einen aus:',
   cardTraffic: 'Autos und Fahrräder, jede Stunde an Hunderten Stellen gezählt, als rote Straßen, die mit dem Verkehr wachsen. Bisher nur in Hamburg. Probier:',
@@ -426,11 +348,4 @@ export const de: Messages = {
   areaDescribe: (measure, lo, hi, at) => `${measure}: ${lo} bis ${hi} in diesem Quadrat${at ? `, ${at} an der Markierung` : ''}.`,
   cardRoute: 'Lade einen Lauf, eine Radtour oder ein Rennen (GPX oder TCX) und sieh die Strecke über jeder Ebene, mit Höhenprofil und den steilsten Anstiegen. Die Datei bleibt auf deinem Gerät.',
   moreLayers: 'Weitere Ebenen kommen: Wasser, Energie.',
-  partOf: 'Teil von Your Place: jede Adresse als 3D-Modell, zum Teilen, Aufhängen oder Drucken',
-  partOfShort: 'Teil von Your Place →',
-  dataTeaser: 'Neu: wo es steil wird, Verkehr in Hamburg, Nahverkehr, Mieten und Einkommen, deine Laufstrecke',
-  openData: 'Datenebenen für diesen Ort',
-  openDataTitle: 'Datenebenen für diesen Ort: Steigung, Verkehr, Nahverkehr, deine Strecke',
-  openPlace: 'In Your Place öffnen',
-  openPlaceTitle: 'Diesen Ort in Your Place öffnen: Poster und 3D-Druck',
 };

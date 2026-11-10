@@ -85,12 +85,8 @@ export async function makePoster(viewer: Viewer, info: PosterInfo, width = 2400)
   return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('PNG encoding failed'))), 'image/png'));
 }
 
+/** "your-place-data-kleinfelde-1km.png" */
 export function posterFileName(title: string, sizeM: number): string {
-  return exportFileName(title, sizeM, 'png');
-}
-
-/** "your-place-kleinfelde-1km.png", "your-place-kleinfelde-1km-15cm.stl" */
-export function exportFileName(title: string, sizeM: number, suffix: string): string {
   const slug = title
     .normalize('NFKD')
     .replace(/[̀-ͯ]/g, '')
@@ -99,5 +95,5 @@ export function exportFileName(title: string, sizeM: number, suffix: string): st
     .replace(/^-|-$/g, '')
     .slice(0, 48);
   const size = sizeM < 1000 ? `${sizeM}m` : `${Number((sizeM / 1000).toFixed(1))}km`;
-  return `your-place-${slug || 'model'}-${size}${suffix.includes('.') ? '-' : '.'}${suffix}`;
+  return `your-place-data-${slug || 'view'}-${size}.png`;
 }

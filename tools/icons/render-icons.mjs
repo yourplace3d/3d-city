@@ -1,9 +1,9 @@
 /**
- * Renders an app's PNG icons from its SVG, the way the main app's are made: 192 and 512 px with
+ * Renders the app's PNG icons from its SVG: 192 and 512 px with
  * the rounded square on transparent, a full-bleed 512 px maskable icon (the art at 78 %, inside the
  * safe zone) and a full-bleed 180 px Apple touch icon.
  *
- *   node tools/icons/render-icons.mjs public/data   (reads icon.svg there, writes the PNGs next to it)
+ *   node tools/icons/render-icons.mjs public   (reads icon.svg there, writes the PNGs next to it)
  *
  * Needs Playwright with Chromium.
  */

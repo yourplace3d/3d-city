@@ -4,7 +4,7 @@
  * Ring-by-ring clipping (polygon.ts) is fine for drawing, but where an outline
  * crosses the rectangle it can leave zero-width slits: a courtyard cut open by
  * the edge, or a U-shaped building leaving and re-entering. Those slits become
- * back-to-back walls that break 3D prints. Outlines that cross the edge go
+ * back-to-back walls that break the model. Outlines that cross the edge go
  * through a real polygon intersection instead; the rest are returned as they are.
  *
  * Map tiles cut every building that crosses a tile edge; `joinPieces` glues the

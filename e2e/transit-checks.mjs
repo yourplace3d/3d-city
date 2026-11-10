@@ -2,7 +2,7 @@
  * End-to-end checks for the Public transport layer of Your Place · Data, run by smoke.mjs: the
  * demo from the start page (Freiburg's timetable, answered from a made-up one), the day, the
  * chart, a vehicle tapped, a line picked, replay and its speed, the table, the description and
- * the link, the 3D print; then a timetable of your own picked while looking at another place
+ * the link; then a timetable of your own picked while looking at another place
  * (the app goes where it runs), a file that isn't one, and taking it away. Also checks the file
  * never goes out in a request, and that the panel fits a phone.
  */
@@ -16,7 +16,7 @@ const HAMBURG = { lat: 53.5511, lon: 9.9937 };
 const ELSEWHERE = { lat: 53.5961, lon: 9.9937 };
 
 export async function transitChecks({ browser, base, routeAll, expect, watchConsole, waitStage, settle, shot }) {
-  const dataBase = `${base}data/`;
+  const dataBase = base;
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 }, deviceScaleFactor: 1, acceptDownloads: true });
   await routeAll(ctx);
   await ctx.route(/timetables\/freiburg-2026\.zip$/, (route) => route.fulfill({ status: 200, contentType: 'application/zip', body: Buffer.from(gtfsZip(DEMO)) }));
@@ -130,18 +130,6 @@ export async function transitChecks({ browser, base, routeAll, expect, watchCons
   expect(x.lines.join(' ') === 'tram:T1' && x.dayRuns > 0, 'on a Saturday only the weekend lines run');
   await page.fill('#transit-date', '2026-11-09');
   await page.dispatchEvent('#transit-date', 'change');
-
-  // the lines in the 3D print
-  await page.click('#share-btn');
-  // the data app folds the 3D print away
-  await page.evaluate(() => { const d = document.getElementById('print-details'); if (d) d.open = true; });
-  expect((await page.isVisible('#print-transit-row')) && (await page.isChecked('#print-transit')) && (await page.isHidden('#print-traffic-row')), 'the 3D print offers the transit lines raised, ticked');
-  await page.click('#print-size-group [data-value="150"]');
-  const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.click('#stl-btn')]);
-  await page.waitForFunction(() => /^Saved/.test(document.getElementById('share-msg').textContent), null, { timeout: 120000 });
-  const msg = await page.textContent('#share-msg');
-  expect(/\.stl$/.test(dl.suggestedFilename()) && / Transit lines raised 0\.4–1\.2 mm\./.test(msg), `the STL has the lines raised by their trips (“${msg.slice(0, 90)}…”)`);
-  await page.keyboard.press('Escape');
 
   // ---- timetables for this place, from the Mobility Database: load one, add another
   const monday = async () => {

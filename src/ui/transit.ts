@@ -21,8 +21,6 @@ import { DAY_S, dayRuns, dayWithin, runsPerHour, type TransitDay, type TransitLi
 import { MODE_COLOURS, modesOn, TransitDisplay } from '../data/display/transit';
 import { barShares, chartTicks } from '../data/display/trafficChart';
 import { Playback } from '../data/time/playback';
-import { transitForPrint } from '../export/transit';
-import type { PrintRoad } from '../export/roads';
 
 export interface TransitHost {
   viewer: Viewer;
@@ -178,15 +176,9 @@ export class TransitController {
     this.host.viewer.requestRender();
   }
 
-  /** Whether the lines are on the model now (for the print). */
+  /** Whether the lines are on the model now. */
   get shown(): boolean {
     return !!this.shownDisplay();
-  }
-
-  /** The lines that run on the day shown, for the 3D print at `mmPerM`, higher where more trips run. */
-  printPieces(mmPerM: number): PrintRoad[] {
-    const d = this.shownDisplay();
-    return d && this.dayData ? transitForPrint(this.dayData, this.pickedRoutes(), mmPerM) : [];
   }
 
   /** Open the file picker. */

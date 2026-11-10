@@ -436,12 +436,6 @@ a {
   text-wrap: pretty;
 }
 
-.presets-label {
-  margin: 0 0 10px;
-  font-size: 13px;
-  color: var(--faint);
-}
-
 .welcome-more {
   margin: 18px 0 0;
   font-size: 13px;
@@ -486,39 +480,6 @@ a {
   inset: auto var(--gutter) 40% var(--gutter);
   text-align: center;
   font-size: 16px;
-}
-
-.presets {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 8px;
-  text-align: left;
-}
-
-.preset {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 11px 13px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-  cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.preset:hover {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow);
-}
-
-.preset strong {
-  font-weight: 600;
-}
-
-.preset span {
-  font-size: 13px;
-  color: var(--muted);
 }
 
 /* ------------------------------------------------------------------ fabs */
@@ -1077,14 +1038,6 @@ input[type='range'] {
   accent-color: var(--accent);
 }
 
-.print-block {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-}
-
 .btn-primary {
   border-color: transparent;
   background: var(--accent);
@@ -1200,27 +1153,6 @@ input[type='range'] {
     transition: none !important;
     animation-duration: 0.001s !important;
   }
-}
-
-.print-block .tiles-label {
-  margin-top: 6px;
-}
-
-.paint-set {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 2px 0 0;
-  padding: 0;
-  border: 0;
-  min-width: 0;
-}
-
-.paint-set legend {
-  padding: 0;
-  margin-bottom: 8px;
-  font-size: 13px;
-  color: var(--muted);
 }
 
 /* ------------------------------------------------------------------ a route (GPX, TCX) */
@@ -1446,34 +1378,6 @@ a.fab {
   text-decoration: none;
 }
 
-.welcome-data {
-  margin: 16px 0 0;
-  font-size: 14px;
-}
-
-.welcome-data a {
-  display: inline-flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 2px 6px;
-  padding: 8px 14px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--muted);
-  text-decoration: none;
-}
-
-.welcome-data a:hover {
-  color: var(--text);
-  box-shadow: var(--shadow);
-}
-
-.welcome-data strong {
-  color: var(--text);
-  font-weight: 600;
-}
-
 .layer-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
@@ -1548,15 +1452,6 @@ a.fab {
   width: 14px;
   height: 8px;
   border-radius: 4px;
-}
-
-.part-of {
-  margin: 4px 0 8px;
-}
-
-.part-of a {
-  color: var(--muted);
-  text-underline-offset: 3px;
 }
 
 /* ------------------------------------------------------------------ your route, over any layer */
@@ -2092,23 +1987,4 @@ a.fab {
   margin: 2px 0 0;
   font-size: 13.5px;
   font-weight: 560;
-}
-
-/* Your Place · Data: the 3D print is there, folded away */
-.print-details {
-  margin-top: 4px;
-  border-top: 1px solid var(--border);
-  padding-top: 8px;
-}
-
-.print-details > summary {
-  min-height: 36px;
-  display: flex;
-  align-items: center;
-  font-weight: 560;
-  cursor: pointer;
-}
-
-.print-details[open] > summary {
-  margin-bottom: 8px;
 }

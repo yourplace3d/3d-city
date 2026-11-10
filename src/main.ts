@@ -8,16 +8,7 @@ import { CityModel } from './scene/cityModel';
 import { BUILDING_COLOURS, HEIGHT_RAMP } from './scene/buildingsMesh';
 import { isWebGL2Available, Viewer } from './scene/viewer';
 import { clampSize, decodeState, encodeState, samePlace, type AreaSize, type BuildingStyle, type DataLayerId, type Layers, type TrafficKind, type ViewState } from './state';
-import { buildPrint, PRINT_BASE_MM, printScale, toBinaryStl, Triangles } from './export/stl';
-import { buildTiledPrint, MAX_TILES, tileName } from './export/tiles';
-import { makeZip, type ZipEntry } from './export/zip';
-import { depthInMetres, GREEN_RAISE_MM, shiftMasked, sinkWater, WATER_DEPTH_MM } from './export/water';
-import { ROAD_RAISE_MM, type PrintRoad } from './export/roads';
-import { ROUTE_RAISE_MM } from './export/route';
-import { routeOverTraffic } from './export/traffic';
-import { TRAFFIC_PRINT_MM } from './data/display/traffic';
-import { addLabel, loadGlyphs } from './export/label';
-import { exportFileName, makePoster, posterFileName } from './ui/poster';
+import { makePoster, posterFileName } from './ui/poster';
 import { setupSearch } from './ui/search';
 import { NoticeView } from './ui/notice';
 import { StatusView } from './ui/status';
@@ -28,33 +19,15 @@ import { TRAFFIC_ATTRIBUTION } from './data/sources/hamburgTraffic';
 import { TransitController } from './ui/transit';
 import { AreaController } from './ui/areas';
 import type { AreaLayer } from './data/sources/areaProviders';
-import { TRANSIT_PRINT_MM } from './export/transit';
-import { area, direction, distance, num, scale as localScale, t, translatePage } from './i18n';
+import { area, direction, distance, num, t, translatePage } from './i18n';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
-/**
- * Which app this page is: Your Place (the model, poster and print) or Your Place · Data (the
- * data layers: steepness, routes). One codebase, two pages built from src/app-body.html.
- */
-const APP: 'place' | 'data' = document.body.dataset.app === 'data' ? 'data' : 'place';
-/** the way back to the site's root, for the other app and the service worker */
-const ROOT = APP === 'data' ? '../' : './';
-
-/** Hilly places for the data app's steepness card. */
+/** Hilly places for the steepness card. */
 const STEEP_PRESETS: Array<{ name: string; center: LngLat; size: AreaSize; ex: number }> = [
   { name: 'Lisbon', center: { lat: 38.7139, lon: -9.1365 }, size: 2000, ex: 1.5 },
   { name: 'San Francisco', center: { lat: 37.7935, lon: -122.4075 }, size: 2000, ex: 1.5 },
   { name: 'Stuttgart', center: { lat: 48.7765, lon: 9.1772 }, size: 3000, ex: 1.5 },
-];
-
-const PRESETS: Array<{ name: string; detail: string; center: LngLat; size: AreaSize; ex: number }> = [
-  { name: 'Stuttgart', detail: t.presets.stuttgart, center: { lat: 48.7765, lon: 9.1772 }, size: 4000, ex: 2 },
-  { name: 'Heidelberg', detail: t.presets.heidelberg, center: { lat: 49.4106, lon: 8.7065 }, size: 2000, ex: 1.5 },
-  { name: 'Edinburgh', detail: t.presets.edinburgh, center: { lat: 55.9496, lon: -3.1835 }, size: 4000, ex: 1.5 },
-  { name: 'Lisbon', detail: t.presets.lisbon, center: { lat: 38.7139, lon: -9.1365 }, size: 2000, ex: 2 },
-  { name: 'San Francisco', detail: t.presets.sanFrancisco, center: { lat: 37.7935, lon: -122.4075 }, size: 2000, ex: 1.5 },
-  { name: 'Hong Kong', detail: t.presets.hongKong, center: { lat: 22.2795, lon: 114.1605 }, size: 2000, ex: 1 },
 ];
 
 // ------------------------------------------------------------------ state
@@ -65,11 +38,6 @@ const app = $('app');
 /** the landing page's title; a loaded place puts its name in the tab instead */
 const HOME_TITLE = document.title;
 let state: ViewState = decodeState(location.hash);
-// each app reads only its own parts of a link
-if (APP === 'place') {
-  state.data = null;
-  state.route = null;
-}
 /** Set once this browser has opened a place of its own; until then a shared model ends with an invitation. */
 const OWN_KEY = 'yp:own';
 let inviteOwn = !!state.center && !readFlag(OWN_KEY);
@@ -101,7 +69,6 @@ const debug = {
   pick: (x: number, y: number) => viewer.pick(x, y),
   /** used by tools/video to drive the camera frame by frame */
   setCamera: (c: Parameters<Viewer['setCameraState']>[0]) => viewer.setCameraState(c),
-  app: APP,
   route: () => route?.debugInfo() ?? null,
   steep: () => steep?.debugInfo() ?? null,
   traffic: () => traffic?.debugInfo() ?? null,
@@ -132,9 +99,9 @@ viewer.onCameraChange(() => {
   scheduleHashWrite();
 });
 viewer.onTap(movePinTo);
-// the data layers, in Your Place · Data only
-const steep: SteepController | null = APP === 'data' ? new SteepController({ viewer, model: () => model }) : null;
-const route: RouteController | null = APP === 'data' ? new RouteController({
+// the data layers
+const steep = new SteepController({ viewer, model: () => model });
+const route = new RouteController({
   viewer,
   accent,
   model: () => model,
@@ -163,9 +130,9 @@ const route: RouteController | null = APP === 'data' ? new RouteController({
     viewer.requestRender();
   },
   say: (message, ms) => toast(message, ms),
-}) : null;
-route?.setShown(true);
-const traffic: TrafficController | null = APP === 'data' ? new TrafficController({
+});
+route.setShown(true);
+const traffic: TrafficController = new TrafficController({
   viewer,
   model: () => model,
   open: (center, size, label) => {
@@ -179,9 +146,9 @@ const traffic: TrafficController | null = APP === 'data' ? new TrafficController
     writeHash();
     describe();
   },
-}) : null;
+});
 
-const transit: TransitController | null = APP === 'data' ? new TransitController({
+const transit: TransitController = new TransitController({
   viewer,
   model: () => model,
   open: (center, size, label) => {
@@ -194,9 +161,9 @@ const transit: TransitController | null = APP === 'data' ? new TransitController
     describe();
     if (model) applyPin(model);
   },
-  demoUrl: `${ROOT}timetables/freiburg-2026.zip`,
+  demoUrl: './timetables/freiburg-2026.zip',
   say: (message, ms) => toast(message, ms),
-}) : null;
+});
 
 /** Homes and Income: buildings coloured by values per area, from open data the user loads. */
 const makeAreas = (layer: AreaLayer): AreaController =>
@@ -213,7 +180,7 @@ const makeAreas = (layer: AreaLayer): AreaController =>
       describe();
       if (model) applyPin(model);
     },
-    root: ROOT,
+    root: './',
     accent,
     pin: () => {
       const p = model?.pinInfo();
@@ -221,11 +188,10 @@ const makeAreas = (layer: AreaLayer): AreaController =>
     },
     say: (message, ms) => toast(message, ms),
   });
-const homes: AreaController | null = APP === 'data' ? makeAreas('homes') : null;
-const income: AreaController | null = APP === 'data' ? makeAreas('income') : null;
+const homes = makeAreas('homes');
+const income = makeAreas('income');
 
-if (APP === 'place') renderPresets();
-else renderDataPresets();
+renderDataPresets();
 renderLegend();
 syncControls();
 bindControls();
@@ -256,14 +222,12 @@ const updateInsets = () => {
 new ResizeObserver(updateInsets).observe($('sheet'));
 wide.addEventListener('change', updateInsets);
 
-if (route && traffic) {
-  // a shared route shows over the layer the link names (or steepness)
-  if (state.route && !route.openLink(state.route)) state.route = null;
-  routeSquare = !!state.route;
-  traffic.setKind(state.traffic);
-  traffic.setSpread(state.spread);
-  setDataLayer(state.data ?? 'steep');
-}
+// a shared route shows over the layer the link names (or steepness)
+if (state.route && !route.openLink(state.route)) state.route = null;
+routeSquare = !!state.route;
+traffic.setKind(state.traffic);
+traffic.setSpread(state.spread);
+setDataLayer(state.data ?? 'steep');
 if (state.center) {
   void loadPlace(state.center, { camera: state.camera });
 } else {
@@ -273,18 +237,12 @@ if (state.center) {
 window.addEventListener('hashchange', () => {
   const next = decodeState(location.hash, state);
   if (!next.center) return;
-  if (APP === 'place') {
-    next.data = null;
-    next.route = null;
-  }
   // a pasted link with a route: show that one (the link without one keeps what's loaded)
-  const newRoute = !!route && !!next.route && next.route !== state.route && route.openLink(next.route);
+  const newRoute = !!next.route && next.route !== state.route && route.openLink(next.route);
   if (newRoute) routeSquare = true;
-  if (traffic) {
-    traffic.setKind(next.traffic);
-    traffic.setSpread(next.spread);
-  }
-  if (route) setDataLayer(next.data ?? state.data ?? 'steep');
+  traffic.setKind(next.traffic);
+  traffic.setSpread(next.spread);
+  setDataLayer(next.data ?? state.data ?? 'steep');
   if (!samePlace(next.center, state.center) || next.size !== state.size) {
     state = next;
     syncControls();
@@ -299,8 +257,7 @@ window.addEventListener('hashchange', () => {
 });
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  // one worker for both apps, at the root
-  navigator.serviceWorker.register(`${ROOT}sw.js`).catch(() => undefined);
+  navigator.serviceWorker.register('./sw.js').catch(() => undefined);
 }
 
 // ------------------------------------------------------------------ loading pipeline
@@ -578,9 +535,8 @@ function dataLayersChanged(): void {
   transit?.placeAgain();
 }
 
-/** Your Place · Data: show one data layer, with its panel. A route of your own stays on over any of them. */
+/** Show one data layer, with its panel. A route of your own stays on over any of them. */
 function setDataLayer(layer: DataLayerId): void {
-  if (!route || !steep || !traffic || !transit) return;
   const switched = layer !== state.data;
   state.data = layer;
   for (const b of $('data-layer-group').querySelectorAll<HTMLButtonElement>('[role="radio"]')) {
@@ -609,7 +565,7 @@ function syncSteep(): void {
   steep?.set(state.data === 'steep' && !route?.active);
 }
 
-// ------------------------------------------------------------------ shared links: "make one of your own"
+// ------------------------------------------------------------------ shared links: "see your own city"
 
 function readFlag(key: string): boolean {
   try {
@@ -628,16 +584,16 @@ function markOwnPlace(): void {
   }
 }
 
-/** Someone who opened a shared model sees it first, then an invitation to make one of their own place. */
+/** Someone who opened a shared view sees it first, then an invitation to look at their own city. */
 function offerOwnPlace(): void {
   if (!inviteOwn) return;
   inviteOwn = false;
   const token = loadToken;
   window.setTimeout(() => {
     if (token !== loadToken || notice.visible) return;
-    notice.show(APP === 'data' ? t.dataSharedInvite : t.sharedInvite, [
+    notice.show(t.dataSharedInvite, [
       {
-        label: APP === 'data' ? t.dataSearchPlace : t.makeMyPlace,
+        label: t.dataSearchPlace,
         primary: true,
         onClick: () => {
           notice.hide();
@@ -787,7 +743,7 @@ function setMode(mode: 'landing' | 'model'): void {
 function setPlaceTitle(title: string, detail: string): void {
   $('place-title').textContent = title;
   // tabs, history and bookmarks name the place
-  document.title = APP === 'data' ? t.dataDocTitle(title) : t.docTitle(title);
+  document.title = t.dataDocTitle(title);
   placeMetaDetail = detail;
   updateMeta();
 }
@@ -858,10 +814,8 @@ function bindControls(): void {
     });
   }
 
-  if (APP === 'data') {
-    radioGroup('data-layer-group', (v) => setDataLayer(v as DataLayerId));
-    radioGroup('traffic-kind-group', (v) => traffic?.setKind(v as TrafficKind));
-  }
+  radioGroup('data-layer-group', (v) => setDataLayer(v as DataLayerId));
+  radioGroup('traffic-kind-group', (v) => traffic.setKind(v as TrafficKind));
 
   $('compass-btn').addEventListener('click', () => viewer.resetNorth());
   $('reset-btn').addEventListener('click', () => viewer.resetView());
@@ -920,26 +874,7 @@ function updateCompass(): void {
   $('compass-needle').style.transform = `rotate(${az}deg)`;
 }
 
-function renderPresets(): void {
-  const host = $('presets');
-  for (const p of PRESETS) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'preset';
-    const name = document.createElement('strong');
-    name.textContent = p.name;
-    const detail = document.createElement('span');
-    detail.textContent = p.detail;
-    b.append(name, detail);
-    b.addEventListener('click', () => {
-      $<HTMLInputElement>('search-input').value = p.name;
-      openPlace({ label: p.name, detail: p.detail, center: p.center }, { size: p.size, ex: p.ex });
-    });
-    host.append(b);
-  }
-}
-
-/** The data app's layer cards: places that open with that layer on. */
+/** The layer cards: places that open with that layer on. */
 function renderDataPresets(): void {
   const add = (hostId: string, layer: DataLayerId, name: string, center: LngLat, size: number, ex?: number) => {
     const b = document.createElement('button');
@@ -1051,14 +986,6 @@ function writeHash(): void {
   state.route = route?.linkCode() ?? null;
   const h = encodeState(state);
   if (`#${h}` !== location.hash) history.replaceState(null, '', `#${h}`);
-  linkOtherApp();
-}
-
-/** The button to the other app opens the same place and view there (never a route: that stays here). */
-function linkOtherApp(): void {
-  const link = $<HTMLAnchorElement>('other-app');
-  const other = APP === 'place' ? 'data/' : '';
-  link.href = state.center ? `${ROOT}${other}#${encodeState({ ...state, route: null, data: null })}` : `${ROOT}${other}`;
 }
 
 let toastTimer = 0;
@@ -1088,76 +1015,9 @@ function bindShare(): void {
   const nativeBtn = $<HTMLButtonElement>('native-share-btn');
   nativeBtn.hidden = typeof navigator.share !== 'function';
 
-  let printMm = 150;
-  let printTiles = 1;
-  const updatePrintNote = () => {
-    const note = `${localScale(state.size, printMm * printTiles)} · ${t.terrainTimes(num(state.exaggeration, 1))}`;
-    const total = num((printMm * printTiles) / 10);
-    $('print-label').textContent = printTiles > 1 ? t.tileSize : t.printSize;
-    $('print-note').textContent = printTiles > 1 ? t.tilesNote(num(printTiles * printTiles), total, note) : note;
-    $('stl-btn').textContent = printTiles > 1 ? t.stlTilesButton : t.stlButton;
-  };
-  radioGroup('print-size-group', (v) => {
-    printMm = Number(v);
-    updatePrintNote();
-  });
-  /**
-   * The print's terrain and roads, as ticked: water sunk, parks and woods raised (where the square
-   * has them), raised roads. `done` lists what was changed, for the message and the tiles' note.
-   */
-  const printLayers = (totalMm: number) => {
-    const m = model!;
-    const metres = (mm: number) => depthInMetres(mm, totalMm, state.size, state.exaggeration);
-    let grid = m.grid;
-    const done = { water: false, green: false, roads: false, route: false, traffic: false, transit: false };
-    const water = $<HTMLInputElement>('print-water').checked ? m.printWater() : null;
-    if (water) {
-      grid = sinkWater(grid, water, metres(WATER_DEPTH_MM));
-      done.water = true;
-    }
-    const green = $<HTMLInputElement>('print-green').checked ? m.printGreen() : null;
-    if (green) {
-      grid = shiftMasked(grid, green, metres(GREEN_RAISE_MM));
-      done.green = true;
-    }
-    const roads: PrintRoad[] = $<HTMLInputElement>('print-roads').checked ? m.printRoads() : [];
-    done.roads = roads.length > 0;
-    // Your Place · Data: the traffic streets, as high as the traffic, and the route as a raised
-    // line, higher than the roads and over the traffic streets
-    const mmPerM = totalMm / state.size;
-    const trafficParts = traffic?.shown && $<HTMLInputElement>('print-traffic').checked ? traffic.printPieces(mmPerM) : [];
-    // …or the transit lines, as high as the trips on them
-    const transitParts = transit?.shown && $<HTMLInputElement>('print-transit').checked ? transit.printPieces(mmPerM) : [];
-    const under = [...trafficParts, ...transitParts];
-    const routeParts = route && $<HTMLInputElement>('print-route').checked ? routeOverTraffic(route.printPieces(mmPerM), under) : [];
-    roads.push(...under, ...routeParts);
-    done.traffic = trafficParts.length > 0;
-    done.transit = transitParts.length > 0;
-    done.route = routeParts.length > 0;
-    const mm = (x: number) => num(x, Number.isInteger(x) ? 0 : 1);
-    const trafficMm = [mm(TRAFFIC_PRINT_MM.low), mm(TRAFFIC_PRINT_MM.high)] as const;
-    const transitMm = [mm(TRANSIT_PRINT_MM.low), mm(TRANSIT_PRINT_MM.high)] as const;
-    const note = [
-      done.water ? t.waterSunk(num(WATER_DEPTH_MM)) : '',
-      done.green ? t.greenRaised(num(GREEN_RAISE_MM, 1)) : '',
-      done.roads ? t.roadsRaised(num(ROAD_RAISE_MM, 1)) : '',
-      done.traffic ? t.trafficRaised(...trafficMm) : '',
-      done.transit ? t.transitRaised(...transitMm) : '',
-      done.route ? t.routeRaised(num(ROUTE_RAISE_MM, 1)) : '',
-    ].join('');
-    return { grid, roads, done, note, trafficMm, transitMm };
-  };
-  const tilesRange = $<HTMLInputElement>('tiles-range');
-  tilesRange.max = String(MAX_TILES);
-  tilesRange.addEventListener('input', () => {
-    printTiles = Number(tilesRange.value);
-    $('tiles-out').textContent = printTiles > 1 ? t.tilesOut(printTiles) : t.onePiece;
-    updatePrintNote();
-  });
-
-  // the title for poster and print: the place's name until the user writes their own
-  const titleInput = $<HTMLInputElement>('print-title');
-  const subtitleInput = $<HTMLInputElement>('print-subtitle');
+  // the title on the image: the place's name until the user writes their own
+  const titleInput = $<HTMLInputElement>('image-title');
+  const subtitleInput = $<HTMLInputElement>('image-subtitle');
   let autoTitle = '';
   const title = () => titleInput.value.trim() || autoTitle;
   const subtitle = () => subtitleInput.value.trim();
@@ -1166,11 +1026,6 @@ function bindShare(): void {
     writeHash();
     url.value = location.href;
     msg.textContent = '';
-    updatePrintNote();
-    // Your Place · Data: the route can stand up in the print, when one is shown
-    if (route) $('print-route-row').hidden = !route.visible;
-    if (traffic) $('print-traffic-row').hidden = !traffic.shown;
-    if (transit) $('print-transit-row').hidden = !transit.shown;
     const place = placeLabel || (state.center ? formatLatLon(state.center) : '');
     if (!titleInput.value.trim() || titleInput.value === autoTitle) titleInput.value = place;
     autoTitle = place;
@@ -1190,7 +1045,7 @@ function bindShare(): void {
 
   nativeBtn.addEventListener('click', async () => {
     try {
-      await navigator.share({ title: placeLabel ? t.shareInApp(placeLabel) : 'Your Place', text: (APP === 'data' ? t.dataShareText : t.shareText)(placeLabel || t.thisPlace), url: url.value });
+      await navigator.share({ title: placeLabel ? t.dataDocTitle(placeLabel) : 'Your Place · Data', text: t.dataShareText(placeLabel || t.thisPlace), url: url.value });
     } catch {
       /* dismissed */
     }
@@ -1200,7 +1055,7 @@ function bindShare(): void {
   posterBtn.addEventListener('click', async () => {
     if (!model || !state.center) return;
     posterBtn.disabled = true;
-    msg.textContent = APP === 'data' ? t.dataRenderingImage : t.renderingPoster;
+    msg.textContent = t.dataRenderingImage;
     try {
       // third-party data on the model is credited on the poster too
       const credit = traffic?.describe() ? TRAFFIC_ATTRIBUTION.text : (transit?.credit() ?? homes?.credit() ?? income?.credit() ?? undefined);
@@ -1208,100 +1063,14 @@ function bindShare(): void {
       saveBlob(blob, posterFileName(title(), state.size));
       msg.textContent = '';
       dialog.close();
-      toast(APP === 'data' ? t.dataImageSaved : t.posterSaved);
+      toast(t.dataImageSaved);
     } catch (err) {
       console.error(err);
-      msg.textContent = APP === 'data' ? t.dataImageFailed : t.posterFailed;
+      msg.textContent = t.dataImageFailed;
     } finally {
       posterBtn.disabled = false;
     }
   });
 
-  // 3D print: terrain block + buildings as one watertight STL, in millimetres
-  const stlBtn = $<HTMLButtonElement>('stl-btn');
-  stlBtn.addEventListener('click', async () => {
-    if (!model || !state.center) return;
-    if (debug.stage === 'loading' || debug.stage === 'terrain') {
-      msg.textContent = t.stillLoading;
-      return;
-    }
-    stlBtn.disabled = true;
-    msg.textContent = t.buildingPrint;
-    await new Promise((r) => window.setTimeout(r, 30)); // let the message show
-    try {
-      const name = title();
-      if (printTiles > 1) {
-        await saveTiles(name);
-        return;
-      }
-      const scale = printScale(state.size, printMm);
-      const terrain = printLayers(printMm);
-      const tris = buildPrint(terrain.grid, model.printBuildings(), { sideMm: printMm, baseMm: PRINT_BASE_MM, exaggeration: state.exaggeration }, terrain.roads);
-      const brokenBuildings = tris.skipped;
-      // the title in raised letters on a strip in front of the model
-      const label = $<HTMLInputElement>('print-ledge').checked ? addLabel(tris, await loadGlyphs(), [name, subtitle()], printMm, PRINT_BASE_MM) : null;
-      const stl = toBinaryStl(tris, `${name}, ${state.size / 1000} km, ${scale}, terrain x${state.exaggeration.toFixed(1)}`);
-      saveBlob(new Blob([stl], { type: 'model/stl' }), exportFileName(name, state.size, `${printMm / 10}cm.stl`));
-      const mb = num(stl.byteLength / 1048576, stl.byteLength < 10485760 ? 1 : 0);
-      const depth = label ? Math.round(label.depthMm) : 0;
-      const cm = num(printMm / 10);
-      const size = depth ? t.printWithStrip(cm, num((printMm + depth) / 10, Number.isInteger((printMm + depth) / 10) ? 0 : 1)) : t.printSquare(cm);
-      const left = brokenBuildings ? t.brokenLeftOut(num(brokenBuildings), brokenBuildings) : '';
-      const missing = label?.missing.length ? t.fontMissing(label.missing.join(' '), label.missing.length) : '';
-      msg.textContent = `${t.saved(size, localScale(state.size, printMm), num(tris.count), mb)}${terrain.note}${left}${missing}`;
-    } catch (err) {
-      console.error(err);
-      msg.textContent = t.printFailed;
-    } finally {
-      stlBtn.disabled = false;
-    }
-  });
-
-  /** The print as n × n tiles in a ZIP, with the title strip as its own piece and a note on the layout. */
-  async function saveTiles(name: string): Promise<void> {
-    if (!model) return;
-    const n = printTiles;
-    const totalMm = printMm * n;
-    const scale = printScale(state.size, totalMm);
-    const terrain = printLayers(totalMm);
-    const tiles = buildTiledPrint(terrain.grid, model.printBuildings(), { sideMm: printMm, baseMm: PRINT_BASE_MM, exaggeration: state.exaggeration, tiles: n }, terrain.roads);
-    const files: ZipEntry[] = tiles.map((t) => ({
-      name: `tile-${t.name}.stl`,
-      data: new Uint8Array(toBinaryStl(t.tris, `${name}, tile ${t.name} of ${n}x${n}, ${scale}`)),
-    }));
-    // the most a building was left out in any one tile (one building can be cut into several)
-    const broken = Math.max(0, ...tiles.map((t) => t.tris.skipped));
-    let label: ReturnType<typeof addLabel> = null;
-    if ($<HTMLInputElement>('print-ledge').checked) {
-      const ledge = new Triangles();
-      label = addLabel(ledge, await loadGlyphs(), [name, subtitle()], printMm, PRINT_BASE_MM);
-      if (label) files.push({ name: 'title.stl', data: new Uint8Array(toBinaryStl(ledge, `${name}, title strip`)) });
-    }
-    const last = tileName(n - 1, n - 1);
-    const readme = [
-      `Your Place: ${name}`,
-      t.readmeSize(area(state.size), num(n * n), n, num(printMm / 10), num(totalMm / 10), localScale(state.size, totalMm), num(state.exaggeration, 1)),
-      '',
-      t.readmeGrid,
-      t.readmeCorners(last),
-      label ? t.readmeStrip : '',
-      terrain.done.water ? t.readmeWater(num(WATER_DEPTH_MM)) : '',
-      terrain.done.green ? t.readmeGreen(num(GREEN_RAISE_MM, 1)) : '',
-      terrain.done.roads ? t.readmeRoads(num(ROAD_RAISE_MM, 1)) : '',
-      terrain.done.traffic ? t.readmeTraffic(...terrain.trafficMm) : '',
-      terrain.done.transit ? t.readmeTransit(...terrain.transitMm) : '',
-      terrain.done.route ? t.readmeRoute(num(ROUTE_RAISE_MM, 1)) : '',
-      '',
-      t.readmeCredit,
-    ].filter((l, i, a) => l || a[i - 1]).join('\n');
-    files.push({ name: 'README.txt', data: new TextEncoder().encode(readme) });
-    const zip = makeZip(files);
-    saveBlob(new Blob([zip], { type: 'application/zip' }), exportFileName(name, state.size, `${n}x${n}-tiles-${printMm / 10}cm.zip`));
-    const triangles = tiles.reduce((s, t) => s + t.tris.count, 0);
-    const mb = num(zip.byteLength / 1048576, zip.byteLength < 10485760 ? 1 : 0);
-    const left = broken ? t.brokenInTile : '';
-    const missing = label?.missing.length ? t.fontMissing(label.missing.join(' '), label.missing.length) : '';
-    msg.textContent = `${t.savedTiles(num(n * n), num(printMm / 10), num(totalMm / 10), !!label, localScale(state.size, totalMm), num(triangles), mb)}${terrain.note}${left}${missing}`;
-  }
 }
 

@@ -96,11 +96,6 @@ export function direction(bearingDeg: number): string {
   return t.compass[Math.round((((bearingDeg % 360) + 360) % 360) / 45) % 8];
 }
 
-/** "1:13,300" (English), "1:13.300" (Portuguese, German): a print of `sideMm` covering `sizeM`. */
-export function scale(sizeM: number, sideMm: number): string {
-  return `1:${new Intl.NumberFormat(locale, { maximumSignificantDigits: 3 }).format((sizeM * 1000) / sideMm)}`;
-}
-
 /** A dictionary entry by its dotted key ("style.white"), as the page's data-t names it. */
 export function lookup(key: string, messages: Messages = t): unknown {
   return key.split('.').reduce<unknown>((o, k) => (o && typeof o === 'object' ? (o as Record<string, unknown>)[k] : undefined), messages);
@@ -109,7 +104,7 @@ export function lookup(key: string, messages: Messages = t): unknown {
 /** Put this language's texts into the page, and fill the language pickers. */
 export function translatePage(root: Document = document): void {
   root.documentElement.lang = locale;
-  root.title = root.body?.dataset.app === 'data' ? t.dataHomeTitle : t.homeTitle;
+  root.title = t.dataHomeTitle;
   for (const el of root.querySelectorAll<HTMLElement>('[data-t]')) {
     const v = lookup(el.dataset.t!);
     if (typeof v === 'string') el.textContent = v;

@@ -16,8 +16,6 @@ import { fetchTrafficCounts, trafficCovers, TRAFFIC_TIME_ZONE, type CountingPoin
 import { busiestHour, HOURS, lastDay, topColumns, type TrafficDay } from '../data/match/traffic';
 import { SPREAD, spreadStreets, StreetNetwork } from '../data/match/trafficStreets';
 import { TrafficDisplay } from '../data/display/traffic';
-import { trafficForPrint } from '../export/traffic';
-import type { PrintRoad } from '../export/roads';
 import type { FeatureSet } from '../geo/osm';
 import { barShares, chartTicks } from '../data/display/trafficChart';
 import { Playback } from '../data/time/playback';
@@ -166,15 +164,9 @@ export class TrafficController {
     return d ? (e, n) => d.overlay.liftAt(e, n) : null;
   }
 
-  /** Whether the traffic streets are on the model now (for the print). */
+  /** Whether the traffic streets are on the model now. */
   get shown(): boolean {
     return !!this.shownDisplay();
-  }
-
-  /** The traffic streets as shown (the hour picked) for the 3D print at `mmPerM`, highest where the most traffic is. */
-  printPieces(mmPerM: number): PrintRoad[] {
-    const d = this.shownDisplay();
-    return d ? trafficForPrint(d.overlay.data, d.overlay.shares(), mmPerM) : [];
   }
 
   /** A tap on the model: true if it picked a counting point. */

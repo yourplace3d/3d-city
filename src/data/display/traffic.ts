@@ -2,8 +2,8 @@
  * Display: traffic streets. The streets near counting points stand up from the model and turn
  * red, higher and darker the more traffic the spread counts add up to there (match/trafficStreets);
  * where nothing reaches they lie flat as the map's roads. One scale for the whole day, so the
- * streets rise and fall as the day is replayed. The heights are the 3D print's, at 15 cm: a
- * gentle relief, no spikes, so what you see is what prints.
+ * streets rise and fall as the day is replayed. The heights are those of a 15 cm model (0.5 to
+ * 2 mm): a gentle relief, no spikes.
  *
  * The counting points themselves, the only places actually counted, are small white discs with
  * a dark rim on top of the streets; tap one to see its day. Labels give the counts.
@@ -27,9 +27,9 @@ const ROAD = '#fbf9f5';
 /** Below this share of the top, a street fades from the lightest red to the road's white. */
 const FADE_IN = 0.06;
 
-/** The 3D print's traffic streets (mm): how high above the ground at nothing and at the most, and their least width. */
-export const TRAFFIC_PRINT_MM = { low: 0.5, high: 2, width: 0.8 } as const;
-/** …and the print they are shown at on screen (mm). */
+/** The traffic streets on a model of SHOWN_AT_MM (mm): how high above the ground at nothing and at the most, and their least width. */
+const TRAFFIC_MM = { low: 0.5, high: 2, width: 0.8 } as const;
+/** …the side of that model (mm). */
 const SHOWN_AT_MM = 150;
 /** A counting point's disc: how thick, for its radius. */
 const DISC = 0.35;
@@ -43,11 +43,6 @@ export function trafficColour(q: number, out = new Color()): Color {
   return out.set(TRAFFIC_RAMP[i]).lerp(tmp.set(TRAFFIC_RAMP[i + 1]), x - i);
 }
 const tmp = new Color();
-
-/** How far a street stands above the ground in the print (mm), at a share of the top. */
-export function printRaiseMm(q: number): number {
-  return TRAFFIC_PRINT_MM.low + (TRAFFIC_PRINT_MM.high - TRAFFIC_PRINT_MM.low) * Math.max(0, Math.min(1, q));
-}
 
 export class TrafficDisplay implements ModelOverlay {
   readonly object = new Group();
@@ -83,9 +78,9 @@ export class TrafficDisplay implements ModelOverlay {
   ) {
     this.object.name = 'traffic';
     const mmPerM = SHOWN_AT_MM / sizeM;
-    this.tallest = (TRAFFIC_PRINT_MM.high - TRAFFIC_PRINT_MM.low) / mmPerM;
+    this.tallest = (TRAFFIC_MM.high - TRAFFIC_MM.low) / mmPerM;
     this.lift = sizeM * 0.0004;
-    const minWidth = TRAFFIC_PRINT_MM.width / mmPerM;
+    const minWidth = TRAFFIC_MM.width / mmPerM;
     this.minWidth = minWidth;
     this.values = new Float32Array(data.width.length);
     this.markerBase = new Float32Array(day.columns.length);

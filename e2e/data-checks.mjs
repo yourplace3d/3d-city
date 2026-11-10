@@ -1,6 +1,5 @@
 /**
- * End-to-end checks for Your Place · Data (data/), run by smoke.mjs: its own page and start
- * page, the steepness layer from a preset, a route of your own over it (GPX, TCX) with the
+ * End-to-end checks for Your Place · Data, run by smoke.mjs: its own page and start page, the steepness layer from a preset, a route of your own over it (GPX, TCX) with the
  * stretch picker, replay, height profile, hiding the ends, the opt-in share link and opening it,
  * removing the route, a TCX file dropped on the page, a FIT file; the traffic layer (Hamburg's
  * counts from a fixture) with its bar chart, columns, replay, cars and bikes, and a route over
@@ -12,7 +11,7 @@ import { routeGpx, routeTcx } from './fixtures/route.mjs';
 import { hamburgGpx } from './fixtures/traffic.mjs';
 
 export async function dataAppChecks({ browser, base, routeAll, expect, watchConsole, waitStage, settle, shot }) {
-  const dataBase = `${base}data/`;
+  const dataBase = base;
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 860 }, deviceScaleFactor: 1, acceptDownloads: true });
   await routeAll(ctx);
   const page = await ctx.newPage();
@@ -30,11 +29,10 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
     await waitStage(page, ['ready', 'error']);
   };
 
-  // ---- its own page, part of the brand
+  // ---- its own page, standing on its own
   await page.goto(dataBase);
   await page.waitForSelector('#route-landing-btn', { state: 'visible' });
   const head = await page.evaluate(async () => ({
-    app: window.__yourPlace.app,
     title: document.title,
     canonical: document.querySelector('link[rel="canonical"]')?.getAttribute('href') ?? '',
     manifest: await fetch(document.querySelector('link[rel="manifest"]').href).then((r) => r.json()),
@@ -43,11 +41,11 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
     presets: document.querySelectorAll('#steep-presets button').length,
     trafficPresets: document.querySelectorAll('#traffic-presets button').length,
     print: !!document.getElementById('stl-btn'),
-    home: document.getElementById('other-app').getAttribute('href'),
+    other: !!document.querySelector('#other-app, a[href^="../"]'),
   }));
-  expect(head.app === 'data' && /^Your Place · Data/.test(head.title) && head.title.length <= 60 && /\/data\/$/.test(head.canonical), `the data app has its own page (“${head.title}”, ${head.canonical})`);
+  expect(/^Your Place · Data/.test(head.title) && head.title.length <= 60 && /^https:\/\/.+\/$/.test(head.canonical) && !/\/data\/$/.test(head.canonical), `the data app has its own page at its own address (“${head.title}”, ${head.canonical})`);
   expect(head.manifest.name === 'Your Place · Data' && head.icon, 'it installs as its own app, with its own icon');
-  expect(head.cards === 6 && head.presets === 3 && head.trafficPresets === 3 && head.print && head.home === '../', 'its start page shows the layers as cards, your route on its own, and the way back to Your Place');
+  expect(head.cards === 6 && head.presets === 3 && head.trafficPresets === 3 && !head.print && !head.other, 'its start page shows the layers as cards and your route on its own; nothing to print, no way to another app');
   await shot(page, 'd0-data-landing');
 
   // ---- steepness, from a preset
@@ -60,8 +58,6 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   expect((await page.isVisible('#route-load-btn')) && (await page.locator('#data-layer-group [role="radio"]').count()) === 5, 'your route has its own place under the layer switch, not one of the layers');
   expect(/dl=steep/.test(await page.evaluate(() => location.hash)) && /^Stuttgart · Your Place Data$/.test(await page.title()), 'the link and the tab name the layer and the place');
   expect(/steeper than 6%: [\d.]+ km/.test(await page.textContent('#describe')), 'the description says how much is steep');
-  const toPlace = await page.getAttribute('#other-app', 'href');
-  expect(/^\.\.\/#lat=48\.7765/.test(toPlace) && !/dl=|rt=/.test(toPlace), `the home button opens the same place in Your Place (${toPlace.slice(0, 40)}…)`);
   await settle(page, 1500);
   await shot(page, 'd1-steepness');
 
@@ -146,22 +142,6 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   expect(code.length > 20 && code.length < 6000, `ticking it puts the stretch in the link (${code.length} characters)`);
   await shot(page, 'r4-share-route');
 
-  // the route in the 3D print: a raised line, higher than the roads
-  // the data app folds the 3D print away
-  await page.evaluate(() => { const d = document.getElementById('print-details'); if (d) d.open = true; });
-  expect((await page.isVisible('#print-route-row')) && (await page.isChecked('#print-route')), 'the 3D print offers the route raised, ticked');
-  await page.click('#print-size-group [data-value="150"]');
-  const stl = async () => {
-    const [download] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.click('#stl-btn')]);
-    await page.waitForFunction(() => /^Saved/.test(document.getElementById('share-msg').textContent), null, { timeout: 120000 });
-    return { name: download.suggestedFilename(), msg: await page.textContent('#share-msg') };
-  };
-  const withRoute = await stl();
-  await page.uncheck('#print-route');
-  const without = await stl();
-  const tris = (m) => Number(/([\d,]+) triangles/.exec(m)[1].replace(/,/g, ''));
-  expect(/\.stl$/.test(withRoute.name) && / Route raised 0\.8 mm\./.test(withRoute.msg) && tris(withRoute.msg) > tris(without.msg) && !/Route raised/.test(without.msg), `the STL has the route raised 0.8 mm (${tris(withRoute.msg) - tris(without.msg)} triangles for it)`);
-  await page.check('#print-route');
   await page.keyboard.press('Escape');
 
   // the link opens the same stretch elsewhere, without the file
@@ -287,18 +267,6 @@ export async function dataAppChecks({ browser, base, routeAll, expect, watchCons
   await page.locator('#traffic-spread').fill('300');
   await page.waitForFunction(() => window.__yourPlace.traffic().spread === 300, null, { timeout: 5000 }).catch(() => undefined);
   expect(!/sp=/.test(await page.evaluate(() => location.hash)), 'back at 300 m the link leaves it out');
-
-  // the traffic streets in the 3D print
-  await page.click('#share-btn');
-  // the data app folds the 3D print away
-  await page.evaluate(() => { const d = document.getElementById('print-details'); if (d) d.open = true; });
-  expect((await page.isVisible('#print-traffic-row')) && (await page.isChecked('#print-traffic')), 'the 3D print offers the traffic streets raised, ticked');
-  await page.click('#print-size-group [data-value="150"]');
-  const [tdl] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.click('#stl-btn')]);
-  await page.waitForFunction(() => /^Saved/.test(document.getElementById('share-msg').textContent), null, { timeout: 120000 });
-  const tmsg = await page.textContent('#share-msg');
-  expect(/\.stl$/.test(tdl.suggestedFilename()) && / Traffic streets raised 0\.5–2 mm\./.test(tmsg), `the STL has the traffic streets raised by traffic (“${tmsg.slice(0, 90)}…”)`);
-  await page.keyboard.press('Escape');
 
   // the table view
   await page.click('.ttable summary');
