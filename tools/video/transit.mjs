@@ -1,9 +1,10 @@
-// Renders a video of the Trams & buses layer only: Hamburg and Berlin on a weekday morning, each
-// timetable found and loaded the way the app does it (the Mobility Database's list, one tap), then
-// an end card. Frames are captured one by one and encoded with ffmpeg, like tools/video/data.mjs.
+// Renders videos of the Trams & buses layer only, one per city: Hamburg and Berlin on a weekday
+// morning, each timetable found and loaded the way the app does it (the Mobility Database's list,
+// one tap), then an end card. Frames are captured one by one and encoded with ffmpeg, like
+// tools/video/data.mjs.
 //
-//   npm run build && node tools/video/transit.mjs           video-out/your-place-data-transit.mp4
-//   node tools/video/transit.mjs --preview                  two pictures per scene, to check the framing
+//   npm run build && node tools/video/transit.mjs           video-out/your-place-data-transit-{hamburg,berlin}.mp4
+//   node tools/video/transit.mjs --preview                  two pictures per city, to check the framing
 //   node tools/video/transit.mjs --only=berlin              one city
 //
 // Needs the map services, the Mobility Database (the list and the two timetables, 40 and 85 MB) and
@@ -31,7 +32,7 @@ const WIDTH = 1920;
 const HEIGHT = 1080;
 const DIP_S = 0.35;
 const END_S = 3.6;
-/** the morning shown: 7:00 to 9:00, ten minutes a second */
+/** the morning shown: 7:00 to 9:00, five minutes a second */
 const FROM_S = 7 * 3600;
 const TO_S = 9 * 3600;
 
@@ -40,19 +41,21 @@ const SCENES = [
     key: 'hamburg',
     hash: 'lat=53.5490&lon=9.9900&km=3&ex=1.5&dl=transit',
     feed: 'mdb-3362',
-    seconds: 12,
+    credit: 'Timetable: Hamburger Verkehrsverbund (HVV), dl-de/by-2-0, via the Mobility Database',
+    seconds: 24,
     title: 'Hamburg’s morning, from the timetable',
     sub: (day) => `Every U-Bahn, S-Bahn, bus and ferry · ${day}, 7:00 to 9:00`,
-    cam: { az: [-22, 12], tilt: [40, 50], dist: [0.86, 0.74] },
+    cam: { az: [-26, 16], tilt: [40, 50], dist: [0.88, 0.72] },
   },
   {
     key: 'berlin',
     hash: 'lat=52.5205&lon=13.4000&km=3&ex=1.5&dl=transit',
     feed: 'mdb-782',
-    seconds: 12,
+    credit: 'Timetable: Verkehrsverbund Berlin-Brandenburg (VBB), CC BY 4.0, via the Mobility Database',
+    seconds: 24,
     title: 'Berlin’s morning, from the timetable',
     sub: (day) => `Every tram, U-Bahn, S-Bahn and bus · ${day}, 7:00 to 9:00`,
-    cam: { az: [18, -14], tilt: [40, 50], dist: [0.86, 0.74] },
+    cam: { az: [22, -18], tilt: [40, 50], dist: [0.88, 0.72] },
   },
 ].filter((s) => !ONLY || ONLY.includes(s.key));
 
@@ -112,8 +115,7 @@ const OVERLAY_HTML = `
       <div class="what">Trams and buses of your city, in 3D</div>
       <div class="free">Free · No sign-up · Find your city’s timetable in one tap</div>
       <div class="url">${SITE}</div>
-      <div class="credits">Map data © OpenStreetMap contributors, OpenMapTiles, OpenFreeMap · Terrain: Mapzen, AWS Terrain Tiles ·
-        Timetables: Hamburger Verkehrsverbund (HVV, dl-de/by-2-0), Verkehrsverbund Berlin-Brandenburg (VBB, CC BY 4.0), via the Mobility Database</div>
+      <div class="credits">Map data © OpenStreetMap contributors, OpenMapTiles, OpenFreeMap · Terrain: Mapzen, AWS Terrain Tiles · <span class="timetable"></span></div>
     </div>
   </div>`;
 
@@ -130,8 +132,6 @@ await ctx.addInitScript(() => {
 });
 
 const frames = join(out, 'frames-transit');
-rmSync(frames, { recursive: true, force: true });
-mkdirSync(frames, { recursive: true });
 let n = 0;
 const framePath = (i) => join(frames, `${String(i).padStart(5, '0')}.jpg`);
 const shot = (page, path) => page.screenshot({ path, type: 'jpeg', quality: 93, timeout: 120000 });
@@ -158,7 +158,10 @@ async function pickWeekday(page) {
   return want;
 }
 
-for (const [si, scene] of SCENES.entries()) {
+for (const scene of SCENES) {
+  rmSync(frames, { recursive: true, force: true });
+  mkdirSync(frames, { recursive: true });
+  n = 0;
   const page = await ctx.newPage();
   page.on('pageerror', (e) => console.log(`  [${scene.key}] page error: ${e.message}`));
   page.on('console', (m) => m.type() === 'warning' && console.log(`  [${scene.key}] ${m.text()}`));
@@ -187,13 +190,14 @@ for (const [si, scene] of SCENES.entries()) {
 
   await page.addStyleTag({ url: 'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Inter:wght@400;500;600;650&display=block' }).catch(() => console.log('  fonts unavailable, using fallbacks'));
   await page.addStyleTag({ content: OVERLAY_CSS });
-  await page.evaluate(({ html, title, sub }) => {
+  await page.evaluate(({ html, title, sub, credit }) => {
     document.body.insertAdjacentHTML('beforeend', html);
     const p = document.getElementById('promo');
     p.querySelector('.title').textContent = title;
     p.querySelector('.sub').textContent = sub;
+    p.querySelector('.timetable').textContent = credit;
     document.getElementById('transit-control')?.scrollIntoView({ block: 'start' });
-  }, { html: OVERLAY_HTML, title: scene.title, sub: scene.sub(dayText) });
+  }, { html: OVERLAY_HTML, title: scene.title, sub: scene.sub(dayText), credit: scene.credit });
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(1500);
 
@@ -206,7 +210,7 @@ for (const [si, scene] of SCENES.entries()) {
     const u = i / (total - 1);
     const t = ease(u);
     const cam = { azimuth: lerp(scene.cam.az, t), tilt: lerp(scene.cam.tilt, t), distance: d0 * lerp(scene.cam.dist, t), targetE: 0, targetN: 0 };
-    const dipIn = si === 0 ? 1 - s / (DIP_S * 1.6) : 1 - s / DIP_S;
+    const dipIn = 1 - s / (DIP_S * 1.6);
     const dipOut = (s - (scene.seconds - DIP_S)) / DIP_S;
     const dip = PREVIEW ? 0 : Math.max(0, Math.min(1, Math.max(dipIn, dipOut)));
     const cap = PREVIEW ? 1 : Math.max(0, Math.min(1, Math.min((s - 0.3) / 0.4, (scene.seconds - 0.25 - s) / 0.35)));
@@ -224,28 +228,25 @@ for (const [si, scene] of SCENES.entries()) {
     await shot(page, PREVIEW ? join(out, `preview-transit-${scene.key}-${i}.jpg`) : framePath(n++));
   }
 
-  if (si === SCENES.length - 1) {
-    const fade = Math.round(0.4 * FPS);
-    for (let i = 1; i <= fade; i++) {
-      if (PREVIEW && i < fade) continue;
-      await page.evaluate((v) => document.getElementById('promo').style.setProperty('--end', v), i / fade);
-      await shot(page, PREVIEW ? join(out, 'preview-transit-end.jpg') : framePath(n++));
-    }
-    if (!PREVIEW) {
-      const hold = framePath(n - 1);
-      for (let i = 0; i < Math.round(END_S * FPS); i++) copyFileSync(hold, framePath(n++));
-    }
+  // end card: fade it in, then hold
+  const fade = Math.round(0.4 * FPS);
+  for (let i = 1; i <= fade; i++) {
+    if (PREVIEW && i < fade) continue;
+    await page.evaluate((v) => document.getElementById('promo').style.setProperty('--end', v), i / fade);
+    await shot(page, PREVIEW ? join(out, `preview-transit-${scene.key}-end.jpg`) : framePath(n++));
   }
   await page.close();
+  if (PREVIEW) continue;
+  const hold = framePath(n - 1);
+  for (let i = 0; i < Math.round(END_S * FPS); i++) copyFileSync(hold, framePath(n++));
+
+  const name = `your-place-data-transit-${scene.key}`;
+  const video = join(out, `${name}.mp4`);
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', join(frames, '%05d.jpg'), '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', video]);
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', video, '-vf', 'fps=1,scale=480:-1,tile=6x5', '-frames:v', '1', '-q:v', '3', join(out, `${name}-sheet.jpg`)]);
+  console.log(`${name}.mp4: ${n} frames, ${(n / FPS).toFixed(1)} s, ${(statSync(video).size / 1048576).toFixed(1)} MB`);
+  rmSync(frames, { recursive: true, force: true });
 }
 await ctx.close();
 await browser.close();
 server.close();
-
-if (!PREVIEW) {
-  const video = join(out, 'your-place-data-transit.mp4');
-  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', join(frames, '%05d.jpg'), '-c:v', 'libx264', '-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', video]);
-  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', video, '-vf', 'fps=1,scale=480:-1,tile=6x5', '-frames:v', '1', '-q:v', '3', join(out, 'your-place-data-transit-sheet.jpg')]);
-  console.log(`your-place-data-transit.mp4: ${n} frames, ${(n / FPS).toFixed(1)} s, ${(statSync(video).size / 1048576).toFixed(1)} MB`);
-  rmSync(frames, { recursive: true, force: true });
-}
