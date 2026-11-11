@@ -34,6 +34,7 @@ import {
 import { decodeRouteLink, encodeRouteLink, MAX_LINK_POINTS } from '../data/sources/routeLink';
 import { readTrackFile, TrackFileProblem } from '../data/sources/trackFile';
 import { Playback } from '../data/time/playback';
+import type { ClipSource } from './clipSource';
 import { bridgeTester, classRuns, climbTotals, sampleClasses, sampleLine, steepClass, steepSections, type LineSample } from '../data/match/slope';
 import { steepColour } from '../data/display/steepness';
 import { profileScale, profileSvg, sampleAtFraction, type ProfileScale } from '../data/display/profile';
@@ -244,6 +245,22 @@ export class RouteController {
   }
 
   /** The replay at one point (0–1), paused, for rendering a video frame by frame. */
+  /** A clip of the route: its replay, start to finish; null with no route. */
+  clip(): ClipSource | null {
+    const r = this.route;
+    if (!r || !this.display) return null;
+    const was = this.playback.position;
+    return {
+      span: t.clipSpanRoute,
+      at: (k) => {
+        this.frameAt(k);
+        const at = replayAt(r, this.fromM, this.toM, k);
+        return { clock: `${num(at.m / 1000, 1)} km`, note: at.elapsed != null ? formatClock(at.elapsed) : '' };
+      },
+      done: () => this.frameAt(was),
+    };
+  }
+
   frameAt(position: number): void {
     this.playback.pause();
     this.playback.seek(position);

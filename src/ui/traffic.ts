@@ -17,6 +17,7 @@ import { busiestHour, HOURS, lastDay, topColumns, type TrafficDay } from '../dat
 import { SPREAD, spreadStreets, StreetNetwork } from '../data/match/trafficStreets';
 import { TrafficDisplay } from '../data/display/traffic';
 import type { FeatureSet } from '../geo/osm';
+import type { ClipSource } from './clipSource';
 import { barShares, chartTicks } from '../data/display/trafficChart';
 import { Playback } from '../data/time/playback';
 
@@ -206,6 +207,29 @@ export class TrafficController {
   }
 
   /** One moment of the day (hours from its first, fractions too), without labels, for rendering a video frame by frame. */
+  /** A clip of the traffic: its whole day, hour by hour; null with none shown. */
+  clip(): ClipSource | null {
+    const day = this.day;
+    if (!day || !this.shownDisplay()) return null;
+    const was = this.hour;
+    const first = day.hours[0];
+    const dayFormat = new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short', timeZone: TRAFFIC_TIME_ZONE });
+    return {
+      span: t.clipSpanTraffic,
+      at: (k) => {
+        const h = k * (HOURS - 1);
+        this.frameAt(h);
+        const ms = first + Math.round(h * 4) * (HOUR_MS / 4);
+        return { clock: this.hourFormat.format(ms), note: dayFormat.format(ms) };
+      },
+      done: () => {
+        this.frameAt(was);
+        this.updateLabels();
+        this.renderChart();
+      },
+    };
+  }
+
   frameAt(at: number): void {
     this.playback.pause();
     const d = this.shownDisplay();

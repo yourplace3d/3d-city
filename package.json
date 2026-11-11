@@ -31,6 +31,7 @@
   "dependencies": {
     "@mapbox/vector-tile": "2.0.3",
     "earcut": "3.2.4",
+    "mp4-muxer": "5.2.2",
     "pbf": "4.0.1",
     "polygon-clipping": "0.15.7",
     "three": "0.187.0"

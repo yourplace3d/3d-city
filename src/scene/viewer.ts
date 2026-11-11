@@ -79,6 +79,8 @@ export class Viewer {
   private lastFrame = 0;
   private lastTap: { x: number; y: number; t: number } | null = null;
   private reducedMotion = prefersReducedMotion();
+  /** frames are being rendered at another size (beginFrames): the screen waits */
+  private offscreen = false;
   /** CSS px covered by UI on the left (desktop settings panel); the model is centred in the rest */
   private insetLeft = 0;
   readonly small = isSmallDevice();
@@ -414,6 +416,7 @@ export class Viewer {
   }
 
   private resize(): void {
+    if (this.offscreen) return;
     const el = this.canvas.parentElement ?? this.canvas;
     const w = Math.max(1, el.clientWidth);
     const h = Math.max(1, el.clientHeight);
@@ -429,6 +432,7 @@ export class Viewer {
   private tick(now: number): void {
     const dt = this.lastFrame ? now - this.lastFrame : 0;
     this.lastFrame = now;
+    if (this.offscreen) return;
     this.frameListeners.forEach((fn) => fn(dt));
     if (this.animation) {
       const { from, to, start, ms } = this.animation;
@@ -454,6 +458,25 @@ export class Viewer {
 
   /** Render the current view at a fixed size, independent of the screen. */
   renderStill(width: number, height: number): HTMLCanvasElement {
+    const frames = this.beginFrames(width, height);
+    try {
+      const gl = frames.frame();
+      const out = document.createElement('canvas');
+      out.width = frames.width;
+      out.height = frames.height;
+      out.getContext('2d')!.drawImage(gl, 0, 0);
+      return out;
+    } finally {
+      frames.end();
+    }
+  }
+
+  /**
+   * Render frame after frame at a fixed size, independent of the screen (a clip): change the scene
+   * or the camera, call frame() and use the canvas it returns straight away; end() when done.
+   * Meanwhile the screen keeps its last picture (`hideScreen` hides it) and doesn't follow resizes.
+   */
+  beginFrames(width: number, height: number, opts: { hideScreen?: boolean } = {}): { width: number; height: number; frame(): HTMLCanvasElement; end(): void } {
     const gl = this.renderer.getContext();
     const maxSize = Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number, 4096);
     const scale = Math.min(1, maxSize / Math.max(width, height));
@@ -464,21 +487,29 @@ export class Viewer {
     // keep at least the horizontal field of view the user sees on screen
     const screenAspect = this.visibleAspect();
     const hTan = Math.tan(MathUtils.degToRad(prevFov) / 2) * screenAspect;
+    this.offscreen = true;
+    if (opts.hideScreen) this.canvas.style.visibility = 'hidden';
     this.renderer.setPixelRatio(1);
     this.renderer.setSize(w, h, false);
     this.camera.clearViewOffset();
     this.camera.aspect = w / h;
     if (w / h < screenAspect) this.camera.fov = MathUtils.radToDeg(2 * Math.atan(hTan / (w / h)));
     this.camera.updateProjectionMatrix();
-    this.renderer.render(this.scene, this.camera);
-    const out = document.createElement('canvas');
-    out.width = w;
-    out.height = h;
-    out.getContext('2d')!.drawImage(this.renderer.domElement, 0, 0);
-    this.renderer.setPixelRatio(prevRatio);
-    this.camera.fov = prevFov;
-    this.resize();
-    return out;
+    return {
+      width: w,
+      height: h,
+      frame: () => {
+        this.renderer.render(this.scene, this.camera);
+        return this.renderer.domElement;
+      },
+      end: () => {
+        this.offscreen = false;
+        this.canvas.style.visibility = '';
+        this.renderer.setPixelRatio(prevRatio);
+        this.camera.fov = prevFov;
+        this.resize();
+      },
+    };
   }
 }
 

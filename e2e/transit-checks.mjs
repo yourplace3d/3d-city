@@ -7,6 +7,7 @@
  * never goes out in a request, and that the panel fits a phone.
  */
 
+import { readFileSync } from 'node:fs';
 import { catalogCsv, gtfsZip } from './fixtures/transit.mjs';
 
 /** Freiburg's centre, where the demo opens (src/ui/transit.ts). */
@@ -52,6 +53,9 @@ export async function transitChecks({ browser, base, routeAll, expect, watchCons
   await page.keyboard.press('Enter');
   await page.waitForFunction(() => window.__yourPlace?.stage === 'ready', null, { timeout: 180000 });
   expect(await page.isHidden('#quick-play'), 'Steepness doesn’t move in time: no play button in the panel’s bar');
+  await page.click('#share-btn');
+  expect((await page.isVisible('#poster-btn')) && (await page.isHidden('#clip-row')), 'and its share dialog offers an image, no clip');
+  await page.keyboard.press('Escape');
   await page.click('#data-layer-group [data-value="transit"]');
   await page.click('#transit-demo');
   await page.waitForFunction((d) => Math.abs((window.__yourPlace.state().center?.lat ?? 0) - d.lat) < 0.001, DEMO, { timeout: 60000 }).catch(() => undefined);
@@ -140,6 +144,38 @@ export async function transitChecks({ browser, base, routeAll, expect, watchCons
   x = await transit();
   expect(!x.playing && (await page.getAttribute('#quick-play', 'aria-pressed')) === 'false' && (await page.textContent('#transit-play')) === 'Replay', 'a second tap pauses it, the panel’s Replay button too');
   await page.click('#sheet-toggle');
+
+  // a clip of it, from the share dialog
+  const asWas = await page.evaluate(() => ({ time: window.__yourPlace.transit().time, cam: window.__yourPlace.camera() }));
+  const looksAsWas = async () => {
+    const now = await page.evaluate(() => ({ t: window.__yourPlace.transit(), cam: window.__yourPlace.camera(), screen: getComputedStyle(document.getElementById('scene')).visibility }));
+    return now.t.time === asWas.time && !now.t.playing && !now.t.trails && now.t.labels > 0 && now.screen === 'visible' && Math.abs(now.cam.azimuth - asWas.cam.azimuth) < 0.01;
+  };
+  await page.click('#share-btn');
+  const clipNote = (await page.textContent('#clip-note')).trim();
+  expect((await page.isVisible('#clip-btn')) && /^12 seconds: \d\d:\d\d to \d\d:\d\d on Mon 9 Nov, as the timetable has it\.$/.test(clipNote), `the share dialog offers a clip of what moves: “${clipNote}”`);
+  await shot(page, 'p10-share-clip');
+  await page.evaluate(() => window.__yourPlace.clipSeconds(1));
+  const clipDownload = page.waitForEvent('download', { timeout: 300000 });
+  await page.click('#clip-btn');
+  const clip = await clipDownload;
+  const clipBytes = readFileSync(await clip.path());
+  const clipText = clipBytes.toString('latin1');
+  expect(/\.mp4$/.test(clip.suggestedFilename()) && clipText.slice(4, 8) === 'ftyp' && clipText.includes('moov') && clipText.includes('avc1') && clipBytes.length > 20000, `it downloads an MP4, in H.264 (${Math.round(clipBytes.length / 1024)} KB): ${clip.suggestedFilename()}`);
+  await page.waitForFunction(() => !document.getElementById('share-dialog').open && !document.getElementById('clip-btn').disabled, null, { timeout: 10000 }).catch(() => undefined);
+  expect((await looksAsWas()) && (await page.textContent('#toast')) === 'Clip saved', 'then the model is as it was: the same time and view, no trails, the lines’ names back');
+  // closing the dialog stops a clip being made
+  await page.evaluate(() => window.__yourPlace.clipSeconds(30));
+  let clipSaved = false;
+  page.once('download', () => (clipSaved = true));
+  await page.click('#share-btn');
+  await page.click('#clip-btn');
+  await page.waitForFunction(() => /[1-9]\d*\s?%/.test(document.getElementById('share-msg').textContent), null, { timeout: 120000 }).catch(() => undefined);
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.getElementById('clip-btn').disabled, null, { timeout: 60000 }).catch(() => undefined);
+  await page.waitForTimeout(300);
+  expect(!clipSaved && (await looksAsWas()), 'closing the dialog stops a clip: nothing is saved, and the model is as it was');
+  await page.evaluate(() => window.__yourPlace.clipSeconds(null));
 
   // table, description, a weekend day
   await page.click('#transit-figure .ttable summary');

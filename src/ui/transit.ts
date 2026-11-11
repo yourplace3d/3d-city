@@ -21,6 +21,7 @@ import { DAY_S, dayRuns, dayWithin, runsPerHour, type TransitDay, type TransitLi
 import { MODE_COLOURS, modesOn, TransitDisplay } from '../data/display/transit';
 import { barShares, chartTicks } from '../data/display/trafficChart';
 import { Playback } from '../data/time/playback';
+import { CLIP_SECONDS, CLIP_TRANSIT_S, type ClipSource } from './clipSource';
 
 export interface TransitHost {
   viewer: Viewer;
@@ -385,6 +386,31 @@ export class TransitController {
   }
 
   /** One moment, without labels and with trails `trailS` long, for rendering a video frame by frame. */
+  /**
+   * A clip of the timetable: two hours from the time shown (from 22:00 at the latest), with the
+   * trails a replay at that speed has; null with no timetable shown.
+   */
+  clip(): ClipSource | null {
+    const day = this.dayData;
+    if (!day || !this.shownDisplay()) return null;
+    const was = this.time;
+    const from = Math.max(0, Math.min(DAY_S - CLIP_TRANSIT_S, Math.floor(this.time / 300) * 300));
+    const dayText = this.dayFormat.format(day.day * DAY_MS);
+    return {
+      span: t.clipSpanTransit(clock(from), clock(from + CLIP_TRANSIT_S), dayText),
+      at: (k) => {
+        const s = from + k * CLIP_TRANSIT_S;
+        // the trails a replay at the clip's speed leaves
+        this.frameAt(s, Math.min(TRAIL_MAX_S, (CLIP_TRANSIT_S / CLIP_SECONDS) * TRAIL_REPLAY_S));
+        return { clock: clock(s), note: dayText };
+      },
+      done: () => {
+        this.shownDisplay()?.overlay.setTrail(0);
+        this.setTime(was);
+      },
+    };
+  }
+
   frameAt(s: number, trailS = 0): void {
     this.playback.pause();
     this.time = Math.max(0, Math.min(DAY_S - 1, s));

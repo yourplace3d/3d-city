@@ -18,6 +18,7 @@ import { TrafficController } from './ui/traffic';
 import { TRAFFIC_ATTRIBUTION } from './data/sources/hamburgTraffic';
 import { TransitController } from './ui/transit';
 import { bindQuickPlay } from './ui/quickPlay';
+import type { ClipSource } from './ui/clipSource';
 import { AreaController } from './ui/areas';
 import type { AreaLayer } from './data/sources/areaProviders';
 import { area, direction, distance, num, t, translatePage } from './i18n';
@@ -43,6 +44,8 @@ let loadToken = 0;
 let abort: AbortController | null = null;
 /** the square was built around a route's stretch (no searched point: the pin stays hidden until placed) */
 let routeSquare = false;
+/** set by tests (window.__yourPlace.clipSeconds) for short clips */
+let clipSecondsForTests: number | null = null;
 const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#c8431a';
 
 const status = new StatusView($('status'));
@@ -69,6 +72,8 @@ const debug = {
   transit: () => transit?.debugInfo() ?? null,
   /** show the timetable at a moment (s after midnight), with trails that long (s), for tools/video */
   transitAt: (s: number, trail = 0) => transit?.frameAt(s, trail),
+  /** clips this long (s) instead of 12, for tests */
+  clipSeconds: (s: number | null) => (clipSecondsForTests = s),
   /** the route's replay at a point (0–1), for tools/video */
   routeAt: (position: number) => route?.frameAt(position),
   /** the traffic at a moment of the day (hours from its first, fractions too), for tools/video */
@@ -1005,14 +1010,16 @@ function bindShare(): void {
     }
   });
 
+  // third-party data on the model is credited on the image and the clip too
+  const dataCredit = () => (traffic?.describe() ? TRAFFIC_ATTRIBUTION.text : (transit?.credit() ?? homes?.credit() ?? income?.credit() ?? undefined));
+
   const posterBtn = $<HTMLButtonElement>('poster-btn');
   posterBtn.addEventListener('click', async () => {
     if (!model || !state.center) return;
     posterBtn.disabled = true;
     msg.textContent = t.dataRenderingImage;
     try {
-      // third-party data on the model is credited on the poster too
-      const credit = traffic?.describe() ? TRAFFIC_ATTRIBUTION.text : (transit?.credit() ?? homes?.credit() ?? income?.credit() ?? undefined);
+      const credit = dataCredit();
       const blob = await makePoster(viewer, { title: title(), subtitle: subtitle(), center: state.center, sizeM: state.size, exaggeration: state.exaggeration, credit });
       saveBlob(blob, posterFileName(title(), state.size));
       msg.textContent = '';
@@ -1026,5 +1033,50 @@ function bindShare(): void {
     }
   });
 
+  // a clip of what moves (the timetable, the traffic, a route), where the browser can make video
+  const clipRow = $('clip-row');
+  const clipBtn = $<HTMLButtonElement>('clip-btn');
+  const canClip = 'VideoEncoder' in window && 'VideoFrame' in window;
+  let clipping: AbortController | null = null;
+  const syncClip = () => {
+    const source = canClip && model ? clipSource() : null;
+    clipRow.hidden = !source;
+    $('clip-note').textContent = source?.span ?? '';
+  };
+  $('share-btn').addEventListener('click', syncClip);
+  dialog.addEventListener('close', () => clipping?.abort());
+  clipBtn.addEventListener('click', async () => {
+    const source = model && state.center ? clipSource() : null;
+    if (!source || clipping) return;
+    const run = (clipping = new AbortController());
+    clipBtn.disabled = posterBtn.disabled = true;
+    msg.textContent = t.dataMakingClip(0);
+    try {
+      const { makeClip, ClipCancelled } = await import('./ui/clip');
+      try {
+        const blob = await makeClip(viewer, source, { title: title(), subtitle: subtitle(), credit: dataCredit() }, (k) => (msg.textContent = t.dataMakingClip(Math.floor(k * 100))), run.signal, clipSecondsForTests ?? undefined);
+        saveBlob(blob, posterFileName(title(), state.size, 'mp4'));
+        msg.textContent = '';
+        dialog.close();
+        toast(t.dataClipSaved);
+      } catch (err) {
+        if (err instanceof ClipCancelled) return;
+        throw err;
+      }
+    } catch (err) {
+      console.error(err);
+      msg.textContent = t.dataClipFailed;
+    } finally {
+      clipping = null;
+      clipBtn.disabled = posterBtn.disabled = false;
+      if (run.signal.aborted) msg.textContent = '';
+    }
+  });
+}
+
+/** What a clip would play: the data layer shown if it moves in time, else a route's replay. */
+function clipSource(): ClipSource | null {
+  const layer = state.data === 'transit' ? transit?.clip() : state.data === 'traffic' ? traffic?.clip() : null;
+  return layer ?? route?.clip() ?? null;
 }
 
