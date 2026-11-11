@@ -266,7 +266,7 @@ export const en = {
   transitSpeeds: ['1 min/s', '10 min/s', '1 h/s'],
   transitLines: 'Lines',
   transitLineTitle: (name: string, trips: string) => `${name}: ${trips} through the square on this day`,
-  transitModes: { rail: 'Trains', subway: 'U-Bahn, metro', tram: 'Trams', bus: 'Buses', ferry: 'Ferries', other: 'Other' },
+  transitModes: { rail: 'Regional trains', suburban: 'S-Bahn, suburban trains', subway: 'U-Bahn, metro', tram: 'Trams', bus: 'Buses', ferry: 'Ferries', other: 'Other' },
   transitNote: 'Vehicles move as the timetable plans them, not live: delays and cancellations don’t show. Tap a vehicle or a line to see that line on its own. U-Bahn and metro lines are dashed and their trains see-through, as most run underground.',
   transitNoShapes: 'This file has no line shapes, so lines run straight from stop to stop.',
   transitFind: 'Find timetables for this place',

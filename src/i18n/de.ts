@@ -260,7 +260,7 @@ export const de: Messages = {
   transitSpeeds: ['1 Min./s', '10 Min./s', '1 Std./s'],
   transitLines: 'Linien',
   transitLineTitle: (name, trips) => `${name}: ${trips} durch das Quadrat an diesem Tag`,
-  transitModes: { rail: 'Züge', subway: 'U-Bahn, Metro', tram: 'Straßenbahnen', bus: 'Busse', ferry: 'Fähren', other: 'Andere' },
+  transitModes: { rail: 'Regionalzüge', suburban: 'S-Bahn', subway: 'U-Bahn, Metro', tram: 'Straßenbahnen', bus: 'Busse', ferry: 'Fähren', other: 'Andere' },
   transitNote: 'Die Fahrzeuge fahren nach Fahrplan, nicht live: Verspätungen und Ausfälle sind nicht zu sehen. Tippe auf ein Fahrzeug oder eine Linie, um nur diese Linie zu sehen. U-Bahn- und Metrolinien sind gestrichelt und ihre Züge durchsichtig, weil die meisten unter der Erde fahren.',
   transitNoShapes: 'Diese Datei hat keine Linienverläufe, deshalb laufen die Linien gerade von Haltestelle zu Haltestelle.',
   transitFind: 'Fahrpläne für diesen Ort finden',

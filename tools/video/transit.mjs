@@ -44,7 +44,7 @@ const SCENES = [
     credit: 'Timetable: Hamburger Verkehrsverbund (HVV), dl-de/by-2-0, via the Mobility Database',
     seconds: 24,
     title: 'Hamburg’s morning, from the timetable',
-    sub: (day) => `Every U-Bahn, S-Bahn, bus and ferry · ${day}`,
+    sub: (day) => `Every regional train, S-Bahn, U-Bahn, bus and ferry · ${day}`,
     cam: { az: [-26, 16], tilt: [40, 50], dist: [0.88, 0.72] },
   },
   {
@@ -54,7 +54,7 @@ const SCENES = [
     credit: 'Timetable: Verkehrsverbund Berlin-Brandenburg (VBB), CC BY 4.0, via the Mobility Database',
     seconds: 24,
     title: 'Berlin’s morning, from the timetable',
-    sub: (day) => `Every tram, U-Bahn, S-Bahn and bus · ${day}, 7:00 to 9:00`,
+    sub: (day) => `Every regional train, S-Bahn, U-Bahn, tram and bus · ${day}, 7:00 to 9:00`,
     cam: { az: [22, -18], tilt: [40, 50], dist: [0.88, 0.72] },
   },
 ].filter((s) => !ONLY || ONLY.includes(s.key));

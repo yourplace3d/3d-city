@@ -1740,6 +1740,10 @@ a.fab {
 }
 
 .mode-rail {
+  background: #7b3fb5;
+}
+
+.mode-suburban {
   background: #008300;
 }
 
@@ -1760,7 +1764,7 @@ a.fab {
 }
 
 .mode-other {
-  background: #9a5bd0;
+  background: #1aa3a3;
 }
 
 .transit-control {

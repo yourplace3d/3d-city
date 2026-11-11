@@ -19,18 +19,19 @@ import { DAY_S, distanceAt, MODE_ORDER, runAt, stretchOn, type TransitDay, type 
 import { CASING, INK, makeLabel } from './label';
 
 export const MODE_COLOURS: Record<TransitMode, string> = {
-  rail: '#008300',
+  rail: '#7b3fb5',
+  suburban: '#008300',
   subway: '#2a78d6',
   tram: '#e34948',
   bus: '#5f5a55',
   ferry: '#c98500',
-  other: '#9a5bd0',
+  other: '#1aa3a3',
 };
 
 /** Line widths for each mode, as a share of the base width. */
-const LINE_WIDTH: Record<TransitMode, number> = { rail: 1.3, subway: 1, tram: 1, bus: 0.75, ferry: 0.8, other: 0.8 };
+const LINE_WIDTH: Record<TransitMode, number> = { rail: 1.4, suburban: 1.3, subway: 1, tram: 1, bus: 0.75, ferry: 0.8, other: 0.8 };
 /** Vehicle lengths, as a share of their width. */
-const VEHICLE_LENGTH: Record<TransitMode, number> = { rail: 6, subway: 5, tram: 3.5, bus: 2, ferry: 2.6, other: 1.6 };
+const VEHICLE_LENGTH: Record<TransitMode, number> = { rail: 7, suburban: 6, subway: 5, tram: 3.5, bus: 2, ferry: 2.6, other: 1.6 };
 /** The ground, for lines and vehicles of the lines not picked. */
 const GROUND = '#ebe6dc';
 /** Lines are drawn this much lighter than their vehicles, so a vehicle stands out on its line. */
@@ -88,7 +89,7 @@ export class TransitDisplay implements ModelOverlay {
       const r = day.run[i];
       if (!seen.has(runs.runPath[r])) seen.set(runs.runPath[r], runs.runRoute[r]);
     }
-    const drawOrder: TransitMode[] = ['bus', 'other', 'ferry', 'subway', 'tram', 'rail'];
+    const drawOrder: TransitMode[] = ['bus', 'other', 'ferry', 'subway', 'tram', 'suburban', 'rail'];
     this.drawn = [...seen].map(([path, route]) => ({ path, route, mode: runs.routes[route].mode }));
     this.drawn.sort((a, b) => drawOrder.indexOf(a.mode) - drawOrder.indexOf(b.mode));
 

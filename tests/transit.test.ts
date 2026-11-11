@@ -75,8 +75,11 @@ describe('GTFS parsing', () => {
   });
 
   it('turns route types, basic and extended, into modes', () => {
-    const cases: Array<[number, string]> = [[0, 'tram'], [1, 'subway'], [2, 'rail'], [3, 'bus'], [4, 'ferry'], [7, 'other'], [109, 'rail'], [400, 'subway'], [402, 'subway'], [404, 'subway'], [405, 'rail'], [702, 'bus'], [900, 'tram'], [1200, 'ferry'], [1300, 'other'], [11, 'bus']];
+    const cases: Array<[number, string]> = [[0, 'tram'], [1, 'subway'], [2, 'rail'], [3, 'bus'], [4, 'ferry'], [7, 'other'], [106, 'rail'], [109, 'suburban'], [400, 'subway'], [402, 'subway'], [404, 'subway'], [405, 'rail'], [702, 'bus'], [900, 'tram'], [1200, 'ferry'], [1300, 'other'], [11, 'bus']];
     for (const [type, mode] of cases) expect(modeOf(type), String(type)).toBe(mode);
+    // regional trains and the S-Bahn apart, also where a timetable gives all its trains one type (Hamburg's RE7 and S1)
+    const named: Array<[number, string, string]> = [[2, 'RE7', 'rail'], [2, 'RB81', 'rail'], [2, 'A1', 'rail'], [2, 'S1', 'suburban'], [2, 'S 41', 'suburban'], [106, 'S3', 'suburban'], [109, 'S1', 'suburban'], [3, 'S1', 'bus'], [2, 'Sylt-Shuttle', 'rail']];
+    for (const [type, name, mode] of named) expect(modeOf(type, name), `${type} ${name}`).toBe(mode);
   });
 
   it('finds lines that cross the square without a point in it', () => {
@@ -147,7 +150,7 @@ describe('runs through the square', () => {
   it('has the lines of a weekday, by mode, and the trips per hour', async () => {
     const r = await runs();
     const d = dayRuns(r, MONDAY);
-    expect(d.lines.map((l) => `${l.mode}:${l.name}`)).toEqual(['rail:S3', 'subway:U4', 'tram:T1', 'bus:B2']);
+    expect(d.lines.map((l) => `${l.mode}:${l.name}`)).toEqual(['suburban:S3', 'subway:U4', 'tram:T1', 'bus:B2']);
     const per = runsPerHour(d);
     expect(per.reduce((a, b) => a + b, 0)).toBe(d.run.length);
     // the U-Bahn runs 06:00–08:50 every 10 minutes: 18 runs

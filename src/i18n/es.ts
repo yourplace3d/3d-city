@@ -260,7 +260,7 @@ export const es: Messages = {
   transitSpeeds: ['1 min/s', '10 min/s', '1 h/s'],
   transitLines: 'Líneas',
   transitLineTitle: (name, trips) => `${name}: ${trips} por el cuadrado ese día`,
-  transitModes: { rail: 'Trenes', subway: 'Metro', tram: 'Tranvías', bus: 'Autobuses', ferry: 'Ferris', other: 'Otros' },
+  transitModes: { rail: 'Trenes regionales', suburban: 'Cercanías', subway: 'Metro', tram: 'Tranvías', bus: 'Autobuses', ferry: 'Ferris', other: 'Otros' },
   transitNote: 'Los vehículos se mueven como los planea el horario, no en vivo: no se ven retrasos ni cancelaciones. Toca un vehículo o una línea para ver solo esa línea. Las líneas de metro van con trazos y sus trenes son transparentes, porque la mayoría van bajo tierra.',
   transitNoShapes: 'Este archivo no tiene el trazado de las líneas, así que van en línea recta de parada en parada.',
   transitFind: 'Buscar horarios para este lugar',

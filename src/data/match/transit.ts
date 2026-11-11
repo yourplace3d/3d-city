@@ -348,7 +348,7 @@ export interface TransitDay {
   most: number;
 }
 
-export const MODE_ORDER: readonly TransitMode[] = ['rail', 'subway', 'tram', 'bus', 'ferry', 'other'];
+export const MODE_ORDER: readonly TransitMode[] = ['rail', 'suburban', 'subway', 'tram', 'bus', 'ferry', 'other'];
 
 /** The runs on a day: its services, and the evening before's after midnight. */
 export function dayRuns(runs: TransitRuns, day: number): TransitDay {

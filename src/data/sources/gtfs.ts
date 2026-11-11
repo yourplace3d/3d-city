@@ -13,16 +13,24 @@
 import { makeProjector, type LngLat } from '../../geo/projection';
 import { findItem, listZip, openItem, type ZipItem } from './zipFile';
 
-/** What a line is, from its GTFS route type: the colour and the vehicle on the model. */
-export type TransitMode = 'rail' | 'subway' | 'tram' | 'bus' | 'ferry' | 'other';
-export const TRANSIT_MODES: readonly TransitMode[] = ['rail', 'subway', 'tram', 'bus', 'ferry', 'other'];
+/**
+ * What a line is, from its GTFS route type: the colour and the vehicle on the model. 'rail' is
+ * the regional and long-distance trains, 'suburban' the S-Bahn and other suburban trains.
+ */
+export type TransitMode = 'rail' | 'suburban' | 'subway' | 'tram' | 'bus' | 'ferry' | 'other';
+export const TRANSIT_MODES: readonly TransitMode[] = ['rail', 'suburban', 'subway', 'tram', 'bus', 'ferry', 'other'];
 
-/** A GTFS route type (basic or extended) as one of our modes. */
-export function modeOf(type: number): TransitMode {
+/**
+ * A GTFS route type (basic or extended) as one of our modes. Suburban trains are route type 109
+ * (Hamburg's and Berlin's S-Bahn), or a train named like an S-Bahn line ("S1", "S 41") where a
+ * timetable gives all its trains one type.
+ */
+export function modeOf(type: number, name = ''): TransitMode {
   if (type === 0 || type === 5 || (type >= 900 && type < 1000)) return 'tram';
   // 400–404, the urban railways: Berlin's U-Bahn is 400 (as other GTFS tools read it, e.g. OpenTripPlanner)
   if (type === 1 || (type >= 400 && type <= 404)) return 'subway';
-  if (type === 2 || (type >= 100 && type < 200) || type === 12 || type === 405) return 'rail';
+  if (type === 109) return 'suburban';
+  if (type === 2 || (type >= 100 && type < 200) || type === 12 || type === 405) return /^S ?\d/.test(name.trim()) ? 'suburban' : 'rail';
   if (type === 3 || type === 11 || (type >= 200 && type < 300) || (type >= 700 && type < 900)) return 'bus';
   if (type === 4 || (type >= 1000 && type < 1100) || (type >= 1200 && type < 1300)) return 'ferry';
   return 'other';
@@ -341,7 +349,7 @@ export async function cutGtfs(blob: Blob, area: CutArea, onProgress: (share: num
       const tp = Number(type);
       const c = colour.trim().replace(/^#/, '');
       routeIndex.set(id, routes.length);
-      routes.push({ short: short.trim(), long: long.trim(), type: tp, mode: modeOf(tp), colour: /^[0-9a-f]{6}$/i.test(c) ? `#${c.toLowerCase()}` : null });
+      routes.push({ short: short.trim(), long: long.trim(), type: tp, mode: modeOf(tp, short), colour: /^[0-9a-f]{6}$/i.test(c) ? `#${c.toLowerCase()}` : null });
     },
     tick,
   );

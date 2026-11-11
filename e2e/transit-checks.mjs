@@ -67,7 +67,7 @@ export async function transitChecks({ browser, base, routeAll, expect, watchCons
   let x = await transit();
   const center = await page.evaluate(() => window.__yourPlace.state().center);
   expect(x.status === 'ready' && x.demo && x.shown && Math.abs(center.lat - DEMO.lat) < 0.001 && /dl=transit/.test(await page.evaluate(() => location.hash)), `“Freiburg” opens its centre with the timetable on (${x.dayRuns} trips through the square)`);
-  expect(x.lines.join(' ') === 'rail:S3 subway:U4 tram:T1 bus:B2', `its lines are listed by mode: trains, U-Bahn, trams, buses (${x.lines.join(' ')})`);
+  expect(x.lines.join(' ') === 'suburban:S3 subway:U4 tram:T1 bus:B2', `its lines are listed by mode: S-Bahn, U-Bahn, trams, buses (${x.lines.join(' ')})`);
   expect(sum(x.perHour) === x.dayRuns && x.perHour[3] === 0 && x.perHour[8] > 0, 'the chart counts every trip into the square once, by hour');
   expect((await page.locator('#transit-bars .tbar').count()) === 24 && (await page.locator('#transit-bars .tbar.on').count()) === 1 && (await page.locator('#transit-lines .chip').count()) === 4, 'the chart has a bar per hour, the hour shown marked, and a chip per line');
   expect(/Freiburger Verkehrs AG/.test(await page.textContent('#transit-credit')) && /dl-de\/by-2-0/.test(await page.textContent('#transit-credit')), 'Freiburg’s timetable is credited with its licence');
@@ -214,14 +214,14 @@ export async function transitChecks({ browser, base, routeAll, expect, watchCons
   await monday();
   x = await transit();
   const credit = await page.textContent('#transit-credit');
-  expect(x.sources.join() === 'test-city' && x.lines.join(' ') === 'rail:S3 subway:U4 tram:T1 bus:B2' && (await page.textContent('#transit-feeds li:nth-child(1) button')) === 'Shown', `“Load” downloads it and shows it in one tap (${x.lines.length} lines)`);
+  expect(x.sources.join() === 'test-city' && x.lines.join(' ') === 'suburban:S3 subway:U4 tram:T1 bus:B2' && (await page.textContent('#transit-feeds li:nth-child(1) button')) === 'Shown', `“Load” downloads it and shows it in one tap (${x.lines.length} lines)`);
   expect(/Test Transit \(CC BY 4\.0\)/.test(credit) && /Mobility Database/.test(credit), `it is credited with its licence (“${credit}”)`);
   expect((await page.textContent('#transit-feeds li:nth-child(2) button')) === 'Add', 'the others can be added to it');
   await page.click('#transit-feeds li:nth-child(2) button');
   await page.waitForFunction(() => window.__yourPlace.transit()?.status === 'ready' && window.__yourPlace.transit().sources.length === 2, null, { timeout: 60000 }).catch(() => undefined);
   await monday();
   x = await transit();
-  expect(x.sources.join() === 'test-city,test-other' && x.lines.join(' ') === 'rail:S3 rail:S3x subway:U4 subway:U4x tram:T1 tram:T1x bus:B2 bus:B2x' && (await page.locator('#transit-sources li').count()) === 2, `two timetables show together (${x.lines.join(' ')})`);
+  expect(x.sources.join() === 'test-city,test-other' && x.lines.join(' ') === 'suburban:S3 suburban:S3x subway:U4 subway:U4x tram:T1 tram:T1x bus:B2 bus:B2x' && (await page.locator('#transit-sources li').count()) === 2, `two timetables show together (${x.lines.join(' ')})`);
   expect(/Test Transit \(CC BY 4\.0\); Other Lines \(dl-de\/by-2-0\)/.test(await page.textContent('#transit-credit')) && (await page.textContent('#transit-remove')) === 'Remove all timetables', 'both are credited');
   await settle(page, 1000);
   await shot(page, 'p6-transit-two');
