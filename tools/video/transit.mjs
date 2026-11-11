@@ -44,7 +44,7 @@ const SCENES = [
     credit: 'Timetable: Hamburger Verkehrsverbund (HVV), dl-de/by-2-0, via the Mobility Database',
     seconds: 24,
     title: 'Hamburg’s morning, from the timetable',
-    sub: (day) => `Every U-Bahn, S-Bahn, bus and ferry · ${day}, 7:00 to 9:00`,
+    sub: (day) => `Every U-Bahn, S-Bahn, bus and ferry · ${day}`,
     cam: { az: [-26, 16], tilt: [40, 50], dist: [0.88, 0.72] },
   },
   {
@@ -85,7 +85,7 @@ const base = 'http://127.0.0.1:4328/';
 
 const icon = readFileSync(join(root, 'public', 'icon.svg'), 'utf8');
 const OVERLAY_CSS = `
-  .toast, .notice, .status, .welcome, .mouse-hint { display: none !important; }
+  .toast, .notice, .status, .welcome, .mouse-hint, #quick-play { display: none !important; }
   #promo { position: fixed; inset: 0; z-index: 100; pointer-events: none; color: #1e1c19; }
   #promo .caption { position: absolute; top: 34px; left: 400px; right: 110px; display: flex; justify-content: center;
     opacity: var(--cap, 0); transform: translateY(calc((1 - var(--cap, 0)) * -14px)); }
